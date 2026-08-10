@@ -1,3 +1,112 @@
+
+Sat, Jul 25 at 3:28 PM
+IMG_0555.jpeg
+IMG_0561.jpeg
+Dit zijn 2 kans hebbers 
+
+
+Sat, Jul 25 at 9:47 PM
+
+260725174131-50512B.pdf
+PDF
+
+Wednesday 6:02 PM
+Hoe kan ik deze het beste bevestigen in de garage van de B66 ? 
+
+Hier zie je dat de koker in een hoek staat gemonteerd dus hier moet een gebogen strip op komen om deze vast te zetten op een dwarsligger van de velo slide 
+
+Generated image: Montagehandleiding VeloSlide zonder vloerboren
+
+
+Edit
+
+
+Dit had ik gedachten een onder de strips iets van vloerbedekking zeil of iets dergelijks 
+
+Generated image: VeloSlide Montagehandleiding zonder vloerenboren
+
+
+Edit
+
+
+6bed1582-3698-4cff-8ac4-edd0a31a993a.png
+
+49b982c2-e03e-4865-9148-931116aa0231.png
+
+709dffa6-4e5e-4165-9d30-fc8a8b0a4f49.png
+
+85565e05-12fd-4057-a784-cf38b4b69cdd.png
+
+f09edc21-61db-46a7-99b6-d858ba3a4002.png
+
+e3a8bca8-b437-46c7-ade2-b9fd9404a7df.png
+
+5e48e3e0-8c17-47ad-ba8f-82a03f7d2310.png
+
+ef48b56e-f118-4a98-92b7-71425f3337e2.png
+
+1beca60f-58a8-41de-9ae3-e3fd113fa11e.png
+
+e8a8900d-bdff-4bd1-b42f-f0c5ccd7f5d5.png
+
+e503cbc6-f9eb-4b78-a0b4-1dcc5505f723.png
+
+4d070be1-51a0-40a3-bfa6-ce3196338396.png
+
+d21e3494-535c-4487-9f2b-eee298e1cd64.png
+
+4defa90e-e655-4f19-8348-adab89bb78fa.png
+hij lijkt wel de hele tekst mee te hebben gepakt
+
+91866b57-ca00-4d20-a493-d4cc74be0ad0.png
+hij is goed 001 km start 100 einde totaal 99km, even test gemaakt website geeft opgeslagen
+
+Klaar. 😄 v0.4 staat klaar.
+
+Download B66 – Making Memories v0.4
+
+Deze versie heeft nu de nieuwe structuur:
+
+🚐 Nieuwe reis starten
+→ startdatum + start KM
+→ 📍 Stop 1
+→ ➡️ Volgende stop
+→ 📍 Stop 2
+→ enzovoort
+→ 🏁 Einde reis
+→ einddatum + eind KM → totaal KM
+
+Ook kun je een stop als:
+
+Camperplaats
+
+Camping
+
+Parkeerplaats
+
+Andere
+
+opslaan.
+
+Eén ding voordat je hem uploadt
+Ik heb in deze versie de bestaande reizen-tabel niet verwijderd of aangepast. De nieuwe reis_stops-tabel wordt erbij gebruikt. Dat is bewust: zo houden we onze werkende basis veilig.
+
+Upload deze dus weer als vervanging van je huidige index.html in GitHub.
+
+Daarna testen we eerst één korte reis:
+
+Elly & Marcel
+Start KM 100
+Stop 1: TEST A
+→ Volgende stop
+Stop 2: TEST B
+→ Einde reis
+Eind KM 150
+
+Dan moet er één reis met 2 stops en 50 km uitkomen.
+
+Als dát werkt, hebben we de structuur voor het echte logboek goed staan. 🚐📖 
+
 <!doctype html>
 <html lang="nl">
 <head>
@@ -318,6 +427,665 @@ async function loadStats(){
   document.getElementById('stopCount').textContent=(stops||[]).length;
   const recent=await supabase.from('reis_stops').select('camperplaats,datum,land').order('datum',{ascending:false}).limit(3);
   document.getElementById('recent').innerHTML=(recent.data||[]).map(x=>`<div class="item"><b>${esc(x.camperplaats||'Onbenoemde stop')}</b><div class="muted">${esc(x.land||'')} · ${esc(x.datum)}</div></div>`).join('')||'Nog geen stops.';
+}
+
+function v(id){return document.getElementById(id).value.trim()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+document.querySelectorAll('nav button[data-tab]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(b.dataset.tab).classList.add('active');
+});
+
+init();
+</script>
+</body>
+</html>
+
+B66_Making_Memories_v0.4_reis_stops.html
+HTML
+
+
+b6b2f748-d7a5-49e7-ae9a-f5ee313a53b6.png
+er zit iets niet lekker , we hebben wel start maar niet einde en geen km berekening
+
+Ja. Je ziet precies het probleem. De nieuwe opzet botst nog met de oude reizen-tabel.
+
+De foutmelding zegt:
+
+camperplaats ... violates not-null constraint
+
+Dat komt doordat we bij het starten van een reis alleen startdatum, persoon en start-KM opslaan. De oude tabel verplichtte echter nog een camperplaats. Daardoor wordt de reis niet eens aangemaakt. En daardoor kunnen Einde reis en de KM-berekening ook nog niet werken.
+
+We gaan dit netjes oplossen.
+
+Stap 1 — database aanpassen
+Ga in Supabase naar SQL Editor → New query en plak:
+
+alter table public.reizen
+alter column camperplaats drop not null;
+
+alter table public.reizen
+alter column land drop not null;
+Klik Run.
+
+Je zou moeten krijgen:
+
+Success. No rows returned
+
+Daarmee mag een reizen-record voortaan bestaan zonder dat er al een camperplaats aan gekoppeld is. Dat is precies wat we nodig hebben.
+
+Daarna gaan we de website aanpassen
+En daar wil ik meteen een paar dingen beter doen dan in deze eerste poging:
+
+Bij Start reis:
+
+Wie?
+
+Startdatum
+
+Start KM
+
+Daarna:
+
+📍 Stop 1
+Datum
+
+Type
+
+Camperplaats
+
+Land
+
+prijs
+
+beoordeling
+
+voorzieningen
+
+ervaring
+
+➡️ Volgende stop
+
+slaapt de stop op en maakt Stop 2.
+
+En:
+
+🏁 Einde reis
+
+moet niet alleen een prompt geven, maar gewoon een nette afsluiting tonen met:
+
+Einddatum
+
+Eind KM
+
+Totaal gereden KM = Eind KM − Start KM
+
+Bijvoorbeeld:
+
+Start KM: 100
+Eind KM: 850
+🚐 750 km gereden
+
+En pas daarna wordt de reis afgesloten.
+
+Dus je gevoel klopt: v0.4 was qua idee goed, maar de overgang van onze oude database naar de nieuwe reisstructuur was nog niet helemaal af.
+
+Voer eerst die twee SQL-regels uit. Daarna maken we v0.4.1 goed, in plaats van verder te bouwen op deze fout.
+
+
+done
+
+Mooi. Nu pakken we v0.4.1. Ik heb het einde van de reis ook meteen beter gemaakt: geen browser-popups meer.
+
+Download B66 – Making Memories v0.4.1
+
+Wat is nu aangepast?
+Bij Nieuwe reis:
+
+Start
+
+Wie
+
+Startdatum
+
+Start KM
+
+Daarna:
+
+Stop 1
+→ Stop opslaan & volgende stop
+
+Daarna Stop 2, Stop 3 enz.
+
+En wanneer jullie naar huis gaan:
+
+🏁 Einde reis
+
+Dan verschijnt gewoon op de pagina:
+
+Einddatum
+
+Eind KM
+
+KM gereden → automatisch berekend
+
+Bijvoorbeeld:
+
+Start KM: 100
+Eind KM: 850
+
+🚐 KM gereden: 750 km
+Pas daarna klik je op ✓ Reis afsluiten.
+
+Nu doen we eerst een test
+Vervang weer de inhoud van index.html in GitHub met dit bestand.
+
+Test daarna:
+
+Nieuwe reis
+
+Start KM 100
+
+Stop 1: bijvoorbeeld Test plaats 1
+
+Volgende stop
+
+Stop 2: Test plaats 2
+
+Einde reis
+
+Eind KM 150
+
+Controleer of er 50 km gereden staat.
+
+Belangrijk: de eerdere testreis met 1 → 100 blijft gewoon in de database staan. Die kunnen we later opruimen. Eerst wil ik zeker weten dat deze nieuwe structuur volledig werkt. 
+
+
+
+B66_Making_Memories_v0.4.1_reisflow.html
+HTML
+
+
+B66_Making_Memories_v0.4.1_reisflow.html
+
+
+
+
+
+B66_Making_Memories_v0.4.1_reisflow.html
+
+
+
+
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B66 – Making Memories</title>
+<style>
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f3f4f6;color:#20252b}
+header{background:#20252b;color:white;padding:20px}
+header h1{margin:0}
+nav{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:0;z-index:2;overflow:auto}
+nav button{padding:10px;border:0;border-radius:8px;white-space:nowrap}
+nav .active{background:#20252b;color:white}
+main{max-width:900px;margin:auto;padding:18px}
+section{display:none}.active{display:block}
+.card{background:white;border:1px solid #ddd;border-radius:14px;padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{font-weight:700;font-size:13px;display:block;margin-bottom:5px}
+input,select,textarea{width:100%;padding:10px;border:1px solid #bbb;border-radius:8px;font:inherit;box-sizing:border-box}
+textarea{min-height:90px}
+button{font:inherit}
+.primary{background:#20252b;color:white;padding:11px 15px;border:0;border-radius:9px;font-weight:700;cursor:pointer}
+.secondary{background:#eee;color:#20252b;padding:10px 13px;border:0;border-radius:9px;font-weight:700;cursor:pointer}
+.danger{background:#fff0f0;color:#9d2222;padding:10px 13px;border:0;border-radius:9px;font-weight:700;cursor:pointer}
+.item{border-top:1px solid #ddd;padding:12px 0}
+.muted{color:#66717d;font-size:13px}
+.big{font-size:30px;font-weight:800}
+.status{padding:10px;border-radius:8px;margin:10px 0}
+.ok{background:#eaf7ed}.err{background:#fff0f0;color:#9d2222}
+.hidden{display:none!important}.login{max-width:430px;margin:30px auto}
+.km-result{font-size:20px;font-weight:800;padding-top:24px}
+.trip-stop{border-left:4px solid #ddd;padding-left:12px;margin:10px 0}
+.end-box{background:#f7f7f7;border-radius:12px;padding:14px;margin-top:18px}
+hr{border:0;border-top:1px solid #ddd;margin:18px 0}
+</style>
+</head>
+<body>
+<header><h1>🚐 B66 – Making Memories</h1><p>Versie 0.4.1 · Reis → Stops → Einde reis</p></header>
+
+<div id="loginView" class="card login">
+<h2>Welkom bij Making Memories</h2>
+<p class="muted">Log in om jullie gezamenlijke reislogboek te gebruiken.</p>
+<div id="loginError" class="status err hidden"></div>
+<label>E-mailadres</label><input id="email" type="email"><br><br>
+<label>Wachtwoord</label><input id="password" type="password"><br><br>
+<button class="primary" onclick="login()">Inloggen</button>
+</div>
+
+<div id="appView" class="hidden">
+<nav>
+<button data-tab="trips" class="active">Reizen</button>
+<button data-tab="home">Dashboard</button>
+<button data-tab="maintenance">Onderhoud</button>
+<button data-tab="camper">Mijn B66</button>
+<button onclick="logout()">Uitloggen</button>
+</nav>
+
+<main>
+<section id="trips" class="active">
+
+<div id="tripChooser" class="card">
+<h2>🚐 Reizen</h2>
+<button class="primary" onclick="startNewTrip()">＋ Nieuwe reis starten</button>
+<div id="tripList" style="margin-top:14px">Reizen laden...</div>
+</div>
+
+<div id="tripForm" class="card hidden">
+<h2 id="tripTitle">🚐 Nieuwe reis</h2>
+<div id="tripStatus" class="status hidden"></div>
+
+<div id="tripStartFields">
+<div class="grid">
+<div><label>Wie maakt de reis?</label><select id="tCrew">
+<option>Elly & Marcel</option>
+<option>Jente & Laura</option>
+<option>Elle & Kenneth</option>
+<option>Tommy-Lee</option>
+</select></div>
+<div><label>Startdatum</label><input id="tStartDate" type="date"></div>
+<div><label>Start KM</label><input id="tStartKm" type="number" min="0" step="1"></div>
+</div>
+<hr>
+</div>
+
+<h3 id="stopHeading">📍 Eerste stop</h3>
+
+<div class="grid">
+<div><label>Datum stop</label><input id="sDate" type="date"></div>
+<div><label>Type stop</label><select id="sType">
+<option>Camperplaats</option>
+<option>Camping</option>
+<option>Parkeerplaats</option>
+<option>Andere</option>
+</select></div>
+<div><label>Naam / plaats</label><input id="sPlace"></div>
+<div><label>Land</label><input id="sCountry"></div>
+<div><label>Prijs per nacht (€)</label><input id="sPrice" type="number" min="0" step=".01"></div>
+<div><label>Beoordeling</label><select id="sRating">
+<option value="5">★★★★★</option>
+<option value="4">★★★★☆</option>
+<option value="3">★★★☆☆</option>
+<option value="2">★★☆☆☆</option>
+<option value="1">★☆☆☆☆</option>
+</select></div>
+</div>
+<br>
+<label>Voorzieningen / indruk</label><input id="sFacilities"><br><br>
+<label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
+
+<div id="activeTripInfo" class="muted"></div><br>
+
+<button class="primary" onclick="nextStop()">➡️ Stop opslaan & volgende stop</button>
+<button class="secondary" onclick="showEndTrip()">🏁 Einde reis</button>
+<button class="secondary" onclick="cancelTrip()">Annuleren</button>
+
+<div id="endBox" class="end-box hidden">
+<h3>🏁 Einde reis</h3>
+<p class="muted">Vul de eindstand in. De app berekent automatisch hoeveel kilometer jullie deze reis hebben gereden.</p>
+<div class="grid">
+<div><label>Einddatum</label><input id="tEndDate" type="date"></div>
+<div><label>Eind KM</label><input id="tEndKm" type="number" min="0" step="1"></div>
+<div><div id="endKmResult" class="km-result">🚐 KM gereden: —</div></div>
+</div>
+<br>
+<button class="primary" onclick="finishTrip()">✓ Reis afsluiten</button>
+<button class="secondary" onclick="hideEndTrip()">Terug</button>
+</div>
+</div>
+
+<div id="tripDetail" class="card hidden"></div>
+</section>
+
+<section id="home">
+<div class="card">
+<div class="muted">Camper</div>
+<div class="big">Bürstner B66 TD 690 G</div>
+<div>Fiat Ducato · 140 pk · 8-traps automaat</div>
+</div>
+<div class="grid">
+<div class="card"><div class="muted">Afgeronde reizen</div><div class="big" id="tripCount">0</div></div>
+<div class="card"><div class="muted">Stops</div><div class="big" id="stopCount">0</div></div>
+</div>
+<div class="card"><h2>Laatste herinneringen</h2><div id="recent">Laden...</div></div>
+</section>
+
+<section id="maintenance">
+<div class="card"><h2>Onderhoud</h2><p class="muted">Komt in een volgende versie.</p></div>
+</section>
+
+<section id="camper">
+<div class="card"><h2>Mijn B66</h2><div class="grid">
+<div><label>Model</label><input value="Bürstner B66 TD 690 G" readonly></div>
+<div><label>Basisvoertuig</label><input value="Fiat Ducato" readonly></div>
+<div><label>Motor</label><input value="140 pk" readonly></div>
+<div><label>Versnellingsbak</label><input value="8-traps automaat" readonly></div>
+<div><label>Max. massa</label><input value="3.500 kg" readonly></div>
+</div></div>
+</section>
+</main>
+</div>
+
+<script type="module">
+import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase=createClient(
+  'https://hktczewqpevvgxqcswov.supabase.co',
+  'sb_publishable_YmfLKfk25pED0oqoTbSYPA_LWhZIuZC'
+);
+
+let activeTripId=null;
+let stopNumber=1;
+
+const loginView=document.getElementById('loginView');
+const appView=document.getElementById('appView');
+
+async function init(){
+  const {data:{session}}=await supabase.auth.getSession();
+  if(session) showApp(); else showLogin();
+  supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
+}
+function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
+async function showApp(){
+  loginView.classList.add('hidden');
+  appView.classList.remove('hidden');
+  await loadTrips();
+  await loadStats();
+}
+
+window.login=async()=>{
+  const box=document.getElementById('loginError');
+  box.classList.add('hidden');
+  const {error}=await supabase.auth.signInWithPassword({
+    email:document.getElementById('email').value.trim(),
+    password:document.getElementById('password').value
+  });
+  if(error){box.textContent=error.message;box.classList.remove('hidden')}
+};
+window.logout=()=>supabase.auth.signOut();
+
+window.startNewTrip=()=>{
+  activeTripId=null;
+  stopNumber=1;
+  document.getElementById('tripChooser').classList.add('hidden');
+  document.getElementById('tripDetail').classList.add('hidden');
+  document.getElementById('tripForm').classList.remove('hidden');
+  document.getElementById('tripTitle').textContent='🚐 Nieuwe reis';
+  document.getElementById('stopHeading').textContent='📍 Eerste stop';
+  document.getElementById('tripStartFields').classList.remove('hidden');
+  document.getElementById('endBox').classList.add('hidden');
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('tStartDate').value=today;
+  document.getElementById('sDate').value=today;
+  document.getElementById('tStartKm').value='';
+  document.getElementById('activeTripInfo').textContent='';
+  clearStopFields();
+  showStatus('',true);
+};
+
+async function ensureTripCreated(){
+  if(activeTripId)return true;
+
+  const startDate=v('tStartDate');
+  const startKmText=v('tStartKm');
+
+  if(!v('tCrew')||!startDate||startKmText===''){
+    showStatus('Vul eerst wie, startdatum en start KM in.',false);
+    return false;
+  }
+
+  const startKm=Number(startKmText);
+  if(!Number.isInteger(startKm)||startKm<0){
+    showStatus('Vul een geldige start KM in.',false);
+    return false;
+  }
+
+  const {data,error}=await supabase.from('reizen').insert({
+    datum:startDate,
+    crew:v('tCrew'),
+    start_km:startKm
+  }).select().single();
+
+  if(error){
+    showStatus('Reis starten mislukt: '+error.message,false);
+    return false;
+  }
+
+  activeTripId=data.id;
+  return true;
+}
+
+async function nextStop(){
+  showStatus('',true);
+
+  if(!(await ensureTripCreated()))return;
+
+  const stop={
+    reis_id:activeTripId,
+    volgorde:stopNumber,
+    datum:v('sDate')||v('tStartDate'),
+    type_stop:v('sType'),
+    camperplaats:v('sPlace'),
+    land:v('sCountry'),
+    prijs_per_nacht:v('sPrice')?Number(v('sPrice')):null,
+    beoordeling:Number(v('sRating')),
+    voorzieningen:v('sFacilities'),
+    ervaring:v('sNotes')
+  };
+
+  if(!stop.camperplaats){
+    showStatus('Vul minimaal de naam / plaats van de stop in.',false);
+    return;
+  }
+
+  const {error}=await supabase.from('reis_stops').insert(stop);
+  if(error){
+    showStatus('Stop opslaan mislukt: '+error.message,false);
+    return;
+  }
+
+  showStatus('✓ Stop opgeslagen. Jullie kunnen naar de volgende stop.',true);
+  stopNumber++;
+  document.getElementById('tripStartFields').classList.add('hidden');
+  document.getElementById('tripTitle').textContent='🚐 Reis actief';
+  document.getElementById('stopHeading').textContent='📍 Stop '+stopNumber;
+  document.getElementById('activeTripInfo').textContent='Reis actief · '+(stopNumber-1)+' stop'+((stopNumber-1)===1?'':'s')+' opgeslagen';
+  document.getElementById('sDate').value=v('sDate')||v('tStartDate');
+  clearStopFields(false);
+  await loadTrips();
+  await loadStats();
+}
+
+function showEndTrip(){
+  if(!activeTripId){
+    showStatus('Sla eerst minimaal één stop op.',false);
+    return;
+  }
+  document.getElementById('endBox').classList.remove('hidden');
+  document.getElementById('tEndDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('tEndKm').value='';
+  document.getElementById('endKmResult').textContent='🚐 KM gereden: —';
+  document.getElementById('endBox').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function hideEndTrip(){
+  document.getElementById('endBox').classList.add('hidden');
+}
+
+async function finishTrip(){
+  const endDate=v('tEndDate');
+  const endKmText=v('tEndKm');
+
+  if(!endDate||endKmText===''){
+    showStatus('Vul einddatum en eind KM in.',false);
+    return;
+  }
+
+  const endKm=Number(endKmText);
+  const startKm=Number(v('tStartKm'));
+
+  if(!Number.isInteger(endKm)||endKm<0){
+    showStatus('Vul een geldige eind KM in.',false);
+    return;
+  }
+  if(endKm<startKm){
+    showStatus('Eind KM mag niet lager zijn dan Start KM.',false);
+    return;
+  }
+
+  const {error}=await supabase.from('reizen').update({
+    einddatum:endDate,
+    eind_km:endKm
+  }).eq('id',activeTripId);
+
+  if(error){
+    showStatus('Reis afsluiten mislukt: '+error.message,false);
+    return;
+  }
+
+  const gereden=endKm-startKm;
+  showStatus('✓ Reis afgesloten · '+gereden.toLocaleString('nl-BE')+' km gereden.',true);
+
+  activeTripId=null;
+  stopNumber=1;
+  document.getElementById('tripForm').classList.add('hidden');
+  document.getElementById('tripChooser').classList.remove('hidden');
+  document.getElementById('endBox').classList.add('hidden');
+
+  await loadTrips();
+  await loadStats();
+}
+
+function updateEndKm(){
+  const endText=v('tEndKm');
+  const startText=v('tStartKm');
+  const el=document.getElementById('endKmResult');
+
+  if(endText===''||startText===''){
+    el.textContent='🚐 KM gereden: —';
+    return;
+  }
+
+  const diff=Number(endText)-Number(startText);
+  if(diff<0){
+    el.textContent='⚠️ Eind KM is lager dan Start KM';
+    return;
+  }
+  el.textContent='🚐 KM gereden: '+diff.toLocaleString('nl-BE')+' km';
+}
+
+document.getElementById('tEndKm').addEventListener('input',updateEndKm);
+
+window.nextStop=nextStop;
+window.showEndTrip=showEndTrip;
+window.hideEndTrip=hideEndTrip;
+window.finishTrip=finishTrip;
+
+function clearStopFields(keepDate=true){
+  const date=document.getElementById('sDate').value;
+  ['sPlace','sCountry','sPrice','sFacilities','sNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sRating').value='5';
+  document.getElementById('sType').value='Camperplaats';
+  if(!keepDate)document.getElementById('sDate').value='';
+  else document.getElementById('sDate').value=date;
+}
+function cancelTrip(){
+  activeTripId=null;
+  stopNumber=1;
+  document.getElementById('tripForm').classList.add('hidden');
+  document.getElementById('tripChooser').classList.remove('hidden');
+}
+function showStatus(text,ok){
+  const el=document.getElementById('tripStatus');
+  if(!text){el.className='status hidden';return}
+  el.textContent=text;
+  el.className='status '+(ok?'ok':'err');
+}
+
+async function loadTrips(){
+  const list=document.getElementById('tripList');
+  list.textContent='Reizen laden...';
+
+  const {data:trips,error}=await supabase.from('reizen').select('*').order('datum',{ascending:false});
+  if(error){
+    list.textContent='Laden mislukt: '+error.message;
+    list.className='status err';
+    return;
+  }
+
+  if(!trips.length){
+    list.innerHTML='<div class="muted">Nog geen reizen. Start jullie eerste reis!</div>';
+    return;
+  }
+
+  const ids=trips.map(t=>t.id);
+  const {data:stops}=await supabase.from('reis_stops').select('*').in('reis_id',ids).order('volgorde');
+
+  list.innerHTML=trips.map(t=>{
+    const ts=(stops||[]).filter(s=>s.reis_id===t.id);
+    const closed=t.einddatum!=null;
+    const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
+
+    return `<div class="item">
+      <b>${esc(t.crew)}</b> · ${esc(t.datum)}
+      ${closed?` → ${esc(t.einddatum)}`:' · 🟢 actief'}
+      <div class="muted">${ts.length} stop${ts.length===1?'':'s'}${km!=null?' · '+km.toLocaleString('nl-BE')+' km':''}</div>
+      ${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
+      <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
+      <button class="secondary" onclick="showTripDetail(${t.id})">Bekijk reis</button>
+    </div>`;
+  }).join('');
+}
+
+window.showTripDetail=async(id)=>{
+  const {data:t,error}=await supabase.from('reizen').select('*').eq('id',id).single();
+  if(error)return;
+
+  const {data:stops}=await supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde');
+  const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
+  const detail=document.getElementById('tripDetail');
+
+  detail.classList.remove('hidden');
+  detail.innerHTML=`<h2>📖 Reis van ${esc(t.crew)}</h2>
+    <div class="muted">${esc(t.datum)}${t.einddatum?' → '+esc(t.einddatum):' · 🟢 nog actief'}</div>
+    <p><b>Start KM:</b> ${t.start_km!=null?Number(t.start_km).toLocaleString('nl-BE'):'—'}
+    ${t.eind_km!=null?' · <b>Eind KM:</b> '+Number(t.eind_km).toLocaleString('nl-BE'):''}
+    ${km!=null?' · <b>'+km.toLocaleString('nl-BE')+' km gereden</b>':''}</p>
+    <h3>Stops</h3>
+    ${(stops||[]).map(s=>`<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
+    <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div>
+    <div>${esc(s.voorzieningen||'')}</div><p>${esc(s.ervaring||'')}</p>
+    ${s.prijs_per_nacht!=null?'<div class="muted">€ '+Number(s.prijs_per_nacht).toFixed(2)+' / nacht</div>':''}</div>`).join('')||'<div class="muted">Geen stops.</div>'}
+    <br><button class="secondary" onclick="document.getElementById('tripDetail').classList.add('hidden')">Sluiten</button>`;
+
+  detail.scrollIntoView({behavior:'smooth'});
+};
+
+async function loadStats(){
+  const {data:trips}=await supabase.from('reizen').select('id,einddatum');
+  const {data:stops}=await supabase.from('reis_stops').select('id');
+
+  document.getElementById('tripCount').textContent=(trips||[]).filter(x=>x.einddatum).length;
+  document.getElementById('stopCount').textContent=(stops||[]).length;
+
+  const recent=await supabase.from('reis_stops').select('camperplaats,datum,land').order('datum',{ascending:false}).limit(3);
+  document.getElementById('recent').innerHTML=(recent.data||[]).map(x=>
+    `<div class="item"><b>${esc(x.camperplaats||'Onbenoemde stop')}</b><div class="muted">${esc(x.land||'')} · ${esc(x.datum)}</div></div>`
+  ).join('')||'Nog geen stops.';
 }
 
 function v(id){return document.getElementById(id).value.trim()}
