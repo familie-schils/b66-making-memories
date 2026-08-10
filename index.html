@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B66 – Making Memories</title>
+<style>
+  :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#20252b;background:#f3f4f6}
+  *{box-sizing:border-box} body{margin:0}
+  header{background:#20252b;color:white;padding:22px 18px}
+  header h1{margin:0 0 4px;font-size:25px} header p{margin:0;opacity:.8}
+  nav{display:flex;gap:8px;overflow:auto;padding:10px;background:white;position:sticky;top:0;z-index:2;border-bottom:1px solid #ddd}
+  nav button{border:0;background:#eee;border-radius:9px;padding:10px 13px;white-space:nowrap;font-weight:600}
+  nav button.active{background:#20252b;color:white}
+  main{max-width:900px;margin:auto;padding:18px}
+  section{display:none} section.active{display:block}
+  .card{background:white;border:1px solid #ddd;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px #0000000d}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+  input,textarea,select{width:100%;padding:10px;border:1px solid #bbb;border-radius:8px;font:inherit}
+  textarea{min-height:90px;resize:vertical}
+  .primary{background:#20252b;color:white;border:0;border-radius:9px;padding:11px 15px;font-weight:700;cursor:pointer}
+  .danger{background:#eee;color:#a00;border:0;border-radius:8px;padding:7px 10px;cursor:pointer}
+  .item{border-top:1px solid #ddd;padding:12px 0}.item:first-child{border-top:0}
+  .muted{color:#66717d;font-size:13px}.big{font-size:30px;font-weight:800}
+  .tag{display:inline-block;background:#eef0f2;border-radius:999px;padding:4px 8px;margin:2px;font-size:12px}
+  .empty{color:#66717d;text-align:center;padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🚐 B66 – Making Memories</h1>
+  <p>Versie 0.1 · persoonlijk digitaal camperlogboek</p>
+</header>
+<nav id="nav">
+  <button data-tab="home">Dashboard</button>
+  <button data-tab="trips" class="active">Reizen</button>
+  <button data-tab="maintenance">Onderhoud</button>
+  <button data-tab="camper">Mijn B66</button>
+</nav>
+<main>
+<section id="home">
+  <div class="card">
+    <div class="muted">Camper</div>
+    <div class="big">Bürstner B66 TD 690 G</div>
+    <div>Fiat Ducato · 140 pk · 8-traps automaat</div>
+  </div>
+  <div class="grid">
+    <div class="card"><div class="muted">Reizen</div><div class="big" id="tripCount">0</div></div>
+    <div class="card"><div class="muted">Camperplaatsen</div><div class="big" id="placeCount">0</div></div>
+    <div class="card"><div class="muted">Onderhoudsitems</div><div class="big" id="maintCount">0</div></div>
+  </div>
+  <div class="card">
+    <h2>Laatste herinneringen</h2>
+    <div id="recent" class="empty">Nog geen reizen ingevoerd.</div>
+  </div>
+</section>
+
+<section id="trips" class="active">
+  <div class="card">
+    <h2>Nieuwe reis / camperplaats</h2>
+    <div class="grid">
+      <div><label>Wie maakt de reis?</label><select id="tCrew"><option>Elly & Marcel</option><option>Jente & Laura</option><option>Elle & Kenneth</option><option>Tommy-Lee</option></select></div>
+      <div><label>Datum</label><input id="tDate" type="date"></div>
+      <div><label>Camperplaats</label><input id="tPlace" placeholder="Naam van de plaats"></div>
+      <div><label>Land</label><input id="tCountry" placeholder="Nederland"></div>
+      <div><label>Prijs per nacht (€)</label><input id="tPrice" type="number" min="0" step=".01"></div>
+      <div><label>Beoordeling</label><select id="tRating"><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select></div>
+    </div>
+    <br>
+    <div><label>Voorzieningen / indruk</label><input id="tFacilities" placeholder="Toilet, douche, stroom, water, hondvriendelijk..."></div><br>
+    <div><label>Herinnering / opmerkingen</label><textarea id="tNotes" placeholder="Wat vonden we ervan? Zouden we terugkomen?"></textarea></div><br>
+    <button class="primary" onclick="addTrip()">Reis opslaan</button>
+  </div>
+  <div class="card"><h2>Ons reislogboek</h2><div id="tripList"></div></div>
+</section>
+
+<section id="maintenance">
+  <div class="card">
+    <h2>Onderhoud / werkzaamheden</h2>
+    <div class="grid">
+      <div><label>Datum</label><input id="mDate" type="date"></div>
+      <div><label>Onderdeel</label><input id="mItem" placeholder="Fiat / Truma / LPG / banden..."></div>
+      <div><label>Kilometerstand</label><input id="mKm" type="number"></div>
+      <div><label>Kosten (€)</label><input id="mCost" type="number" min="0" step=".01"></div>
+    </div><br>
+    <div><label>Omschrijving</label><textarea id="mNotes" placeholder="Wat is uitgevoerd?"></textarea></div><br>
+    <button class="primary" onclick="addMaintenance()">Onderhoud opslaan</button>
+  </div>
+  <div class="card"><h2>Historiek</h2><div id="maintList"></div></div>
+</section>
+
+<section id="camper">
+  <div class="card">
+    <h2>Mijn B66</h2>
+    <div class="grid">
+      <div><label>Model</label><input id="cModel"></div>
+      <div><label>Basisvoertuig</label><input id="cBase"></div>
+      <div><label>Motor</label><input id="cEngine"></div>
+      <div><label>Versnellingsbak</label><input id="cGear"></div>
+      <div><label>Max. massa</label><input id="cMass"></div>
+      <div><label>Opmerking</label><input id="cNote"></div>
+    </div><br>
+    <label>Uitrusting</label>
+    <textarea id="cOptions"></textarea><br><br>
+    <button class="primary" onclick="saveCamper()">Campergegevens opslaan</button>
+  </div>
+  <div class="card">
+    <h2>Belangrijke documenten</h2>
+    <p class="muted">V0.1 houdt bewust nog geen bestanden/cloud bij. Dat komt pas als we weten wat jullie echt nodig hebben.</p>
+  </div>
+</section>
+</main>
+
+<script>
+const KEY='b66makingmemories_v01';
+let data=JSON.parse(localStorage.getItem(KEY)||'null')||{
+  camper:{
+    model:'Bürstner B66 TD 690 G',
+    base:'Fiat Ducato',
+    engine:'140 pk',
+    gear:'8-traps automatische versnellingsbak',
+    mass:'3.500 kg',
+    note:'',
+    options:'Dubbele technische vloer (Thermo-Floor/dubbele bodem)\\nLithium woon-batterij\\n170W zonne-energie + Smart MPPT\\nThule 5200 luifel 4 m\\nVeiligheidsdeur HARTAL Premium\\nBijkomende garagedeur links\\nAlu velgen\\nHeosafe + Safe-Door veiligheidssloten'
+  },trips:[],maintenance:[]
+};
+function save(){localStorage.setItem(KEY,JSON.stringify(data));}
+function render(){
+  document.getElementById('tripCount').textContent=data.trips.length;
+  document.getElementById('placeCount').textContent=new Set(data.trips.map(x=>x.place.toLowerCase())).size;
+  document.getElementById('maintCount').textContent=data.maintenance.length;
+  const recent=[...data.trips].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
+  document.getElementById('recent').innerHTML=recent.length?recent.map(x=>`<div class="item"><b>${esc(x.place)}</b> · ${esc(x.country)}<div class="muted">${esc(x.crew||'Onbekend')}</div><div class="muted">${esc(x.date)} · ${'★'.repeat(+x.rating)}</div></div>`).join(''):'Nog geen reizen ingevoerd.';
+  document.getElementById('tripList').innerHTML=data.trips.length?[...data.trips].sort((a,b)=>b.date.localeCompare(a.date)).map((x,i)=>`<div class="item"><b>${esc(x.place)}</b> · ${esc(x.country)}<div class="muted">${esc(x.crew||'Onbekend')}</div> <span class="tag">${'★'.repeat(+x.rating)}</span><div class="muted">${esc(x.date)} · €${Number(x.price||0).toFixed(2)} / nacht</div><div>${esc(x.facilities)}</div><p>${esc(x.notes)}</p><button class="danger" onclick="delTrip(${i})">Verwijder</button></div>`).join(''):'<div class="empty">Nog geen reizen.</div>';
+  document.getElementById('maintList').innerHTML=data.maintenance.length?[...data.maintenance].sort((a,b)=>b.date.localeCompare(a.date)).map((x,i)=>`<div class="item"><b>${esc(x.item)}</b><div class="muted">${esc(x.date)} · ${x.km?esc(x.km)+' km · ':''}€${Number(x.cost||0).toFixed(2)}</div><p>${esc(x.notes)}</p><button class="danger" onclick="delMaint(${i})">Verwijder</button></div>`).join(''):'<div class="empty">Nog geen onderhoud geregistreerd.</div>';
+  for(const id of ['cModel','cBase','cEngine','cGear','cMass','cNote','cOptions']) document.getElementById(id).value=data.camper[id==='cModel'?'model':id==='cBase'?'base':id==='cEngine'?'engine':id==='cGear'?'gear':id==='cMass'?'mass':id==='cNote'?'note':'options'];
+}
+function addTrip(){
+  data.trips.push({crew:v('tCrew'),date:v('tDate'),place:v('tPlace'),country:v('tCountry'),price:v('tPrice'),rating:v('tRating'),facilities:v('tFacilities'),notes:v('tNotes')}); save(); render();
+  ['tDate','tPlace','tCountry','tPrice','tFacilities','tNotes'].forEach(id=>document.getElementById(id).value='');
+}
+function addMaintenance(){
+  data.maintenance.push({date:v('mDate'),item:v('mItem'),km:v('mKm'),cost:v('mCost'),notes:v('mNotes')}); save(); render();
+  ['mDate','mItem','mKm','mCost','mNotes'].forEach(id=>document.getElementById(id).value='');
+}
+function delTrip(i){data.trips.splice(i,1);save();render()} function delMaint(i){data.maintenance.splice(i,1);save();render()}
+function saveCamper(){
+  Object.assign(data.camper,{model:v('cModel'),base:v('cBase'),engine:v('cEngine'),gear:v('cGear'),mass:v('cMass'),note:v('cNote'),options:v('cOptions')});save();render();
+  alert('Campergegevens opgeslagen.');
+}
+function v(id){return document.getElementById(id).value.trim()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));document.getElementById(b.dataset.tab).classList.add('active')});
+render();
+</script>
+</body>
+</html>
