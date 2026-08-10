@@ -8,8 +8,8 @@
 body{font-family:system-ui;margin:0;background:#f3f4f6;color:#20252b}
 header{background:#20252b;color:white;padding:20px}
 header h1{margin:0}
-nav{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:0}
-nav button{padding:10px;border:0;border-radius:8px}
+nav{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:0;z-index:2;overflow:auto}
+nav button{padding:10px;border:0;border-radius:8px;white-space:nowrap}
 nav .active{background:#20252b;color:white}
 main{max-width:900px;margin:auto;padding:18px}
 section{display:none}.active{display:block}
@@ -18,7 +18,8 @@ section{display:none}.active{display:block}
 label{font-weight:700;font-size:13px;display:block;margin-bottom:5px}
 input,select,textarea{width:100%;padding:10px;border:1px solid #bbb;border-radius:8px;font:inherit;box-sizing:border-box}
 textarea{min-height:90px}
-.primary{background:#20252b;color:white;padding:11px 15px;border:0;border-radius:9px;font-weight:700}
+.primary{background:#20252b;color:white;padding:11px 15px;border:0;border-radius:9px;font-weight:700;cursor:pointer}
+.secondary{background:#eee;color:#20252b;padding:10px 13px;border:0;border-radius:9px;font-weight:700;cursor:pointer}
 .item{border-top:1px solid #ddd;padding:12px 0}
 .muted{color:#66717d;font-size:13px}
 .big{font-size:30px;font-weight:800}
@@ -26,10 +27,11 @@ textarea{min-height:90px}
 .ok{background:#eaf7ed}.err{background:#fff0f0;color:#9d2222}
 .hidden{display:none!important}.login{max-width:430px;margin:30px auto}
 .km-result{font-size:18px;font-weight:800;padding-top:26px}
+.trip-stop{border-left:4px solid #ddd;padding-left:12px;margin:10px 0}
 </style>
 </head>
 <body>
-<header><h1>🚐 B66 – Making Memories</h1><p>Versie 0.3 · online familielogboek</p></header>
+<header><h1>🚐 B66 – Making Memories</h1><p>Versie 0.4 · Reis → Stops → Einde reis</p></header>
 
 <div id="loginView" class="card login">
 <h2>Welkom bij Making Memories</h2>
@@ -51,60 +53,72 @@ textarea{min-height:90px}
 
 <main>
 <section id="trips" class="active">
-<div class="card">
-<h2>Nieuwe reis / camperplaats</h2>
-<div id="saveStatus" class="status hidden"></div>
+<div id="tripChooser" class="card">
+<h2>🚐 Reizen</h2>
+<button class="primary" onclick="startNewTrip()">＋ Nieuwe reis starten</button>
+<div id="tripList" style="margin-top:14px">Reizen laden...</div>
+</div>
 
+<div id="tripForm" class="card hidden">
+<h2 id="tripTitle">Nieuwe reis</h2>
+<div id="tripStatus" class="status hidden"></div>
+
+<div id="tripStartFields">
 <div class="grid">
 <div><label>Wie maakt de reis?</label><select id="tCrew">
 <option>Elly & Marcel</option><option>Jente & Laura</option><option>Elle & Kenneth</option><option>Tommy-Lee</option>
 </select></div>
-<div><label>Datum</label><input id="tDate" type="date"></div>
-<div><label>Camperplaats</label><input id="tPlace"></div>
-<div><label>Land</label><input id="tCountry"></div>
-<div><label>Prijs per nacht (€)</label><input id="tPrice" type="number" step=".01"></div>
-<div><label>Beoordeling</label><select id="tRating">
+<div><label>Startdatum</label><input id="tStartDate" type="date"></div>
+<div><label>Start KM</label><input id="tStartKm" type="number" min="0" step="1"></div>
+</div>
+<hr style="border:0;border-top:1px solid #ddd;margin:18px 0">
+</div>
+
+<h3 id="stopHeading">📍 Eerste stop</h3>
+<div class="grid">
+<div><label>Datum stop</label><input id="sDate" type="date"></div>
+<div><label>Type stop</label><select id="sType">
+<option>Camperplaats</option><option>Camping</option><option>Parkeerplaats</option><option>Andere</option>
+</select></div>
+<div><label>Naam / plaats</label><input id="sPlace"></div>
+<div><label>Land</label><input id="sCountry"></div>
+<div><label>Prijs per nacht (€)</label><input id="sPrice" type="number" min="0" step=".01"></div>
+<div><label>Beoordeling</label><select id="sRating">
 <option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option>
 </select></div>
 </div>
-
 <br>
-<h3>Kilometerstand</h3>
-<div class="grid">
-<div><label>Start KM</label><input id="tStartKm" type="number" min="0" step="1" placeholder="Bij vertrek"></div>
-<div><label>Eind KM</label><input id="tEndKm" type="number" min="0" step="1" placeholder="Bij thuiskomst"></div>
-<div><div id="kmResult" class="km-result">KM gereden: —</div></div>
+<label>Voorzieningen / indruk</label><input id="sFacilities"><br><br>
+<label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
+
+<div id="activeTripInfo" class="muted"></div>
+<br>
+<button class="primary" onclick="nextStop()">➡️ Volgende stop</button>
+<button class="secondary" onclick="endTrip()">🏁 Einde reis</button>
+<button class="secondary" onclick="cancelTrip()">Annuleren</button>
 </div>
 
-<br>
-<label>Voorzieningen / indruk</label><input id="tFacilities"><br><br>
-<label>Onze ervaring</label><textarea id="tNotes"></textarea><br><br>
-<button class="primary" onclick="addTrip()">☁️ Reis opslaan</button>
-</div>
-
-<div class="card"><h2>Ons reislogboek</h2><div id="tripList">Reizen laden...</div></div>
+<div id="tripDetail" class="card hidden"></div>
 </section>
 
 <section id="home">
 <div class="card"><div class="muted">Camper</div><div class="big">Bürstner B66 TD 690 G</div><div>Fiat Ducato · 140 pk · 8-traps automaat</div></div>
 <div class="grid">
-<div class="card"><div class="muted">Reizen</div><div class="big" id="tripCount">0</div></div>
-<div class="card"><div class="muted">Camperplaatsen</div><div class="big" id="placeCount">0</div></div>
+<div class="card"><div class="muted">Afgeronde reizen</div><div class="big" id="tripCount">0</div></div>
+<div class="card"><div class="muted">Stops</div><div class="big" id="stopCount">0</div></div>
 </div>
-<div class="card"><h2>Laatste herinneringen</h2><div id="recent">Nog geen reizen.</div></div>
+<div class="card"><h2>Laatste herinneringen</h2><div id="recent">Laden...</div></div>
 </section>
 
 <section id="maintenance"><div class="card"><h2>Onderhoud</h2><p class="muted">Komt in een volgende versie.</p></div></section>
 
-<section id="camper">
-<div class="card"><h2>Mijn B66</h2><div class="grid">
+<section id="camper"><div class="card"><h2>Mijn B66</h2><div class="grid">
 <div><label>Model</label><input value="Bürstner B66 TD 690 G" readonly></div>
 <div><label>Basisvoertuig</label><input value="Fiat Ducato" readonly></div>
 <div><label>Motor</label><input value="140 pk" readonly></div>
 <div><label>Versnellingsbak</label><input value="8-traps automaat" readonly></div>
 <div><label>Max. massa</label><input value="3.500 kg" readonly></div>
-</div></div>
-</section>
+</div></div></section>
 </main>
 </div>
 
@@ -116,6 +130,9 @@ const supabase=createClient(
   'sb_publishable_YmfLKfk25pED0oqoTbSYPA_LWhZIuZC'
 );
 
+let activeTripId=null;
+let stopNumber=1;
+
 const loginView=document.getElementById('loginView');
 const appView=document.getElementById('appView');
 
@@ -125,118 +142,182 @@ async function init(){
   supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
 }
 function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
-async function showApp(){loginView.classList.add('hidden');appView.classList.remove('hidden');await loadTrips()}
-
+async function showApp(){
+  loginView.classList.add('hidden');
+  appView.classList.remove('hidden');
+  await loadTrips();
+  await loadStats();
+}
 window.login=async()=>{
-  const errorBox=document.getElementById('loginError');
-  errorBox.classList.add('hidden');
+  const box=document.getElementById('loginError');box.classList.add('hidden');
   const {error}=await supabase.auth.signInWithPassword({
     email:document.getElementById('email').value.trim(),
     password:document.getElementById('password').value
   });
-  if(error){errorBox.textContent=error.message;errorBox.classList.remove('hidden')}
+  if(error){box.textContent=error.message;box.classList.remove('hidden')}
 };
 window.logout=()=>supabase.auth.signOut();
 
-function getKm(){
-  const start=document.getElementById('tStartKm').value;
-  const end=document.getElementById('tEndKm').value;
-  const result=document.getElementById('kmResult');
+window.startNewTrip=()=>{
+  activeTripId=null;stopNumber=1;
+  document.getElementById('tripChooser').classList.add('hidden');
+  document.getElementById('tripDetail').classList.add('hidden');
+  document.getElementById('tripForm').classList.remove('hidden');
+  document.getElementById('tripTitle').textContent='🚐 Nieuwe reis';
+  document.getElementById('stopHeading').textContent='📍 Eerste stop';
+  document.getElementById('tripStartFields').classList.remove('hidden');
+  document.getElementById('tStartDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('sDate').value=document.getElementById('tStartDate').value;
+  clearStopFields();
+  showStatus('',true);
+};
 
-  if(start==='' || end===''){
-    result.textContent='KM gereden: —';
-    return null;
+async function nextStop(){
+  const status=document.getElementById('tripStatus');
+  showStatus('',true);
+
+  if(!activeTripId){
+    const startDate=v('tStartDate');
+    const startKm=v('tStartKm');
+    if(!startDate||!startKm||!v('tCrew')){
+      showStatus('Vul wie, startdatum en start KM in.',false);return;
+    }
+    const {data,error}=await supabase.from('reizen').insert({
+      datum:startDate,crew:v('tCrew'),start_km:Number(startKm)
+    }).select().single();
+    if(error){showStatus('Reis starten mislukt: '+error.message,false);return}
+    activeTripId=data.id;
   }
-  const s=Number(start), e=Number(end);
-  if(e<s){
-    result.textContent='⚠️ Eind KM mag niet lager zijn dan Start KM';
-    return 'invalid';
-  }
-  const km=e-s;
-  result.textContent='KM gereden: '+km.toLocaleString('nl-BE')+' km';
-  return km;
-}
-document.getElementById('tStartKm').addEventListener('input',getKm);
-document.getElementById('tEndKm').addEventListener('input',getKm);
 
-window.addTrip=async()=>{
-  const status=document.getElementById('saveStatus');
-  status.className='status hidden';
-
-  const km=getKm();
-  if(km==='invalid'){
-    status.textContent='Controleer de kilometerstanden.';
-    status.className='status err';
-    return;
-  }
-
-  const start=document.getElementById('tStartKm').value;
-  const end=document.getElementById('tEndKm').value;
-
-  const row={
-    datum:v('tDate'),
-    crew:v('tCrew'),
-    camperplaats:v('tPlace'),
-    land:v('tCountry'),
-    prijs_per_nacht:v('tPrice')?Number(v('tPrice')):null,
-    beoordeling:Number(v('tRating')),
-    start_km:start!==''?Number(start):null,
-    eind_km:end!==''?Number(end):null,
-    voorzieningen:v('tFacilities'),
-    ervaring:v('tNotes')
+  const stop={
+    reis_id:activeTripId,
+    volgorde:stopNumber,
+    datum:v('sDate')||v('tStartDate'),
+    type_stop:v('sType'),
+    camperplaats:v('sPlace'),
+    land:v('sCountry'),
+    prijs_per_nacht:v('sPrice')?Number(v('sPrice')):null,
+    beoordeling:Number(v('sRating')),
+    voorzieningen:v('sFacilities'),
+    ervaring:v('sNotes')
   };
 
-  if(!row.datum||!row.camperplaats){
-    status.textContent='Vul minimaal datum en camperplaats in.';
-    status.className='status err';
-    return;
+  if(!stop.camperplaats){
+    showStatus('Vul minimaal de naam / plaats van de stop in.',false);return;
   }
 
-  const {error}=await supabase.from('reizen').insert(row);
-  if(error){
-    status.textContent='Opslaan mislukt: '+error.message;
-    status.className='status err';
-    return;
-  }
+  const {error}=await supabase.from('reis_stops').insert(stop);
+  if(error){showStatus('Stop opslaan mislukt: '+error.message,false);return}
 
-  status.textContent='✓ Reis opgeslagen in de online database.';
-  status.className='status ok';
-
-  ['tPlace','tCountry','tPrice','tFacilities','tNotes','tStartKm','tEndKm']
-    .forEach(id=>document.getElementById(id).value='');
-  document.getElementById('kmResult').textContent='KM gereden: —';
-
+  showStatus('✓ Stop opgeslagen. Klaar voor de volgende stop.',true);
+  stopNumber++;
+  document.getElementById('tripStartFields').classList.add('hidden');
+  document.getElementById('tripTitle').textContent='🚐 Reis actief';
+  document.getElementById('stopHeading').textContent='📍 Stop '+stopNumber;
+  document.getElementById('activeTripInfo').textContent='Reis is actief · stop '+(stopNumber-1)+' opgeslagen';
+  clearStopFields();
   await loadTrips();
-};
+  await loadStats();
+}
+
+async function endTrip(){
+  if(!activeTripId){
+    showStatus('Start eerst een reis en sla minimaal één stop op.',false);return;
+  }
+
+  const endDate=prompt('Einddatum van de reis (JJJJ-MM-DD):',new Date().toISOString().slice(0,10));
+  if(!endDate)return;
+  const endKmText=prompt('Eind KM:');
+  if(endKmText===null)return;
+  const endKm=Number(endKmText);
+  if(!Number.isInteger(endKm)||endKm<0){showStatus('Vul een geldige eind KM in.',false);return}
+
+  const {data:trip,error:tripError}=await supabase.from('reizen').select('start_km').eq('id',activeTripId).single();
+  if(tripError){showStatus('Reis ophalen mislukt: '+tripError.message,false);return}
+  if(endKm<Number(trip.start_km)){showStatus('Eind KM mag niet lager zijn dan Start KM.',false);return}
+
+  const {error}=await supabase.from('reizen').update({
+    einddatum:endDate,
+    eind_km:endKm
+  }).eq('id',activeTripId);
+
+  if(error){showStatus('Reis afsluiten mislukt: '+error.message,false);return}
+
+  showStatus('✓ Reis afgesloten. '+(endKm-Number(trip.start_km))+' km gereden.',true);
+  activeTripId=null;stopNumber=1;
+  document.getElementById('tripForm').classList.add('hidden');
+  document.getElementById('tripChooser').classList.remove('hidden');
+  await loadTrips();
+  await loadStats();
+}
+
+window.endTrip=endTrip;
+window.nextStop=nextStop;
+
+function clearStopFields(){
+  ['sPlace','sCountry','sPrice','sFacilities','sNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sRating').value='5';
+  document.getElementById('sType').value='Camperplaats';
+}
+function cancelTrip(){
+  activeTripId=null;stopNumber=1;
+  document.getElementById('tripForm').classList.add('hidden');
+  document.getElementById('tripChooser').classList.remove('hidden');
+}
+function showStatus(text,ok){
+  const el=document.getElementById('tripStatus');
+  if(!text){el.className='status hidden';return}
+  el.textContent=text;el.className='status '+(ok?'ok':'err');
+}
 
 async function loadTrips(){
   const list=document.getElementById('tripList');
   list.textContent='Reizen laden...';
+  const {data:trips,error}=await supabase.from('reizen').select('*').order('datum',{ascending:false});
+  if(error){list.textContent='Laden mislukt: '+error.message;list.className='status err';return}
+  if(!trips.length){list.innerHTML='<div class="muted">Nog geen reizen. Start jullie eerste reis!</div>';return}
 
-  const {data,error}=await supabase.from('reizen').select('*').order('datum',{ascending:false});
-  if(error){
-    list.textContent='Laden mislukt: '+error.message;
-    list.className='status err';
-    return;
-  }
-
-  list.innerHTML=data.length?data.map(x=>{
-    const km=(x.start_km!=null && x.eind_km!=null)?(Number(x.eind_km)-Number(x.start_km)):null;
+  const ids=trips.map(t=>t.id);
+  const {data:stops}=await supabase.from('reis_stops').select('*').in('reis_id',ids).order('volgorde');
+  list.innerHTML=trips.map(t=>{
+    const ts=(stops||[]).filter(s=>s.reis_id===t.id);
+    const closed=t.einddatum!=null;
+    const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
     return `<div class="item">
-      <b>${esc(x.camperplaats)}</b> · ${esc(x.land||'')}
-      <div class="muted">${esc(x.crew)} · ${esc(x.datum)} · ${'★'.repeat(Number(x.beoordeling||0))}</div>
-      ${x.start_km!=null?`<div class="muted">Start: ${Number(x.start_km).toLocaleString('nl-BE')} km · Eind: ${x.eind_km!=null?Number(x.eind_km).toLocaleString('nl-BE')+' km':''}${km!=null?' · '+km.toLocaleString('nl-BE')+' km gereden':''}</div>`:''}
-      <div>${esc(x.voorzieningen||'')}</div>
-      <p>${esc(x.ervaring||'')}</p>
-      ${x.prijs_per_nacht!=null?`<div class="muted">€ ${Number(x.prijs_per_nacht).toFixed(2)} / nacht</div>`:''}
+      <b>${esc(t.crew)}</b> · ${esc(t.datum)}
+      ${closed?` → ${esc(t.einddatum)}`:' · 🟢 actief'}
+      <div class="muted">${ts.length} stop${ts.length===1?'':'s'}${km!=null?' · '+km.toLocaleString('nl-BE')+' km':''}</div>
+      ${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}<div class="muted">${esc(s.datum)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
+      <button class="secondary" onclick="showTripDetail(${t.id})">Bekijk reis</button>
     </div>`;
-  }).join(''):'Nog geen reizen opgeslagen.';
+  }).join('');
+}
 
-  document.getElementById('tripCount').textContent=data.length;
-  document.getElementById('placeCount').textContent=new Set(data.map(x=>(x.camperplaats||'').toLowerCase())).size;
-  document.getElementById('recent').innerHTML=data.slice(0,3).map(x=>
-    `<div class="item"><b>${esc(x.camperplaats)}</b><div class="muted">${esc(x.crew)} · ${esc(x.datum)}</div></div>`
-  ).join('')||'Nog geen reizen opgeslagen.';
+window.showTripDetail=async(id)=>{
+  const {data:t,error}=await supabase.from('reizen').select('*').eq('id',id).single();
+  if(error)return;
+  const {data:stops}=await supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde');
+  const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
+  const detail=document.getElementById('tripDetail');
+  detail.classList.remove('hidden');
+  detail.innerHTML=`<h2>📖 Reis van ${esc(t.crew)}</h2>
+    <div class="muted">${esc(t.datum)}${t.einddatum?' → '+esc(t.einddatum):' · 🟢 nog actief'}</div>
+    <p><b>Start KM:</b> ${t.start_km!=null?Number(t.start_km).toLocaleString('nl-BE'):'—'}
+    ${t.eind_km!=null?' · <b>Eind KM:</b> '+Number(t.eind_km).toLocaleString('nl-BE'):''}
+    ${km!=null?' · <b>'+km.toLocaleString('nl-BE')+' km gereden</b>':''}</p>
+    <h3>Stops</h3>
+    ${(stops||[]).map(s=>`<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}<div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div><div>${esc(s.voorzieningen||'')}</div><p>${esc(s.ervaring||'')}</p>${s.prijs_per_nacht!=null?'<div class="muted">€ '+Number(s.prijs_per_nacht).toFixed(2)+' / nacht</div>':''}</div>`).join('')||'<div class="muted">Geen stops.</div>'}
+    <br><button class="secondary" onclick="document.getElementById('tripDetail').classList.add('hidden')">Sluiten</button>`;
+  detail.scrollIntoView({behavior:'smooth'});
+};
+
+async function loadStats(){
+  const {data:trips}=await supabase.from('reizen').select('id,einddatum');
+  const {data:stops}=await supabase.from('reis_stops').select('id');
+  document.getElementById('tripCount').textContent=(trips||[]).filter(x=>x.einddatum).length;
+  document.getElementById('stopCount').textContent=(stops||[]).length;
+  const recent=await supabase.from('reis_stops').select('camperplaats,datum,land').order('datum',{ascending:false}).limit(3);
+  document.getElementById('recent').innerHTML=(recent.data||[]).map(x=>`<div class="item"><b>${esc(x.camperplaats||'Onbenoemde stop')}</b><div class="muted">${esc(x.land||'')} · ${esc(x.datum)}</div></div>`).join('')||'Nog geen stops.';
 }
 
 function v(id){return document.getElementById(id).value.trim()}
