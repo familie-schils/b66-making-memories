@@ -648,9 +648,11 @@ async function loadFuel(){
         <b>⛽ ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}
         <div class="muted">${x.locatie?esc(x.locatie)+' · ':''}${x.land?esc(x.land):''}</div>
         <div>${liters.toFixed(2).replace('.',',')} liter · € ${price.toFixed(3).replace('.',',')}/l · <b>€ ${cost.toFixed(2).replace('.',',')}</b></div>
-        ${distance!=null
+        ${consumption!=null
           ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · ${consumption.toFixed(2).replace('.',',')} l/100 km</div>`
-          :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>'}
+          :distance!=null
+            ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · verbruik niet berekend (liters ontbreken of zijn 0)</div>`
+            :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>'}
       </div>`;
     }).join(''):'Nog geen tankbeurten opgeslagen.';
 
