@@ -225,7 +225,14 @@ if(session)showApp();else showLogin();
 supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
 }
 function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
-async function showApp(){loginView.classList.add('hidden');appView.classList.remove('hidden');await loadTrips();await prepareFuelForm();await loadFuel();await loadStats()}
+async function showApp(){
+loginView.classList.add('hidden');
+appView.classList.remove('hidden');
+await loadTrips();
+await loadStats();
+try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
+await loadFuel();
+}
 
 window.login=async()=>{
 const box=document.getElementById('loginError');box.classList.add('hidden');
@@ -611,36 +618,46 @@ async function prepareFuelForm(){
 
 async function loadFuel(){
   const list=document.getElementById('fuelList');
-  const {data,error}=await supabase.from('tankbeurten')
-    .select('*').order('kmstand',{ascending:true});
-  if(error){
-    list.textContent='Laden mislukt: '+error.message;
-    list.className='status err';return;
+  if(!list)return;
+  list.textContent='Tankbeurten laden...';
+  try{
+    const result=await supabase.from('tankbeurten')
+      .select('*')
+      .order('kmstand',{ascending:true});
+
+    if(result.error){
+      list.textContent='Laden mislukt: '+result.error.message;
+      list.className='status err';
+      return;
+    }
+
+    let totalLiters=0,totalCost=0;
+    const rows=result.data||[];
+
+    list.innerHTML=rows.length?rows.map((x,i)=>{
+      totalLiters+=Number(x.liters||0);
+      totalCost+=Number(x.totaalbedrag||0);
+      const prev=rows[i-1];
+      const distance=prev?Number(x.kmstand)-Number(prev.kmstand):null;
+      const consumption=(distance>0&&Number(x.liters)>0)?Number(x.liters)/distance*100:null;
+
+      return `<div class="item">
+        <b>⛽ ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}
+        <div class="muted">${x.locatie?esc(x.locatie)+' · ':''}${x.land?esc(x.land):''}</div>
+        <div>${Number(x.liters).toFixed(2).replace('.',',')} liter · € ${Number(x.prijs_per_liter).toFixed(3).replace('.',',')}/l · <b>€ ${Number(x.totaalbedrag).toFixed(2).replace('.',',')}</b></div>
+        ${distance!=null
+          ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · ${consumption.toFixed(2).replace('.',',')} l/100 km</div>`
+          :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>'}
+      </div>`;
+    }).join(''):'Nog geen tankbeurten opgeslagen.';
+
+    document.getElementById('fuelTotalLiters').textContent=totalLiters.toFixed(2).replace('.',',')+' l';
+    document.getElementById('fuelTotalCost').textContent='€ '+totalCost.toFixed(2).replace('.',',');
+    document.getElementById('fuelCount').textContent=rows.length;
+  }catch(err){
+    list.textContent='Laden mislukt: '+(err?.message||String(err));
+    list.className='status err';
   }
-
-  let totalLiters=0,totalCost=0;
-  const rows=data||[];
-
-  list.innerHTML=rows.length?rows.map((x,i)=>{
-    totalLiters+=Number(x.liters||0);
-    totalCost+=Number(x.totaalbedrag||0);
-    const prev=rows[i-1];
-    const distance=prev?Number(x.kmstand)-Number(prev.kmstand):null;
-    const consumption=(distance&&Number(x.liters)>0)?Number(x.liters)/distance*100:null;
-
-    return `<div class="item">
-      <b>⛽ ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}
-      <div class="muted">${x.locatie?esc(x.locatie)+' · ':''}${x.land?esc(x.land):''}</div>
-      <div>${Number(x.liters).toFixed(2).replace('.',',')} liter · € ${Number(x.prijs_per_liter).toFixed(3).replace('.',',')}/l · <b>€ ${Number(x.totaalbedrag).toFixed(2).replace('.',',')}</b></div>
-      ${distance!=null
-        ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · ${consumption.toFixed(2).replace('.',',')} l/100 km</div>`
-        :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>'}
-    </div>`;
-  }).join(''):'Nog geen tankbeurten opgeslagen.';
-
-  document.getElementById('fuelTotalLiters').textContent=totalLiters.toFixed(2).replace('.',',')+' l';
-  document.getElementById('fuelTotalCost').textContent='€ '+totalCost.toFixed(2).replace('.',',');
-  document.getElementById('fuelCount').textContent=rows.length;
 }
 
 async function loadStats(){
