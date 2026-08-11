@@ -635,16 +635,19 @@ async function loadFuel(){
     const rows=result.data||[];
 
     list.innerHTML=rows.length?rows.map((x,i)=>{
-      totalLiters+=Number(x.liters||0);
-      totalCost+=Number(x.totaalbedrag||0);
+      const liters=Number(x.liters||0);
+      const price=Number(x.prijs_per_liter||0);
+      const cost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*price;
+      totalLiters+=liters;
+      totalCost+=cost;
       const prev=rows[i-1];
       const distance=prev?Number(x.kmstand)-Number(prev.kmstand):null;
-      const consumption=(distance>0&&Number(x.liters)>0)?Number(x.liters)/distance*100:null;
+      const consumption=(distance>0&&liters>0)?liters/distance*100:null;
 
       return `<div class="item">
         <b>⛽ ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}
         <div class="muted">${x.locatie?esc(x.locatie)+' · ':''}${x.land?esc(x.land):''}</div>
-        <div>${Number(x.liters).toFixed(2).replace('.',',')} liter · € ${Number(x.prijs_per_liter).toFixed(3).replace('.',',')}/l · <b>€ ${Number(x.totaalbedrag).toFixed(2).replace('.',',')}</b></div>
+        <div>${liters.toFixed(2).replace('.',',')} liter · € ${price.toFixed(3).replace('.',',')}/l · <b>€ ${cost.toFixed(2).replace('.',',')}</b></div>
         ${distance!=null
           ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · ${consumption.toFixed(2).replace('.',',')} l/100 km</div>`
           :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>'}
@@ -688,8 +691,11 @@ async function loadStats(){
   const sortedTanks=[...tankRows].sort((a,b)=>Number(a.kmstand)-Number(b.kmstand));
   let intervalLiters=0,intervalKm=0,totalLiters=0,totalCost=0;
   sortedTanks.forEach((x,i)=>{
-    totalLiters+=Number(x.liters||0);
-    totalCost+=Number(x.totaalbedrag||0);
+    const liters=Number(x.liters||0);
+    const price=Number(x.prijs_per_liter||0);
+    const cost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*price;
+    totalLiters+=liters;
+    totalCost+=cost;
     if(i>0){
       intervalKm+=Number(x.kmstand)-Number(sortedTanks[i-1].kmstand);
       intervalLiters+=Number(x.liters||0);
