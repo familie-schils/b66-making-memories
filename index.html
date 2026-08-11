@@ -431,7 +431,7 @@ async function updateFuelCalcAsync(km,liters){
 }
 ['fKm','fLiters','fPrice'].forEach(id=>document.getElementById(id).addEventListener('input',updateFuelCalc));
 
-async function addFuel(){
+window.addFuel=async()=>{
   const status=document.getElementById('fuelStatus'); status.className='status hidden';
   const datum=v('fDate'),kmText=v('fKm'),litersText=v('fLiters'),priceText=v('fPrice');
   if(!datum||kmText===''||litersText===''||priceText===''){status.textContent='Vul minimaal datum, KM-stand, liters en prijs per liter in.';status.className='status err';return}
