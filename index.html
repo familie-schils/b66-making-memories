@@ -74,8 +74,8 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div class="trip-header">
 <h3 style="margin-top:0">Kilometerstand van deze reis</h3>
 <div class="grid">
-<div><label>Start KM</label><input id="tStartKm" type="number" min="0" step="1"></div>
-<div><label>Eind KM</label><input id="tEndKm" type="number" min="0" step="1"></div>
+<div><label>Start KM</label><input id="tStartKm" type="number" min="0" step="1" readonly></div>
+<div><label>Eind KM</label><input id="tEndKm" type="number" min="0" step="1" readonly placeholder="Bij einde reis"></div>
 <div><div id="kmResult" class="km-result">🚐 KM gereden: —</div></div>
 </div>
 </div>
@@ -120,7 +120,8 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
 
 <div id="activeTripInfo" class="muted"></div><br>
-<button class="primary" onclick="nextStop()">➡️ Stop opslaan & volgende stop</button>
+<button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
+<button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
 <button class="secondary" onclick="showEndTrip()">🏁 Einde reis</button>
 <button class="secondary" onclick="cancelTrip()">Annuleren</button>
 
@@ -128,8 +129,9 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <h3>🏁 Einde reis</h3>
 <div class="grid">
 <div><label>Einddatum</label><input id="tEndDate" type="date"></div>
+<div><label>Eind KM</label><input id="tEndKmEndBox" type="number" min="0" step="1" placeholder="Bij thuiskomst"></div>
 </div>
-<p class="muted">De eind KM staat hierboven bij de kilometerstand van deze reis.</p>
+<p class="muted">De Eind KM is de kilometerstand bij thuiskomst / einde van deze reis.</p>
 <button class="primary" onclick="finishTrip()">✓ Reis afsluiten</button>
 <button class="secondary" onclick="hideEndTrip()">Terug</button>
 </div>
@@ -234,8 +236,10 @@ if(error){box.textContent=error.message;box.classList.remove('hidden')}
 };
 window.logout=()=>supabase.auth.signOut();
 
+let currentStopSaved=false;
+
 window.startNewTrip=async()=>{
-activeTripId=null;stopNumber=1;
+activeTripId=null;stopNumber=1;currentStopSaved=false;
 document.getElementById('tripChooser').classList.add('hidden');
 document.getElementById('tripDetail').classList.add('hidden');
 document.getElementById('tripForm').classList.remove('hidden');
@@ -247,8 +251,12 @@ document.getElementById('tStartDate').value=today();
 document.getElementById('sDate').value=today();
 document.getElementById('tStartKm').value='';
 document.getElementById('tEndKm').value='';
+document.getElementById('tEndKm').readOnly=true;
+document.getElementById('tEndKmEndBox').value='';
 document.getElementById('kmResult').textContent='🚐 KM gereden: —';
 document.getElementById('activeTripInfo').textContent='';
+document.getElementById('saveStopBtn').classList.remove('hidden');
+document.getElementById('nextStopBtn').classList.add('hidden');
 clearStopFields();
 showStatus('',true);
 
@@ -258,19 +266,21 @@ if(latest!=null){
   document.getElementById('activeTripInfo').textContent=
     'Start KM automatisch overgenomen van de hoogste bekende B66-kilometerstand: '+
     Number(latest).toLocaleString('nl-BE')+' km';
-  updateKm();
 }
 };
 
 function updateKm(){
-const s=v('tStartKm'),e=v('tEndKm'),el=document.getElementById('kmResult');
+const s=v('tStartKm'),e=v('tEndKmEndBox')||v('tEndKm'),el=document.getElementById('kmResult');
 if(s===''||e===''){el.textContent='🚐 KM gereden: —';return}
 const diff=Number(e)-Number(s);
 if(diff<0){el.textContent='⚠️ Eind KM is lager dan Start KM';return}
 el.textContent='🚐 KM gereden: '+diff.toLocaleString('nl-BE')+' km';
 }
-document.getElementById('tStartKm').addEventListener('input',updateKm);
 document.getElementById('tEndKm').addEventListener('input',updateKm);
+document.getElementById('tEndKmEndBox').addEventListener('input',()=>{
+document.getElementById('tEndKm').value=document.getElementById('tEndKmEndBox').value;
+updateKm();
+});
 
 async function ensureTripCreated(){
 if(activeTripId)return true;
@@ -288,9 +298,14 @@ if(error){showStatus('Reis starten mislukt: '+error.message,false);return false}
 activeTripId=data.id;return true;
 }
 
-async function nextStop(){
+async function saveCurrentStop(){
 showStatus('',true);
 if(!(await ensureTripCreated()))return;
+
+if(currentStopSaved){
+  showStatus('Deze stop is al opgeslagen. Kies "Naar stop '+(stopNumber+1)+'".',false);
+  return;
+}
 
 const stop={
 reis_id:activeTripId,
@@ -305,52 +320,106 @@ voorzieningen:v('sFacilities'),
 ervaring:v('sNotes')
 };
 
-if(!stop.camperplaats){showStatus('Vul minimaal de naam / plaats van de stop in.',false);return}
+if(!stop.camperplaats){
+  showStatus('Vul minimaal de naam / plaats van de stop in.',false);
+  return;
+}
 
 const {error}=await supabase.from('reis_stops').insert(stop);
-if(error){showStatus('Stop opslaan mislukt: '+error.message,false);return}
+if(error){
+  showStatus('Stop opslaan mislukt: '+error.message,false);
+  return;
+}
 
-showStatus('✓ Stop opgeslagen. Klaar voor de volgende stop.',true);
+currentStopSaved=true;
+showStatus('✓ Stop '+stopNumber+' opgeslagen.',true);
+document.getElementById('saveStopBtn').classList.add('hidden');
+const nextBtn=document.getElementById('nextStopBtn');
+nextBtn.textContent='➡️ Naar stop '+(stopNumber+1);
+nextBtn.classList.remove('hidden');
+document.getElementById('activeTripInfo').textContent=
+  'Reis actief · '+stopNumber+' stop'+(stopNumber===1?'':'s')+' opgeslagen';
+await loadTrips();
+await loadStats();
+}
+
+function prepareNextStop(){
+if(!currentStopSaved){
+  showStatus('Sla eerst de huidige stop op.',false);
+  return;
+}
 stopNumber++;
+currentStopSaved=false;
 document.getElementById('tripStartFields').classList.add('hidden');
 document.getElementById('tripTitle').textContent='🚐 Reis actief';
 document.getElementById('stopHeading').textContent='📍 Stop '+stopNumber;
-document.getElementById('activeTripInfo').textContent='Reis actief · '+(stopNumber-1)+' stop'+((stopNumber-1)===1?'':'s')+' opgeslagen';
+document.getElementById('activeTripInfo').textContent=
+  'Reis actief · vul de gegevens van stop '+stopNumber+' in';
+document.getElementById('saveStopBtn').classList.remove('hidden');
+document.getElementById('nextStopBtn').classList.add('hidden');
 clearStopFields();
-await loadTrips();await loadStats();
 }
 
 function showEndTrip(){
-if(!activeTripId){showStatus('Sla eerst minimaal één stop op.',false);return}
+if(!activeTripId){
+  showStatus('Start eerst een reis.',false);
+  return;
+}
+if(!currentStopSaved){
+  showStatus('Sla eerst stop '+stopNumber+' op voordat je de reis afsluit.',false);
+  return;
+}
 document.getElementById('endBox').classList.remove('hidden');
 document.getElementById('tEndDate').value=today();
+document.getElementById('tEndKmEndBox').value='';
+document.getElementById('tEndKm').value='';
+document.getElementById('tEndKm').readOnly=true;
 document.getElementById('endBox').scrollIntoView({behavior:'smooth',block:'center'});
 }
-function hideEndTrip(){document.getElementById('endBox').classList.add('hidden')}
+
+function hideEndTrip(){
+document.getElementById('endBox').classList.add('hidden');
+}
 
 async function finishTrip(){
-const endDate=v('tEndDate'),start=v('tStartKm'),end=v('tEndKm');
-if(!endDate||start===''||end===''){showStatus('Vul Einddatum en Eind KM in.',false);return}
+const endDate=v('tEndDate'),start=v('tStartKm'),end=v('tEndKmEndBox');
+if(!endDate||start===''||end===''){
+showStatus('Vul Einddatum en Eind KM in.',false);
+return;
+}
 const endKm=Number(end),startKm=Number(start);
-if(!Number.isInteger(endKm)||endKm<0){showStatus('Vul een geldige Eind KM in.',false);return}
-if(endKm<startKm){showStatus('Eind KM mag niet lager zijn dan Start KM.',false);return}
+if(!Number.isInteger(endKm)||endKm<0){
+showStatus('Vul een geldige Eind KM in.',false);
+return;
+}
+if(endKm<startKm){
+showStatus('Eind KM mag niet lager zijn dan Start KM.',false);
+return;
+}
+
+document.getElementById('tEndKm').value=endKm;
 
 const {error}=await supabase.from('reizen').update({
 einddatum:endDate,eind_km:endKm
 }).eq('id',activeTripId);
 
-if(error){showStatus('Reis afsluiten mislukt: '+error.message,false);return}
+if(error){
+showStatus('Reis afsluiten mislukt: '+error.message,false);
+return;
+}
 
 const gereden=endKm-startKm;
 showStatus('✓ Reis afgesloten · '+gereden.toLocaleString('nl-BE')+' km gereden.',true);
-activeTripId=null;stopNumber=1;
+activeTripId=null;stopNumber=1;currentStopSaved=false;
 document.getElementById('tripForm').classList.add('hidden');
+document.getElementById('saveStopBtn').classList.remove('hidden');
+document.getElementById('nextStopBtn').classList.add('hidden');
 document.getElementById('tripChooser').classList.remove('hidden');
 document.getElementById('endBox').classList.add('hidden');
 await loadTrips();await loadStats();
 }
 
-window.nextStop=nextStop;window.showEndTrip=showEndTrip;window.hideEndTrip=hideEndTrip;window.finishTrip=finishTrip;
+window.saveCurrentStop=saveCurrentStop;window.prepareNextStop=prepareNextStop;window.showEndTrip=showEndTrip;window.hideEndTrip=hideEndTrip;window.finishTrip=finishTrip;
 
 function clearStopFields(){
 ['sPlace','sCountry','sPrice','sFacilities','sNotes'].forEach(id=>document.getElementById(id).value='');
@@ -359,7 +428,7 @@ document.getElementById('sType').value='Camperplaats';
 document.getElementById('sDate').value=today();
 }
 function cancelTrip(){
-activeTripId=null;stopNumber=1;
+activeTripId=null;stopNumber=1;currentStopSaved=false;
 document.getElementById('tripForm').classList.add('hidden');
 document.getElementById('tripChooser').classList.remove('hidden');
 }
