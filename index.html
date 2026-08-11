@@ -75,7 +75,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <h3 style="margin-top:0">Kilometerstand van deze reis</h3>
 <div class="grid">
 <div><label>Start KM</label><input id="tStartKm" type="number" min="0" step="1" readonly></div>
-<div><label>Eind KM</label><input id="tEndKm" type="number" min="0" step="1" readonly placeholder="Bij einde reis"></div>
+<div><label>Eind KM</label><input id="tEndKm" type="text" inputmode="numeric" autocomplete="off" readonly placeholder="Bij einde reis"></div>
 <div><div id="kmResult" class="km-result">🚐 KM gereden: —</div></div>
 </div>
 </div>
@@ -129,7 +129,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <h3>🏁 Einde reis</h3>
 <div class="grid">
 <div><label>Einddatum</label><input id="tEndDate" type="date"></div>
-<div><label>Eind KM</label><input id="tEndKmEndBox" type="number" min="0" step="1" placeholder="Bij thuiskomst"></div>
+<div><label>Eind KM</label><input id="tEndKmEndBox" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Bij thuiskomst"></div>
 </div>
 <p class="muted">De Eind KM is de kilometerstand bij thuiskomst / einde van deze reis.</p>
 <button class="primary" onclick="finishTrip()">✓ Reis afsluiten</button>
@@ -284,8 +284,10 @@ if(diff<0){el.textContent='⚠️ Eind KM is lager dan Start KM';return}
 el.textContent='🚐 KM gereden: '+diff.toLocaleString('nl-BE')+' km';
 }
 document.getElementById('tEndKm').addEventListener('input',updateKm);
-document.getElementById('tEndKmEndBox').addEventListener('input',()=>{
-document.getElementById('tEndKm').value=document.getElementById('tEndKmEndBox').value;
+document.getElementById('tEndKmEndBox').addEventListener('input',function(){
+const clean=this.value.replace(/\D/g,'');
+this.value=clean;
+document.getElementById('tEndKm').value=clean;
 updateKm();
 });
 
@@ -394,8 +396,9 @@ if(!endDate||start===''||end===''){
 showStatus('Vul Einddatum en Eind KM in.',false);
 return;
 }
-const endKm=Number(end),startKm=Number(start);
-if(!Number.isInteger(endKm)||endKm<0){
+const cleanEndKm=String(end).replace(/\D/g,'');
+const endKm=Number(cleanEndKm),startKm=Number(start);
+if(cleanEndKm===''||!Number.isInteger(endKm)||endKm<0){
 showStatus('Vul een geldige Eind KM in.',false);
 return;
 }
