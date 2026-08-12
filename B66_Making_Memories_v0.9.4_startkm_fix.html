@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Making Memories</title>
+<style>
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f3f4f6;color:#20252b}
+header{background:#20252b;color:white;padding:20px}
+header h1{margin:0}
+nav{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:0;z-index:2;overflow:auto}
+nav button{padding:10px;border:0;border-radius:8px;white-space:nowrap}
+nav .active{background:#20252b;color:white}
+main{max-width:900px;margin:auto;padding:18px}
+section{display:none}.active{display:block}
+.card{background:white;border:1px solid #ddd;border-radius:14px;padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{font-weight:700;font-size:13px;display:block;margin-bottom:5px}
+input,select,textarea{width:100%;padding:10px;border:1px solid #bbb;border-radius:8px;font:inherit;box-sizing:border-box}
+textarea{min-height:90px}
+button{font:inherit}
+.primary{background:#20252b;color:white;padding:11px 15px;border:0;border-radius:9px;font-weight:700;cursor:pointer}
+.secondary{background:#eee;color:#20252b;padding:10px 13px;border:0;border-radius:9px;font-weight:700;cursor:pointer}
+.item{border-top:1px solid #ddd;padding:12px 0}
+.muted{color:#66717d;font-size:13px}
+.big{font-size:30px;font-weight:800}
+.status{padding:10px;border-radius:8px;margin:10px 0}
+.ok{background:#eaf7ed}.err{background:#fff0f0;color:#9d2222}
+.hidden{display:none!important}.login{max-width:430px;margin:30px auto}
+.km-result{font-size:21px;font-weight:800;padding-top:24px}
+.trip-stop{border-left:4px solid #ddd;padding-left:12px;margin:10px 0}
+.end-box{background:#f7f7f7;border-radius:12px;padding:14px;margin-top:18px}
+.trip-header{background:#f7f7f7;border-radius:12px;padding:14px;margin-bottom:18px}
+.fuel-summary{background:#f7f7f7;border-radius:12px;padding:14px;margin-bottom:18px}
+.fuel-number{font-size:24px;font-weight:800}
+hr{border:0;border-top:1px solid #ddd;margin:18px 0}
+</style>
+</head>
+<body>
+<header><h1 id="siteTitle">🚐 Making Memories</h1><p>Versie 0.9.4 · Start KM uit laatste afgesloten reis · KM per stop · Meerdere campers</p></header>
+
+<div id="loginView" class="card login">
+<h2>Welkom bij Making Memories</h2>
+<p class="muted">Log in om jullie gezamenlijke reislogboek te gebruiken.</p>
+<div id="loginError" class="status err hidden"></div>
+<label>E-mailadres</label><input id="email" type="email"><br><br>
+<label>Wachtwoord</label><input id="password" type="password"><br><br>
+<button id="loginButton" class="primary" type="button" onclick="login()">Inloggen</button>
+</div>
+
+<div id="appView" class="hidden">
+<nav>
+<button data-tab="trips" class="active">Reizen</button>
+<button data-tab="fuel">⛽ Tanken</button>
+<button data-tab="home">Dashboard</button>
+<button data-tab="maintenance">Onderhoud</button>
+<button data-tab="camper" id="camperTabButton">Mijn camper</button>
+<button onclick="logout()">Uitloggen</button>
+</nav>
+
+<main>
+<section id="trips" class="active">
+
+<div id="tripChooser" class="card">
+<h2>🚐 Reizen</h2>
+<button id="newTripButton" class="primary" type="button">＋ Nieuwe reis starten</button>
+<div id="tripList" style="margin-top:14px">Reizen laden...</div>
+</div>
+
+<div id="tripForm" class="card hidden">
+<h2 id="tripTitle">🚐 Nieuwe reis</h2>
+<div id="tripStatus" class="status hidden"></div>
+
+<div class="trip-header">
+<h3 style="margin-top:0">Kilometerstand van deze reis</h3>
+<div class="grid">
+<div><label>Start KM</label><input id="tStartKm" type="number" min="0" step="1" readonly></div>
+
+<div><div id="kmResult" class="km-result">🚐 KM gereden: —</div></div>
+</div>
+</div>
+
+<div id="tripStartFields">
+<h3>🚐 Start van de reis</h3>
+<div class="grid">
+<div><label>Wie maakt de reis?</label><select id="tCrew">
+<option>Elly & Marcel</option>
+<option>Jente & Laura</option>
+<option>Elle & Kenneth</option>
+<option>Tommy-Lee</option>
+</select></div>
+<div><label>Startdatum</label><input id="tStartDate" type="date"></div>
+</div>
+</div>
+
+<hr>
+
+<h3 id="stopHeading">📍 Eerste stop</h3>
+<div class="grid">
+<div><label>Datum stop</label><input id="sDate" type="date"></div>
+<div><label>KM-stand stop</label><input id="sKm" type="number" min="0" step="1" inputmode="numeric" placeholder="bijv. 2300">
+<div id="stopKmHint" class="muted">KM-stand van deze stop.</div></div>
+<div><label>Type stop</label><select id="sType">
+<option>Camperplaats</option>
+<option>Camping</option>
+<option>Parkeerplaats</option>
+<option>Andere</option>
+</select></div>
+<div><label>Naam / plaats</label><input id="sPlace"></div>
+<div><label>Land</label><input id="sCountry"></div>
+<div><label>Prijs per nacht (€)</label><input id="sPrice" type="number" min="0" step=".01"></div>
+<div><label>Beoordeling</label><select id="sRating">
+<option value="5">★★★★★</option>
+<option value="4">★★★★☆</option>
+<option value="3">★★★☆☆</option>
+<option value="2">★★☆☆☆</option>
+<option value="1">★☆☆☆☆</option>
+</select></div>
+</div>
+<br>
+<label>Voorzieningen / indruk</label><input id="sFacilities"><br><br>
+<label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
+
+<div id="activeTripInfo" class="muted"></div><br>
+<button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
+<button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
+<button class="secondary" onclick="showEndTrip()">🏁 Einde reis</button>
+<button class="secondary" onclick="cancelTrip()">Annuleren</button>
+
+<div id="endBox" class="end-box hidden">
+<h3>🏁 Einde reis</h3>
+<div class="grid">
+<div><label>Einddatum</label><input id="tEndDate" type="date"></div>
+<div><label>Eind KM</label><input id="tEndKmEndBox" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Bij thuiskomst"></div>
+</div>
+<p class="muted">De Eind KM is de kilometerstand bij thuiskomst / einde van deze reis.</p>
+<button class="primary" onclick="finishTrip()">✓ Reis afsluiten</button>
+<button class="secondary" onclick="hideEndTrip()">Terug</button>
+</div>
+</div>
+
+<div id="tripDetail" class="card hidden"></div>
+</section>
+
+
+<section id="fuel">
+<div class="card">
+<h2>⛽ Tanken</h2>
+<p class="muted">Houd alle tankbeurten van de B66 bij. De app berekent automatisch de kilometers sinds de vorige tankbeurt en het verbruik.</p>
+<div class="fuel-summary">
+<div class="grid">
+<div><div class="muted">Totaal diesel</div><div class="fuel-number" id="fuelTotalLiters">0,00 l</div></div>
+<div><div class="muted">Totaal uitgegeven</div><div class="fuel-number" id="fuelTotalCost">€ 0,00</div></div>
+<div><div class="muted">Tankbeurten</div><div class="fuel-number" id="fuelCount">0</div></div>
+</div>
+</div>
+<h3>Nieuwe tankbeurt</h3>
+<div id="fuelStatus" class="status hidden"></div>
+<div class="grid">
+<div><label>Datum</label><input id="fDate" type="date"></div>
+<div><label>KM-stand</label><input id="fKm" type="number" min="0" step="1"><div id="fuelKmHint" class="muted" style="margin-top:5px"></div></div>
+<div><label>Liters diesel</label><input id="fLiters" type="number" min="0" step="0.01"></div>
+<div><label>Prijs per liter (€)</label><input id="fPrice" type="number" min="0" step="0.001"></div>
+<div><label>Waar getankt?</label><input id="fLocation"></div>
+<div><label>Land</label><input id="fCountry"></div>
+</div>
+<br>
+<div id="fuelCalc" class="muted">Totaalbedrag: € 0,00 · KM sinds vorige tankbeurt: — · Verbruik: —</div>
+<br>
+<button class="primary" onclick="addFuel()">⛽ Tankbeurt opslaan</button>
+</div>
+<div class="card"><h2>Tankhistorie</h2><div id="fuelList">Tankbeurten laden...</div></div>
+</section>
+
+<section id="home">
+<div class="card">
+<div class="muted">Camper</div><div class="big">Bürstner B66 TD 690 G</div>
+<div>Fiat Ducato · 140 pk · 8-traps automaat</div>
+</div>
+
+<div class="grid">
+<div class="card"><div class="muted">Huidige KM-stand</div><div class="big" id="odometer">—</div></div>
+<div class="card"><div class="muted">KM geregistreerd</div><div class="big" id="totalKm">—</div></div>
+<div class="card"><div class="muted">Gemiddeld verbruik</div><div class="big" id="avgConsumption">—</div></div>
+<div class="card"><div class="muted">Dieselkosten</div><div class="big" id="fuelCost">€ 0,00</div></div>
+</div>
+
+<div class="grid">
+<div class="card"><div class="muted">Afgeronde reizen</div><div class="big" id="tripCount">0</div></div>
+<div class="card"><div class="muted">Stops</div><div class="big" id="stopCount">0</div></div>
+<div class="card"><div class="muted">Diesel getankt</div><div class="big" id="dashboardLiters">0,00 l</div></div>
+<div class="card"><div class="muted">Tankbeurten</div><div class="big" id="dashboardFuelCount">0</div></div>
+</div>
+
+<div class="card"><h2>Laatste herinneringen</h2><div id="recent">Laden...</div></div>
+</section>
+
+<section id="maintenance"><div class="card"><h2>Onderhoud</h2><p class="muted">Komt in een volgende versie.</p></div></section>
+
+<section id="camper"><div class="card"><h2 id="camperSectionTitle">Mijn camper</h2><div class="grid">
+<div><label>Model</label><input id="camperModel" value="—" readonly></div>
+<div><label>Basisvoertuig</label><input id="camperBase" value="—" readonly></div>
+<div><label>Motor</label><input id="camperMotor" value="—" readonly></div>
+<div><label>Versnellingsbak</label><input id="camperGearbox" value="—" readonly></div>
+<div><label>Max. massa</label><input id="camperMass" value="—" readonly></div>
+</div></div></section>
+</main>
+</div>
+
+<script type="module">
+import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase=createClient(
+'https://hktczewqpevvgxqcswov.supabase.co',
+'sb_publishable_YmfLKfk25pED0oqoTbSYPA_LWhZIuZC'
+);
+let currentCamperId=null;
+let currentCamperName='';
+
+async function loadCurrentCamper(){
+  currentCamperId=null;
+  currentCamperName='';
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user) return false;
+  const {data:links,error:linkError}=await supabase
+    .from('camper_users').select('camper_id').eq('user_id',user.id);
+  if(linkError || !links?.length){
+    console.error('Camper koppeling laden mislukt:',linkError?.message||'geen camper gekoppeld');
+    return false;
+  }
+  currentCamperId=links[0].camper_id;
+  const {data:camper,error:camperError}=await supabase
+    .from('campers').select('id,naam').eq('id',currentCamperId).single();
+  if(camperError){
+    console.error('Camper laden mislukt:',camperError.message);
+    currentCamperId=null;
+    return false;
+  }
+  currentCamperName=camper.naam;
+  const label=currentCamperName;
+  const siteTitle=document.getElementById('siteTitle');
+  const dashboardCamperName=document.getElementById('dashboardCamperName');
+  const camperSectionTitle=document.getElementById('camperSectionTitle');
+  const camperTabButton=document.getElementById('camperTabButton');
+  if(siteTitle) siteTitle.textContent='🚐 '+label;
+  if(dashboardCamperName) dashboardCamperName.textContent=label;
+  if(camperSectionTitle) camperSectionTitle.textContent='Mijn camper · '+label;
+  if(camperTabButton) camperTabButton.textContent='Mijn camper';
+  return true;
+}
+
+function requireCamper(){
+  if(!currentCamperId){
+    showStatus('Geen camper aan dit account gekoppeld. Neem contact op met de beheerder.',false);
+    return false;
+  }
+  return true;
+}
+
+
+let activeTripId=null;
+let stopNumber=1;
+
+const loginView=document.getElementById('loginView');
+const appView=document.getElementById('appView');
+
+async function init(){
+const {data:{session}}=await supabase.auth.getSession();
+if(session)showApp();else showLogin();
+supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
+}
+function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
+async function showApp(){
+loginView.classList.add('hidden');
+appView.classList.remove('hidden');
+const camperOk=await loadCurrentCamper();
+if(!camperOk){
+  document.getElementById('tripList').textContent='Geen camper aan dit account gekoppeld.';
+  return;
+}
+await loadTrips();
+await loadStats();
+try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
+await loadFuel();
+}
+
+window.login=async()=>{
+  const box=document.getElementById('loginError');
+  box.classList.add('hidden');
+  const {error}=await supabase.auth.signInWithPassword({
+    email:document.getElementById('email').value.trim(),
+    password:document.getElementById('password').value
+  });
+  if(error){
+    box.textContent=error.message;
+    box.classList.remove('hidden');
+  }
+};
+
+window.logout=()=>supabase.auth.signOut();
+
+let currentStopSaved=false;
+
+window.startNewTrip=async()=>{
+  activeTripId=null;
+
+  document.getElementById('tripChooser').classList.add('hidden');
+  document.getElementById('tripForm').classList.remove('hidden');
+  document.getElementById('tripStartFields').classList.remove('hidden');
+  document.getElementById('endBox').classList.add('hidden');
+
+  document.getElementById('tStartDate').value=today();
+  document.getElementById('sDate').value=today();
+
+  // A new trip always starts with a blank End KM.
+  document.getElementById('tStartKm').value='';
+  document.getElementById('tEndKmEndBox').value='';
+  document.getElementById('kmResult').textContent='🚐 KM gereden: —';
+  document.getElementById('activeTripInfo').textContent='';
+
+  document.getElementById('saveStopBtn').classList.remove('hidden');
+  document.getElementById('nextStopBtn').classList.add('hidden');
+  clearStopFields();
+  showStatus('',true);
+
+  if(!currentCamperId){
+    showStatus('Geen camper gekoppeld aan dit account.',false);
+    return;
+  }
+
+  // Start KM of a new trip comes ONLY from the last completed trip's End KM.
+  // Fuel/tank KM must never influence the start of a new trip.
+  const {data:lastCompletedTrip,error}=await supabase
+    .from('reizen')
+    .select('id,eind_km,einddatum')
+    .eq('camper_id',currentCamperId)
+    .not('eind_km','is',null)
+    .order('einddatum',{ascending:false,nullsFirst:false})
+    .order('id',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if(error){
+    showStatus('Start KM laden mislukt: '+error.message,false);
+    return;
+  }
+
+  // Only for the very first trip, when no completed trip exists yet,
+  // use the existing odometer fallback.
+  const latest=lastCompletedTrip?.eind_km!=null
+    ? Number(lastCompletedTrip.eind_km)
+    : await getLatestOdometer();
+
+  // Set Start KM only. Explicitly clear both End KM fields AFTER the query too,
+  // so an old End KM can never leak into the new trip.
+  document.getElementById('tEndKmEndBox').value='';
+  document.getElementById('kmResult').textContent='🚐 KM gereden: —';
+
+  if(latest!=null){
+    document.getElementById('tStartKm').value=String(latest);
+    document.getElementById('activeTripInfo').textContent=
+      'Start KM automatisch overgenomen van de eind KM van de vorige reis: '+
+      Number(latest).toLocaleString('nl-BE')+' km';
+  }
+};
+
+function updateKm(){
+ const s=v('tStartKm'),e=v('tEndKmEndBox'),el=document.getElementById('kmResult');
+ if(s===''||e===''){el.textContent='🚐 KM gereden: —';return}
+ const diff=Number(e)-Number(s);
+ if(diff<0){el.textContent='⚠️ Eind KM is lager dan Start KM';return}
+ el.textContent='🚐 KM gereden: '+diff.toLocaleString('nl-BE')+' km';
+}
+document.getElementById('tEndKmEndBox').addEventListener('input',function(){
+const clean=this.value.replace(/\D/g,'');
+this.value=clean;
+updateKm();
+});
+
+async function ensureTripCreated(){
+if(activeTripId)return true;
+const startDate=v('tStartDate'),startKmText=v('tStartKm');
+if(!v('tCrew')||!startDate||startKmText===''){
+showStatus('Vul eerst wie, startdatum en Start KM in.',false);return false}
+const startKm=Number(startKmText);
+if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige Start KM in.',false);return false}
+
+if(!requireCamper())return false;
+const {data,error}=await supabase.from('reizen').insert({
+datum:startDate,crew:v('tCrew'),start_km:startKm,camper_id:currentCamperId
+}).select().single();
+
+if(error){showStatus('Reis starten mislukt: '+error.message,false);return false}
+activeTripId=data.id;return true;
+}
+
+async function saveCurrentStop(){
+showStatus('',true);
+if(!(await ensureTripCreated()))return;
+
+if(currentStopSaved){
+  showStatus('Deze stop is al opgeslagen. Kies "Naar stop '+(stopNumber+1)+'".',false);
+  return;
+}
+
+const stopKmText=v('sKm');
+if(stopKmText===''){
+  showStatus('Vul de KM-stand van deze stop in.',false);
+  return;
+}
+const stopKm=Number(stopKmText);
+if(!Number.isInteger(stopKm)||stopKm<0){
+  showStatus('Vul een geldige KM-stand van deze stop in.',false);
+  return;
+}
+
+const stop={
+reis_id:activeTripId,
+volgorde:stopNumber,
+datum:v('sDate')||v('tStartDate'),
+kmstand:stopKm,
+type_stop:v('sType'),
+camperplaats:v('sPlace'),
+land:v('sCountry'),
+prijs_per_nacht:v('sPrice')?Number(v('sPrice')):null,
+beoordeling:Number(v('sRating')),
+voorzieningen:v('sFacilities'),
+ervaring:v('sNotes')
+};
+
+if(!stop.camperplaats){
+  showStatus('Vul minimaal de naam / plaats van de stop in.',false);
+  return;
+}
+
+const {error}=await supabase.from('reis_stops').insert(stop);
+if(error){
+  showStatus('Stop opslaan mislukt: '+error.message,false);
+  return;
+}
+
+currentStopSaved=true;
+showStatus('✓ Stop '+stopNumber+' opgeslagen.',true);
+document.getElementById('saveStopBtn').classList.add('hidden');
+const nextBtn=document.getElementById('nextStopBtn');
+nextBtn.textContent='➡️ Naar stop '+(stopNumber+1);
+nextBtn.classList.remove('hidden');
+document.getElementById('activeTripInfo').textContent=
+  'Reis actief · '+stopNumber+' stop'+(stopNumber===1?'':'s')+' opgeslagen';
+await loadTrips();
+await loadStats();
+}
+
+async function loadPreviousStopKmHint(){
+  const hint=document.getElementById('stopKmHint');
+  if(!hint||!activeTripId)return;
+  const {data,error}=await supabase
+    .from('reis_stops')
+    .select('kmstand,volgorde')
+    .eq('reis_id',activeTripId)
+    .not('kmstand','is',null)
+    .order('volgorde',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  if(!error && data?.kmstand!=null){
+    hint.textContent='Vorige stop: '+Number(data.kmstand).toLocaleString('nl-BE')+' km — vul hier de KM-stand van deze stop in.';
+  }
+}
+
+function prepareNextStop(){
+if(!currentStopSaved){
+  showStatus('Sla eerst de huidige stop op.',false);
+  return;
+}
+stopNumber++;
+currentStopSaved=false;
+document.getElementById('sKm').value='';
+document.getElementById('stopKmHint').textContent='Vul de KM-stand van deze stop in.';
+document.getElementById('tripStartFields').classList.add('hidden');
+document.getElementById('tripTitle').textContent='🚐 Reis actief';
+document.getElementById('stopHeading').textContent='📍 Stop '+stopNumber;
+document.getElementById('activeTripInfo').textContent=
+  'Reis actief · vul de gegevens van stop '+stopNumber+' in';
+document.getElementById('saveStopBtn').classList.remove('hidden');
+document.getElementById('nextStopBtn').classList.add('hidden');
+clearStopFields();
+}
+
+function showEndTrip(){
+if(!activeTripId){
+  showStatus('Start eerst een reis.',false);
+  return;
+}
+if(!currentStopSaved){
+  showStatus('Sla eerst stop '+stopNumber+' op voordat je de reis afsluit.',false);
+  return;
+}
+document.getElementById('endBox').classList.remove('hidden');
+document.getElementById('tEndDate').value=today();
+document.getElementById('tEndKmEndBox').value='';
+document.getElementById('endBox').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function hideEndTrip(){
+document.getElementById('endBox').classList.add('hidden');
+}
+
+async function finishTrip(){
+const endDate=v('tEndDate'),start=v('tStartKm'),end=v('tEndKmEndBox');
+if(!endDate||start===''||end===''){
+showStatus('Vul Einddatum en Eind KM in.',false);
+return;
+}
+
+const cleanEndKm=String(end).replace(/\D/g,'');
+const endKm=Number(cleanEndKm),startKm=Number(start);
+if(cleanEndKm===''||!Number.isInteger(endKm)||endKm<0){
+showStatus('Vul een geldige Eind KM in.',false);
+return;
+}
+if(endKm<startKm){
+showStatus('Eind KM mag niet lager zijn dan Start KM.',false);
+return;
+}
+
+if(!currentCamperId){
+showStatus('Geen camper gekoppeld aan dit account.',false);
+return;
+}
+
+// Use the active trip. If the page lost its in-memory id, recover the latest
+// open trip for this camper.
+let tripId=activeTripId;
+if(!tripId){
+  const {data:openTrip,error:openError}=await supabase
+    .from('reizen')
+    .select('id,start_km')
+    .eq('camper_id',currentCamperId)
+    .is('eind_km',null)
+    .is('einddatum',null)
+    .order('datum',{ascending:false})
+    .order('id',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if(openError){
+    showStatus('Open reis zoeken mislukt: '+openError.message,false);
+    return;
+  }
+  tripId=openTrip?.id||null;
+}
+
+if(!tripId){
+  showStatus('Geen actieve/open reis gevonden om af te sluiten.',false);
+  return;
+}
+
+
+const {error}=await supabase.from('reizen').update({
+  einddatum:endDate,
+  eind_km:endKm
+}).eq('id',tripId).eq('camper_id',currentCamperId);
+
+if(error){
+showStatus('Reis afsluiten mislukt: '+error.message,false);
+return;
+}
+
+const gereden=endKm-startKm;
+showStatus('✓ Reis afgesloten · '+gereden.toLocaleString('nl-BE')+' km gereden.',true);
+activeTripId=null;stopNumber=1;currentStopSaved=false;
+document.getElementById('tripForm').classList.add('hidden');
+document.getElementById('saveStopBtn').classList.remove('hidden');
+document.getElementById('nextStopBtn').classList.add('hidden');
+document.getElementById('tripChooser').classList.remove('hidden');
+document.getElementById('endBox').classList.add('hidden');
+await loadTrips();await loadStats();
+}
+
+window.saveCurrentStop=saveCurrentStop;window.prepareNextStop=prepareNextStop;window.showEndTrip=showEndTrip;window.hideEndTrip=hideEndTrip;window.finishTrip=finishTrip;
+
+function clearStopFields(){
+['sPlace','sCountry','sPrice','sFacilities','sNotes'].forEach(id=>document.getElementById(id).value='');
+const sKm=document.getElementById('sKm');
+if(sKm) sKm.value='';
+document.getElementById('sRating').value='5';
+document.getElementById('sType').value='Camperplaats';
+document.getElementById('sDate').value=today();
+}
+function cancelTrip(){
+activeTripId=null;stopNumber=1;currentStopSaved=false;
+document.getElementById('tripForm').classList.add('hidden');
+document.getElementById('tripChooser').classList.remove('hidden');
+}
+function showStatus(text,ok){
+const el=document.getElementById('tripStatus');
+if(!text){el.className='status hidden';return}
+el.textContent=text;el.className='status '+(ok?'ok':'err');
+}
+function today(){return new Date().toISOString().slice(0,10)}
+
+async function loadTrips(){
+  const list=document.getElementById('tripList');
+  list.textContent='Reizen laden...';
+
+  if(!currentCamperId){
+    list.textContent='Geen camper gekoppeld aan dit account.';
+    list.className='status err';
+    return;
+  }
+
+  const {data:trips,error:tripError}=await supabase
+    .from('reizen')
+    .select('id,datum,crew,camperplaats,land,prijs_per_nacht,beoordeling,voorzieningen,ervaring,start_km,eind_km,einddatum')
+    .eq('camper_id',currentCamperId)
+    .order('datum',{ascending:false});
+
+  if(tripError){
+    list.textContent='Reizen laden mislukt: '+tripError.message;
+    list.className='status err';
+    return;
+  }
+
+  const tripRows=trips||[];
+  const tripIds=tripRows.map(x=>x.id);
+
+  let stops=[];
+  if(tripIds.length){
+    const {data:stopData,error:stopError}=await supabase
+      .from('reis_stops')
+      .select('id,reis_id,volgorde,datum,kmstand,type_stop,camperplaats,land,prijs_per_nacht,beoordeling,voorzieningen,ervaring')
+      .in('reis_id',tripIds)
+      .order('volgorde',{ascending:true});
+
+    if(stopError){
+      list.textContent='Stops laden mislukt: '+stopError.message;
+      list.className='status err';
+      return;
+    }
+    stops=stopData||[];
+  }
+
+  const stopsByTrip=new Map();
+  stops.forEach(s=>{
+    if(!stopsByTrip.has(s.reis_id))stopsByTrip.set(s.reis_id,[]);
+    stopsByTrip.get(s.reis_id).push(s);
+  });
+
+  list.innerHTML=tripRows.length
+    ? tripRows.map(x=>{
+        const tripStops=stopsByTrip.get(x.id)||[];
+        const startKm=x.start_km!=null?Number(x.start_km).toLocaleString('nl-BE'):'—';
+        const endKm=x.eind_km!=null?Number(x.eind_km).toLocaleString('nl-BE'):'—';
+        const km=x.start_km!=null&&x.eind_km!=null
+          ?(Number(x.eind_km)-Number(x.start_km)).toLocaleString('nl-BE')+' km'
+          :'—';
+
+        return `<div class="item">
+          <b>🚐 ${esc(x.crew||'Reis')}</b> · ${esc(x.datum||x.startdatum||'')}
+          <div class="muted">Start KM ${startKm} · Eind KM ${endKm} · ${km}</div>
+          ${tripStops.length
+            ? `<div class="muted">📍 ${tripStops.length} stop${tripStops.length===1?'':'s'}: ${tripStops.map(s=>esc(s.camperplaats||'Onbenoemde stop')).join(' → ')}</div>`
+            : '<div class="muted">Nog geen stops geregistreerd.</div>'}
+        </div>`;
+      }).join('')
+    :'Nog geen reizen opgeslagen.';
+
+  document.getElementById('tripCount').textContent=tripRows.filter(x=>x.einddatum).length;
+}
+
+window.showTripDetail=async(id)=>{
+const {data:t,error}=await supabase.from('reizen').select('*').eq('id',id).single();
+if(error)return;
+const {data:stops}=await supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde');
+const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
+const detail=document.getElementById('tripDetail');
+detail.classList.remove('hidden');
+detail.innerHTML=`<h2>📖 Reis van ${esc(t.crew)}</h2>
+<div class="muted">${esc(t.datum)}${t.einddatum?' → '+esc(t.einddatum):' · 🟢 nog actief'}</div>
+<p><b>Start KM:</b> ${t.start_km!=null?Number(t.start_km).toLocaleString('nl-BE'):'—'}
+${t.eind_km!=null?' · <b>Eind KM:</b> '+Number(t.eind_km).toLocaleString('nl-BE'):''}
+${km!=null?' · <b>'+km.toLocaleString('nl-BE')+' km gereden</b>':''}</p>
+<h3>Stops</h3>
+${(stops||[]).map(s=>`<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
+<div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${s.kmstand!=null?'🚐 '+Number(s.kmstand).toLocaleString('nl-BE')+' km · ':''}${'★'.repeat(Number(s.beoordeling||0))}</div>
+<div>${esc(s.voorzieningen||'')}</div><p>${esc(s.ervaring||'')}</p>
+${s.prijs_per_nacht!=null?'<div class="muted">€ '+Number(s.prijs_per_nacht).toFixed(2)+' / nacht</div>':''}</div>`).join('')||'<div class="muted">Geen stops.</div>'}
+<br><button class="secondary" onclick="document.getElementById('tripDetail').classList.add('hidden')">Sluiten</button>`;
+detail.scrollIntoView({behavior:'smooth'});
+};
+
+
+async function getLatestOdometer(){
+  const [{data:trips},{data:tanks}]=await Promise.all([
+    supabase.from('reizen').select('start_km,eind_km').eq('camper_id',currentCamperId).order('eind_km',{ascending:false}).limit(1000),
+    supabase.from('tankbeurten').select('kmstand').eq('camper_id',currentCamperId).order('kmstand',{ascending:false}).limit(1000)
+  ]);
+  const kms=[];
+  (trips||[]).forEach(x=>{
+    if(x.start_km!=null)kms.push(Number(x.start_km));
+    if(x.eind_km!=null)kms.push(Number(x.eind_km));
+  });
+  (tanks||[]).forEach(x=>{if(x.kmstand!=null)kms.push(Number(x.kmstand));});
+  return kms.length?Math.max(...kms):null;
+}
+
+async function getFirstOdometer(){
+  const [{data:trips},{data:tanks}]=await Promise.all([
+    supabase.from('reizen').select('start_km,eind_km').limit(1000),
+    supabase.from('tankbeurten').select('kmstand').limit(1000)
+  ]);
+  const kms=[];
+  (trips||[]).forEach(x=>{
+    if(x.start_km!=null)kms.push(Number(x.start_km));
+    if(x.eind_km!=null)kms.push(Number(x.eind_km));
+  });
+  (tanks||[]).forEach(x=>{if(x.kmstand!=null)kms.push(Number(x.kmstand));});
+  return kms.length?Math.min(...kms):null;
+}
+
+async function getPreviousTank(km){
+  const {data}=await supabase.from('tankbeurten')
+    .select('kmstand,liters,datum')
+    .eq('camper_id',currentCamperId)
+    .lt('kmstand',km)
+    .order('kmstand',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  return data||null;
+}
+
+async function updateFuelCalc(){
+  const liters=Number(v('fLiters')||0);
+  const price=Number(v('fPrice')||0);
+  const km=Number(v('fKm')||0);
+  const total=liters*price;
+  const el=document.getElementById('fuelCalc');
+  el.textContent='Totaalbedrag: € '+total.toFixed(2).replace('.',',')+
+    ' · KM sinds vorige tankbeurt: — · Verbruik: —';
+  if(km>0) await updateFuelCalcAsync(km,liters);
+}
+
+async function updateFuelCalcAsync(km,liters){
+  const prev=await getPreviousTank(km);
+  const total=Number(v('fLiters')||0)*Number(v('fPrice')||0);
+  if(prev && liters>0){
+    const distance=km-Number(prev.kmstand);
+    const consumption=distance>0?(liters/distance)*100:null;
+    document.getElementById('fuelCalc').textContent=
+      'Totaalbedrag: € '+total.toFixed(2).replace('.',',')+
+      ' · '+distance.toLocaleString('nl-BE')+' km sinds vorige tankbeurt'+
+      ' · Verbruik: '+(consumption!=null?consumption.toFixed(2).replace('.',',')+' l/100 km':'—');
+  }else{
+    document.getElementById('fuelCalc').textContent=
+      'Totaalbedrag: € '+total.toFixed(2).replace('.',',')+
+      ' · Eerste geregistreerde tankbeurt · Verbruik: —';
+  }
+}
+
+['fKm','fLiters','fPrice'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>updateFuelCalc());
+});
+
+window.addFuel=async()=>{
+  const status=document.getElementById('fuelStatus');
+  status.className='status hidden';
+
+  const datum=v('fDate'),kmText=v('fKm'),litersText=v('fLiters'),priceText=v('fPrice');
+  if(!datum||kmText===''||litersText===''||priceText===''){
+    status.textContent='Vul minimaal datum, KM-stand, liters en prijs per liter in.';
+    status.className='status err';return;
+  }
+
+  const km=Number(kmText),liters=Number(litersText),price=Number(priceText);
+  if(!Number.isInteger(km)||km<0||liters<=0||price<0){
+    status.textContent='Controleer de kilometerstand, liters en prijs per liter.';
+    status.className='status err';return;
+  }
+
+  const prev=await getPreviousTank(km);
+  if(prev && km<=Number(prev.kmstand)){
+    status.textContent='De KM-stand moet hoger zijn dan de vorige tankbeurt.';
+    status.className='status err';return;
+  }
+
+  if(!requireCamper())return;
+  const {error}=await supabase.from('tankbeurten').insert({
+    datum,kmstand:km,liters,prijs_per_liter:price,
+    locatie:v('fLocation')||null,land:v('fCountry')||null,
+    camper_id:currentCamperId
+  });
+
+  if(error){
+    status.textContent='Tankbeurt opslaan mislukt: '+error.message;
+    status.className='status err';return;
+  }
+
+  status.textContent='✓ Tankbeurt opgeslagen.';
+  status.className='status ok';
+  ['fKm','fLiters','fPrice','fLocation','fCountry'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fDate').value=today();
+  document.getElementById('fuelKmHint').textContent='';
+  document.getElementById('fuelCalc').textContent='Totaalbedrag: € 0,00 · Eerste/nieuwe tankbeurt — · Verbruik: —';
+  await loadFuel();
+  await loadStats();
+};
+
+async function prepareFuelForm(){
+  if(!document.getElementById('fDate').value)document.getElementById('fDate').value=today();
+  const latest=await getLatestOdometer();
+  const kmField=document.getElementById('fKm');
+  if(latest!=null && !kmField.value){
+    kmField.value=latest;
+    document.getElementById('fuelKmHint').textContent=
+      'Automatisch overgenomen: hoogste bekende KM-stand ('+
+      Number(latest).toLocaleString('nl-BE')+' km). Pas dit aan naar de werkelijke KM-stand bij het tanken.';
+  }
+  await updateFuelCalc();
+}
+
+async function loadFuel(){
+  const list=document.getElementById('fuelList');
+  if(!list)return;
+  list.textContent='Tankbeurten laden...';
+
+  const {data,error}=await supabase
+    .from('tankbeurten')
+    .select('*')
+    .eq('camper_id',currentCamperId)
+    .order('datum',{ascending:false})
+    .order('kmstand',{ascending:false});
+
+  if(error){
+    list.textContent='Laden mislukt: '+error.message;
+    list.className='status err';
+    return;
+  }
+
+  const rows=data||[];
+  const chronological=[...rows].sort((a,b)=>Number(a.kmstand)-Number(b.kmstand));
+  let totalLiters=0,totalCost=0;
+
+  list.innerHTML=rows.length?rows.map(x=>{
+    const liters=Number(x.liters||0);
+    const price=Number(x.prijs_per_liter||0);
+    const cost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*price;
+    totalLiters+=liters;
+    totalCost+=cost;
+
+    const idx=chronological.findIndex(r=>r.id===x.id);
+    const prev=idx>0?chronological[idx-1]:null;
+    const distance=prev?Number(x.kmstand)-Number(prev.kmstand):null;
+    const consumption=(distance>0&&liters>0)?liters/distance*100:null;
+
+    return `<div class="item">
+      <b>⛽ ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}
+      <div class="muted">${x.locatie?esc(x.locatie)+' · ':''}${x.land?esc(x.land):''}</div>
+      <div>${liters.toFixed(2).replace('.',',')} liter · € ${price.toFixed(3).replace('.',',')}/l · <b>€ ${cost.toFixed(2).replace('.',',')}</b></div>
+      ${consumption!=null
+        ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · ${consumption.toFixed(2).replace('.',',')} l/100 km</div>`
+        :distance!=null
+          ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · verbruik niet berekend</div>`
+          :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>'}
+    </div>`;
+  }).join(''):'Nog geen tankbeurten opgeslagen.';
+
+  if(document.getElementById('fuelTotalLiters'))
+    document.getElementById('fuelTotalLiters').textContent=totalLiters.toFixed(2).replace('.',',')+' l';
+  if(document.getElementById('fuelTotalCost'))
+    document.getElementById('fuelTotalCost').textContent='€ '+totalCost.toFixed(2).replace('.',',');
+  if(document.getElementById('fuelCount'))
+    document.getElementById('fuelCount').textContent=rows.length;
+}
+
+async function loadStats(){
+  const [{data:trips},{data:stops},{data:tanks}]=await Promise.all([
+    supabase.from('reizen').select('id,start_km,eind_km,einddatum').eq('camper_id',currentCamperId),
+    supabase.from('reis_stops').select('id'),
+    supabase.from('tankbeurten').select('kmstand,liters,totaalbedrag').eq('camper_id',currentCamperId)
+  ]);
+
+  const tripRows=trips||[], stopRows=stops||[], tankRows=tanks||[];
+  document.getElementById('tripCount').textContent=tripRows.filter(x=>x.einddatum).length;
+  document.getElementById('stopCount').textContent=stopRows.length;
+
+  const kms=[];
+  tripRows.forEach(x=>{
+    if(x.start_km!=null)kms.push(Number(x.start_km));
+    if(x.eind_km!=null)kms.push(Number(x.eind_km));
+  });
+  tankRows.forEach(x=>{if(x.kmstand!=null)kms.push(Number(x.kmstand));});
+
+  const currentKm=kms.length?Math.max(...kms):null;
+  const firstKm=kms.length?Math.min(...kms):null;
+  document.getElementById('odometer').textContent=
+    currentKm!=null?Number(currentKm).toLocaleString('nl-BE')+' km':'—';
+  document.getElementById('totalKm').textContent=
+    currentKm!=null&&firstKm!=null?(currentKm-firstKm).toLocaleString('nl-BE')+' km':'—';
+
+  const sortedTanks=[...tankRows].sort((a,b)=>Number(a.kmstand)-Number(b.kmstand));
+  let intervalLiters=0,intervalKm=0,totalLiters=0,totalCost=0;
+  sortedTanks.forEach((x,i)=>{
+    const liters=Number(x.liters||0);
+    const price=Number(x.prijs_per_liter||0);
+    const cost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*price;
+    totalLiters+=liters;
+    totalCost+=cost;
+    if(i>0){
+      intervalKm+=Number(x.kmstand)-Number(sortedTanks[i-1].kmstand);
+      intervalLiters+=Number(x.liters||0);
+    }
+  });
+
+  const avg=intervalKm>0?(intervalLiters/intervalKm)*100:null;
+  document.getElementById('avgConsumption').textContent=
+    avg!=null?avg.toFixed(2).replace('.',',')+' l/100 km':'—';
+  document.getElementById('fuelCost').textContent=
+    '€ '+totalCost.toFixed(2).replace('.',',');
+  document.getElementById('dashboardLiters').textContent=
+    totalLiters.toFixed(2).replace('.',',')+' l';
+  document.getElementById('dashboardFuelCount').textContent=tankRows.length;
+
+  const recent=await supabase.from('reis_stops')
+    .select('camperplaats,datum,land')
+    .order('datum',{ascending:false}).limit(3);
+
+  document.getElementById('recent').innerHTML=(recent.data||[]).map(x=>
+    `<div class="item"><b>${esc(x.camperplaats||'Onbenoemde stop')}</b><div class="muted">${esc(x.land||'')} · ${esc(x.datum)}</div></div>`
+  ).join('')||'Nog geen stops.';
+}
+
+function v(id){return document.getElementById(id).value.trim()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+document.querySelectorAll('nav button[data-tab]').forEach(b=>b.onclick=async()=>{
+document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
+b.classList.add('active');
+document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+document.getElementById(b.dataset.tab).classList.add('active');
+if(b.dataset.tab==='fuel'){
+  await prepareFuelForm();
+  await loadFuel();
+}
+});
+
+const newTripButton=document.getElementById('newTripButton');
+if(newTripButton){
+  newTripButton.addEventListener('click',()=>startNewTrip());
+}
+
+init();
+</script>
+</body>
+</html>
