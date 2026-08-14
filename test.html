@@ -807,6 +807,7 @@ uploadedUrls.push({
   naam: photo.name,
   url: data.publicUrl
 });
+}
 
   return uploadedUrls;
 }
@@ -818,7 +819,6 @@ window.testUpload = async function(){
 
   document.getElementById('photoStatus').textContent =
     uploads.length + ' foto(s) geüpload';
-
 
 };
   init();
