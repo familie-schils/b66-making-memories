@@ -509,6 +509,13 @@ window.showTripDetail=async(id)=>{
 const {data:t,error}=await supabase.from('reizen').select('*').eq('id',id).single();
 if(error)return;
 const {data:stops}=await supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde');
+  const stopIds = (stops || []).map(s => s.id);
+
+const {data:fotos} = await supabase
+  .from('fotos')
+  .select('*')
+  .in('stop_id', stopIds);
+  console.log('Fotos:', fotos);
 const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
 const detail=document.getElementById('tripDetail');
 detail.classList.remove('hidden');
