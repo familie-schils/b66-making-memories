@@ -800,15 +800,25 @@ async function uploadPhotos() {
 }
 
     const { data } = supabase.storage
-      .from('fotos')
-      .getPublicUrl(filename);
+  .from('fotos')
+  .getPublicUrl(filename);
 
-    uploadedUrls.push(data.publicUrl);
-  }
+uploadedUrls.push({
+  naam: photo.name,
+  url: data.publicUrl
+});
 
   return uploadedUrls;
 }
 window.testUpload = async function(){
+
+  const uploads = await uploadPhotos();
+
+  console.log('Uploads:', uploads);
+
+  document.getElementById('photoStatus').textContent =
+    uploads.length + ' foto(s) geüpload';
+
 
 };
   init();
