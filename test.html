@@ -810,17 +810,6 @@ async function uploadPhotos() {
 }
 window.testUpload = async function(){
 
-  const urls = await uploadPhotos();
-
-  const photoStatus =
-    document.getElementById('photoStatus');
-
-  photoStatus.innerHTML =
-    urls.length + ' foto(s) geüpload<br><br>' +
-    urls.map(url =>
-      ' + '" target="_blank">📸 Bekijk foto</a>'
-    ).join('<br>');
-
 };
   init();
 </script>
