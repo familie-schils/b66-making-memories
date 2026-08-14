@@ -773,7 +773,38 @@ photoList.innerHTML = selectedPhotos
   });
 
 }
-init();
+async function uploadPhotos() {
+
+  if(selectedPhotos.length === 0){
+    return [];
+  }
+
+  const uploadedUrls = [];
+
+  for(const photo of selectedPhotos){
+
+    const filename =
+      Date.now() + '_' + photo.name.replaceAll(' ','_');
+
+    const { error } = await supabase.storage
+      .from('fotos')
+      .upload(filename, photo);
+
+    if(error){
+      console.error('Upload mislukt:', error);
+      continue;
+    }
+
+    const { data } = supabase.storage
+      .from('fotos')
+      .getPublicUrl(filename);
+
+    uploadedUrls.push(data.publicUrl);
+  }
+
+  return uploadedUrls;
+}
+  init();
 </script>
 </body>
 </html>
