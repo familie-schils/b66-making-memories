@@ -794,9 +794,10 @@ async function uploadPhotos() {
       .upload(filename, photo);
 
     if(error){
-      console.error('Upload mislukt:', error);
-      continue;
-    }
+  console.error('Upload mislukt:', error);
+  alert('Upload mislukt: ' + error.message);
+  continue;
+}
 
     const { data } = supabase.storage
       .from('fotos')
