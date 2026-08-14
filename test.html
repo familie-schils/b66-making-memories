@@ -126,6 +126,9 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 Nog geen foto geselecteerd.
 </div>
   <div id="photoList"></div>
+  <button type="button" class="secondary" onclick="testUpload()">
+📤 Test foto-upload
+</button>
 <div id="activeTripInfo" class="muted"></div><br>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
@@ -804,6 +807,16 @@ async function uploadPhotos() {
 
   return uploadedUrls;
 }
+  window.testUpload = async function(){
+
+  const urls = await uploadPhotos();
+
+  console.log('Upload resultaat:', urls);
+
+  document.getElementById('photoStatus').textContent =
+    urls.length + ' foto(s) geüpload';
+
+};
   init();
 </script>
 </body>
