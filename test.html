@@ -756,7 +756,7 @@ if (photoUpload) {
       photoStatus.textContent = 'Nog geen foto geselecteerd.';
       return;
     }
-
+console.log('Foto gekozen:', this.files.length);
     photoStatus.textContent =
       this.files.length + ' foto(s) geselecteerd';
 
