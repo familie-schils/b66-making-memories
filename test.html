@@ -314,7 +314,6 @@ const {data,error}=await supabase.from('reizen').insert({
   datum:startDate,
   crew:v('tCrew'),
   start_km:startKm,
-  camper_id: currentCamperId
 }).select().single();
 
 if(error){showStatus('Reis starten mislukt: '+error.message,false);return false}
