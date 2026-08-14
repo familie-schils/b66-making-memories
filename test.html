@@ -527,7 +527,17 @@ ${km!=null?' · <b>'+km.toLocaleString('nl-BE')+' km gereden</b>':''}</p>
 <h3>Stops</h3>
 ${(stops||[]).map(s=>`<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div>
-<div>${esc(s.voorzieningen||'')}</div><p>${esc(s.ervaring||'')}</p>
+<div>${esc(s.voorzieningen||'')}</div>
+<p>${esc(s.ervaring||'')}</p>
+
+${((fotos||[]).filter(f=>f.stop_id===s.id)).map(f=>`
+<div style="margin-top:10px">
+${f.url}     style="max-width:150px;
+            max-height:150px;
+            border-radius:8px;">
+</div>
+`).join('')}
+
 ${s.prijs_per_nacht!=null?'<div class="muted">€ '+Number(s.prijs_per_nacht).toFixed(2)+' / nacht</div>':''}</div>`).join('')||'<div class="muted">Geen stops.</div>'}
 <br><button class="secondary" onclick="document.getElementById('tripDetail').classList.add('hidden')">Sluiten</button>`;
 detail.scrollIntoView({behavior:'smooth'});
