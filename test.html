@@ -125,6 +125,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="photoStatus" class="muted">
 Nog geen foto geselecteerd.
 </div>
+  <div id="photoList"></div>
 <div id="activeTripInfo" class="muted"></div><br>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
@@ -761,7 +762,13 @@ if (photoUpload) {
     }
 
     photoStatus.textContent =
-      selectedPhotos.length + ' foto(s) geselecteerd';
+  selectedPhotos.length + ' foto(s) geselecteerd';
+
+const photoList = document.getElementById('photoList');
+
+photoList.innerHTML = selectedPhotos
+  .map(photo => `<div>📸 ${photo.name}</div>`)
+  .join('');
 
   });
 
