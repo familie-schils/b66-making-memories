@@ -345,10 +345,16 @@ if(!stop.camperplaats){
   return;
 }
 
-const {error}=await supabase.from('reis_stops').insert(stop);
+const {data,error}=await supabase
+  .from('reis_stops')
+  .insert(stop)
+  .select()
+  .single();
 if(error){
   showStatus('Stop opslaan mislukt: '+error.message,false);
   return;
+  }
+  console.log('Nieuwe stop:', data);
 }
 
 currentStopSaved=true;
