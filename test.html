@@ -504,11 +504,16 @@ function today(){return new Date().toISOString().slice(0,10)}
 
 async function loadTrips(){
 const list=document.getElementById('tripList');list.textContent='Reizen laden...';
+  console.log('Filter op camper:', activeCamperId);
+console.log('Filter op camper:', activeCamperId);
+
 const {data:trips,error}=await supabase
   .from('reizen')
   .select('*')
   .eq('camper_id', activeCamperId)
   .order('datum',{ascending:false});
+
+console.log('Gevonden reizen:', trips);
 if(error){list.textContent='Laden mislukt: '+error.message;list.className='status err';return}
 if(!trips.length){list.innerHTML='<div class="muted">Nog geen reizen. Start jullie eerste reis!</div>';return}
 
