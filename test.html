@@ -818,7 +818,7 @@ window.testUpload = async function(){
   photoStatus.innerHTML =
     urls.length + ' foto(s) geüpload<br><br>' +
     urls.map(url =>
-      `${url}📸 Bekijk foto</a>`
+      ' + '" target="_blank">📸 Bekijk foto</a>'
     ).join('<br>');
 
 };
