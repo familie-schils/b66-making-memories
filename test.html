@@ -336,6 +336,7 @@ const startDate=v('tStartDate'),startKmText=v('tStartKm');
 if(!v('tCrew')||!startDate||startKmText===''){
 showStatus('Vul eerst wie, startdatum en Start KM in.',false);return false}
 const startKm=Number(startKmText);
+  console.log('Actieve camper bij opslaan:', activeCamperId);
 if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige Start KM in.',false);return false}
   console.log('Actieve camper bij opslaan:', activeCamperId);
 
