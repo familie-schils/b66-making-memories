@@ -117,8 +117,14 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </div>
 <br>
 <label>Voorzieningen / indruk</label><input id="sFacilities"><br><br>
-<label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
+<label>Onze ervaring</label><textarea id="sNotes"></textarea><<br><br>
 
+<label>📷 Foto's toevoegen</label>
+<input id="photoUpload" type="file" accept="image/*">
+
+<div id="photoStatus" class="muted">
+Nog geen foto geselecteerd.
+</div>
 <div id="activeTripInfo" class="muted"></div><br>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
