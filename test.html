@@ -261,6 +261,9 @@ function showLogin(){loginView.classList.remove('hidden');appView.classList.add(
 async function showApp(){
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
+
+await loadCurrentCamper();
+
 await loadTrips();
 await loadStats();
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
