@@ -311,7 +311,10 @@ const startKm=Number(startKmText);
 if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige Start KM in.',false);return false}
 
 const {data,error}=await supabase.from('reizen').insert({
-datum:startDate,crew:v('tCrew'),start_km:startKm
+  datum:startDate,
+  crew:v('tCrew'),
+  start_km:startKm,
+  camper_id: currentCamperId
 }).select().single();
 
 if(error){showStatus('Reis starten mislukt: '+error.message,false);return false}
