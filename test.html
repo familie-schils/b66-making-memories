@@ -744,7 +744,25 @@ if(b.dataset.tab==='fuel'){
   await loadFuel();
 }
 });
+const photoUpload = document.getElementById('photoUpload');
 
+if (photoUpload) {
+
+  photoUpload.addEventListener('change', function () {
+
+    const photoStatus = document.getElementById('photoStatus');
+
+    if(this.files.length === 0){
+      photoStatus.textContent = 'Nog geen foto geselecteerd.';
+      return;
+    }
+
+    photoStatus.textContent =
+      this.files.length + ' foto(s) geselecteerd';
+
+  });
+
+}
 init();
 </script>
 </body>
