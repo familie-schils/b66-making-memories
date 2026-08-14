@@ -141,7 +141,19 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </div>
 <br>
 <label>Voorzieningen / indruk</label><input id="sFacilities"><br><br>
-<label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
+<label>Onze ervaring</label>
+<textarea id="sNotes"></textarea>
+
+<br><br>
+
+<label>📷 Foto's toevoegen</label>
+<input id="photoUpload" type="file" accept="image/*" multiple>
+
+<div id="photoStatus" class="muted" style="margin-top:10px">
+Nog geen foto's geselecteerd.
+</div>
+
+<div id="photoList" style="margin-top:10px"></div>
 
 <div id="activeTripInfo" class="muted"></div><br>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
