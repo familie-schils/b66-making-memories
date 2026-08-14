@@ -812,15 +812,13 @@ window.testUpload = async function(){
 
   const urls = await uploadPhotos();
 
-  console.log('Upload resultaat:', urls);
-
   const photoStatus =
     document.getElementById('photoStatus');
 
   photoStatus.innerHTML =
     urls.length + ' foto(s) geüpload<br><br>' +
     urls.map(url =>
-      `url}" target="_blank">Bekijk foto</a>`
+      `${url}📸 Bekijk foto</a>`
     ).join('<br>');
 
 };
