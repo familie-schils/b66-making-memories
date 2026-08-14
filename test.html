@@ -221,6 +221,7 @@ const supabase=createClient(
 
 let activeTripId=null;
 let stopNumber=1;
+  let selectedPhotos = [];
 
 const loginView=document.getElementById('loginView');
 const appView=document.getElementById('appView');
@@ -750,15 +751,17 @@ if (photoUpload) {
 
   photoUpload.addEventListener('change', function () {
 
+    selectedPhotos = [...this.files];
+
     const photoStatus = document.getElementById('photoStatus');
 
-    if(this.files.length === 0){
+    if(selectedPhotos.length === 0){
       photoStatus.textContent = 'Nog geen foto geselecteerd.';
       return;
     }
-console.log('Foto gekozen:', this.files.length);
+
     photoStatus.textContent =
-      this.files.length + ' foto(s) geselecteerd';
+      selectedPhotos.length + ' foto(s) geselecteerd';
 
   });
 
