@@ -530,12 +530,23 @@ ${(stops||[]).map(s=>`<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperpla
 <div>${esc(s.voorzieningen||'')}</div>
 <p>${esc(s.ervaring||'')}</p>
 
+<div class="muted">
+📸 ${((fotos||[]).filter(f => f.stop_id === s.id)).length} foto(s)
+</div>
 ${((fotos||[]).filter(f => f.stop_id === s.id)).map(f => `
 <div style="margin-top:10px">
-  <img src="${f.url}"
-       style="max-width:150px;
-              max-height:150px;
-              border-radius:8px;">
+
+  ${f.url} target="_blank">
+    ${f.url}="max-width:220px;
+                max-height:220px;
+                border-radius:8px;
+                cursor:pointer;">
+  </a>
+
+  <div class="muted">
+    📸 ${esc(f.bestandsnaam)}
+  </div>
+
 </div>
 `).join('')}
 
