@@ -808,14 +808,20 @@ async function uploadPhotos() {
 
   return uploadedUrls;
 }
-  window.testUpload = async function(){
+window.testUpload = async function(){
 
   const urls = await uploadPhotos();
 
   console.log('Upload resultaat:', urls);
 
-  document.getElementById('photoStatus').textContent =
-    urls.length + ' foto(s) geüpload';
+  const photoStatus =
+    document.getElementById('photoStatus');
+
+  photoStatus.innerHTML =
+    urls.length + ' foto(s) geüpload<br><br>' +
+    urls.map(url =>
+      `url}" target="_blank">Bekijk foto</a>`
+    ).join('<br>');
 
 };
   init();
