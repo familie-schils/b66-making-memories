@@ -598,18 +598,19 @@ async function loadCrewOptions(){
   const { data, error } = await supabase
     .from('camper_crew')
     .select('*')
-    .eq('camper_id', activeCamp*rId)
+    .eq('camper_id', activeCamperId)
     .order('naam');
 
-  if(err*r){
-    console.error('Crew laden *islukt:', error);
+  if(error){
+    console.error('Crew laden mislukt:', error);
     return;
   }
-*  const select = document.getEleme*tById('tCrew');
 
-  select.innerHTM* = (data || [])
-    .map(x => `<op*ion>${x.naam}</option>`)
-    .join*'');
+  const select = document.getElementById('tCrew');
+
+  select.innerHTML = (data || [])
+    .map(x => `<option>${x.naam}</option>`)
+    .join('');
 
 }
 async function loadTrips(){
