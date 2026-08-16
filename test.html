@@ -967,6 +967,65 @@ window.testUpload = async function(){
     uploads.length + ' foto(s) geüpload';
 
 };
+
+const maintenanceOptions = {
+
+  fiat: [
+    'Olie',
+    'Oliefilter',
+    'Luchtfilter',
+    'Brandstoffilter',
+    'Banden',
+    'Remmen',
+    'Accu',
+    'APK / Keuring',
+    'Ruitenwissers',
+    'Overig'
+  ],
+
+  vanomobil: [
+    'Vochtcontrole',
+    'Zonnepaneel',
+    'Omvormer',
+    'Kachel',
+    'Boiler',
+    'Waterpomp',
+    'Koelkast',
+    'Luifel',
+    'Overig'
+  ],
+
+  repair: [
+    'Schade',
+    'Steenslag',
+    'Lekke band',
+    'Slot',
+    'Verlichting',
+    'Camera',
+    'Overig'
+  ]
+
+};
+
+document.getElementById('mCategory').addEventListener('change', function(){
+
+  const container =
+    document.getElementById('maintenanceOptions');
+
+  const items =
+    maintenanceOptions[this.value] || [];
+
+  container.innerHTML = items.map(item => `
+    <label>
+      <input type="checkbox" value="${item}">
+      ${item}
+    </label>
+  `).join('<br>');
+
+});
+
+init();
+};
   init();
 </script>
 </body>
