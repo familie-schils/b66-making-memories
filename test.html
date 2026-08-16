@@ -389,6 +389,22 @@ if(error){
   }
   console.log('Nieuwe stop:', data);
 console.log('TEST SAVE STOP');
+  const uploads = await uploadPhotos();
+
+for(const foto of uploads){
+
+  const { error: fotoError } = await supabase
+    .from('fotos')
+    .insert({
+      stop_id: data.id,
+      bestandsnaam: foto.naam,
+      url: foto.url
+    });
+
+  if(fotoError){
+    console.error('Foto opslaan mislukt:', fotoError);
+  }
+}
 
 
 
