@@ -343,6 +343,7 @@ appView.classList.remove('hidden');
 await loadCurrentCamper();
 
 await loadTrips();
+await loadMaintenance();
 await loadStats();
 
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
