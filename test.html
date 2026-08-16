@@ -344,7 +344,7 @@ await loadCurrentCamper();
 
 await loadTrips();
 await loadStats();
-  await loadMaintenance();
+
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
 }
@@ -1109,6 +1109,7 @@ document.getElementById('saveMaintenanceBtn')
   }
 
   alert('✅ Onderhoud opgeslagen');
+    });
     async function loadMaintenance(){
 
   const { data, error } = await supabase
@@ -1153,7 +1154,7 @@ document.getElementById('saveMaintenanceBtn')
 
 }
 
-});
+
 });
 init();
 
