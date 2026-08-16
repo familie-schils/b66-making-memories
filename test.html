@@ -344,6 +344,7 @@ await loadCurrentCamper();
 
 await loadTrips();
 await loadStats();
+  await loadMaintenance();
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
 }
