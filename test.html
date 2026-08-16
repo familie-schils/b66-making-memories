@@ -858,9 +858,15 @@ async function loadFuel(){
 
 async function loadStats(){
   const [{data:trips},{data:stops},{data:tanks}]=await Promise.all([
-    supabase.from('reizen').select('id,start_km,eind_km,einddatum'),
+    supabase
+  .from('reizen')
+  .select('id,start_km,eind_km,einddatum')
+  .eq('camper_id', activeCamperId)
     supabase.from('reis_stops').select('id'),
-    supabase.from('tankbeurten').select('kmstand,liters,totaalbedrag')
+    supabase
+  .from('tankbeurten')
+  .select('kmstand,liters,totaalbedrag')
+  .eq('camper_id', activeCamperId)
   ]);
 
   const tripRows=trips||[], stopRows=stops||[], tankRows=tanks||[];
