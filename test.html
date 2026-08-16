@@ -87,10 +87,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <h3>🚐 Start van de reis</h3>
 <div class="grid">
 <div><label>Wie maakt de reis?</label><select id="tCrew">
-<option>Elly & Marcel</option>
-<option>Jente & Laura</option>
-<option>Elle & Kenneth</option>
-<option>Tommy-Lee</option>
+</select>
 </select></div>
 <div><label>Startdatum</label><input id="tStartDate" type="date"></div>
 </div>
@@ -341,6 +338,8 @@ loginView.classList.add('hidden');
 appView.classList.remove('hidden');
 
 await loadCurrentCamper();
+
+await loadCrewOptions();
 
 await loadTrips();
 await loadMaintenance();
