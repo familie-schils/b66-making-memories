@@ -206,7 +206,59 @@ Nog geen foto geselecteerd.
 <div class="card"><h2>Laatste herinneringen</h2><div id="recent">Laden...</div></div>
 </section>
 
-<section id="maintenance"><div class="card"><h2>Onderhoud</h2><p class="muted">Komt in een volgende versie.</p></div></section>
+<section id="maintenance">
+
+<div class="card">
+<h2>🔧 Onderhoud</h2>
+
+<div class="grid">
+
+<div>
+<label>Categorie</label>
+<select id="mCategory">
+  <option value="">Kies categorie</option>
+  <option value="fiat">Fiat Onderhoud</option>
+  <option value="vanomobil">Vanomobil Onderhoud</option>
+  <option value="repair">Schade / Reparatie</option>
+  <option value="other">Overig</option>
+</select>
+</div>
+
+<div>
+<label>Datum</label>
+<input id="mDate" type="date">
+</div>
+
+<div>
+<label>Kilometerstand</label>
+<input id="mKm" type="number">
+</div>
+
+<div>
+<label>Kosten (€)</label>
+<input id="mCost" type="number" step="0.01">
+</div>
+
+</div>
+
+<br>
+
+<div id="maintenanceOptions"></div>
+
+<br>
+
+<label>Opmerkingen</label>
+<textarea id="mNotes"></textarea>
+
+<br><br>
+
+<button class="primary">
+💾 Onderhoud opslaan
+</button>
+
+</div>
+
+</section>
 
 <section id="camper"><div class="card"><h2>Mijn B66</h2><div class="grid">
 <div><label>Model</label><input value="Bürstner B66 TD 690 G" readonly></div>
