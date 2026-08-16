@@ -764,9 +764,15 @@ window.addFuel=async()=>{
   }
 
   const {error}=await supabase.from('tankbeurten').insert({
-    datum,kmstand:km,liters,prijs_per_liter:price,
-    locatie:v('fLocation')||null,land:v('fCountry')||null
-  });
+  datum,
+  kmstand:km,
+  liters,
+  prijs_per_liter:price,
+  locatie:v('fLocation')||null,
+  land:v('fCountry')||null,
+  camper_id: activeCamperId
+});
+
 
   if(error){
     status.textContent='Tankbeurt opslaan mislukt: '+error.message;
