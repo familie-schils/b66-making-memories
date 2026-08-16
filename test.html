@@ -244,6 +244,10 @@ Nog geen foto geselecteerd.
 <br>
 
 <div id="maintenanceOptions"></div>
+  <div id="otherMaintenanceBox" style="display:none;margin-top:10px">
+  <label>Omschrijving overig</label>
+  <input id="otherMaintenanceText">
+</div>
 
 <br>
 
@@ -1015,14 +1019,30 @@ document.getElementById('mCategory').addEventListener('change', function(){
   const items =
     maintenanceOptions[this.value] || [];
 
-  container.innerHTML = items.map(item => `
-    <label>
-      <input type="checkbox" value="${item}">
-      ${item}
-    </label>
-  `).join('<br>');
+container.innerHTML = items.map(item => `
+  <label>
+    <input type="checkbox"
+           class="maintenanceCheck"
+           value="${item}">
+    ${item}
+  </label>
+`).join('<br>');
 
-});
+document.querySelectorAll('.maintenanceCheck')
+  .forEach(cb => {
+
+    cb.addEventListener('change', function(){
+
+      const overigAangevinkt =
+        [...document.querySelectorAll('.maintenanceCheck')]
+        .some(x => x.checked && x.value === 'Overig');
+
+      document.getElementById('otherMaintenanceBox')
+        .style.display =
+          overigAangevinkt ? 'block' : 'none';
+
+    });
+
 
 init();
 
