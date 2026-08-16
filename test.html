@@ -593,7 +593,25 @@ if(!text){el.className='status hidden';return}
 el.textContent=text;el.className='status '+(ok?'ok':'err');
 }
 function today(){return new Date().toISOString().slice(0,10)}
+async function loadCrewOptions(){
 
+  const { data, error } = await supabase
+    .from('camper_crew')
+    .select('*')
+    .eq('camper_id', activeCamp*rId)
+    .order('naam');
+
+  if(err*r){
+    console.error('Crew laden *islukt:', error);
+    return;
+  }
+*  const select = document.getEleme*tById('tCrew');
+
+  select.innerHTM* = (data || [])
+    .map(x => `<op*ion>${x.naam}</option>`)
+    .join*'');
+
+}
 async function loadTrips(){
 const list=document.getElementById('tripList');list.textContent='Reizen laden...';
   console.log('Filter op camper:', activeCamperId);
