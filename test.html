@@ -812,8 +812,9 @@ async function loadFuel(){
   list.textContent='Tankbeurten laden...';
   try{
     const result=await supabase.from('tankbeurten')
-      .select('*')
-      .order('kmstand',{ascending:true});
+  .select('*')
+  .eq('camper_id', activeCamperId)
+  .order('kmstand',{ascending:true});
 
     if(result.error){
       list.textContent='Laden mislukt: '+result.error.message;
