@@ -298,7 +298,7 @@ let activeTripId=null;
 let stopNumber=1;
   let selectedPhotos = [];
   let activeCamperId = null;
-  const APP_VERSION = 'v1.4.30 - 12:15';
+  const APP_VERSION = 'v1.4.30 - 15:53';
 
 console.log('🚐 Making Memories', APP_VERSION);
 
@@ -1055,7 +1055,59 @@ document.querySelectorAll('.maintenanceCheck')
 
     });
      });
+document.getElementById('saveMaintenanceBtn')
+  .addEventListener('click', async function(){
 
+  const category =
+    document.getElementById('mCategory').value;
+
+  if(!category){
+    alert('Kies eerst een categorie.');
+    return;
+  }
+
+  const selectedWork = [
+    ...document.querySelectorAll('.maintenanceCheck:checked')
+  ].map(x => x.value);
+
+  const { error } = await supabase
+    .from('onderhoud')
+    .insert({
+
+      camper_id: activeCamperId,
+
+      datum:
+        document.getElementById('mDate').value || null,
+
+      categorie: category,
+
+      werkzaamheden:
+        selectedWork.join(', '),
+
+      omschrijving_overig:
+        document.getElementById('otherMaintenanceText')
+          ?.value || null,
+
+      kosten:
+        document.getElementById('mCost').value || null,
+
+      uitvoerder:
+        document.getElementById('mPerformer').value || null,
+
+      opmerkingen:
+        document.getElementById('mNotes').value || null
+
+    });
+
+  if(error){
+    alert('Opslaan mislukt: ' + error.message);
+    console.error(error);
+    return;
+  }
+
+  alert('✅ Onderhoud opgeslagen');
+
+});
 });
 init();
 
