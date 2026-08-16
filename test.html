@@ -674,7 +674,10 @@ detail.scrollIntoView({behavior:'smooth'});
 async function getLatestOdometer(){
   const [{data:trips},{data:tanks}]=await Promise.all([
     supabase.from('reizen').select('start_km,eind_km').order('eind_km',{ascending:false}).limit(1000),
-    supabase.from('tankbeurten').select('kmstand').order('kmstand',{ascending:false}).limit(1000)
+    supabase.from('tankbeurten')
+  .select('*')
+  .eq('camper_id', activeCamperId)
+  .order('kmstand',{ascending:true});
   ]);
   const kms=[];
   (trips||[]).forEach(x=>{
