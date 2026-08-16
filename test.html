@@ -1108,6 +1108,49 @@ document.getElementById('saveMaintenanceBtn')
   }
 
   alert('✅ Onderhoud opgeslagen');
+    async function loadMaintenance(){
+
+  const { data, error } = await supabase
+    .from('onderhoud')
+    .select('*')
+    .eq('camper_id', activeCamperId)
+    .order('datum', { ascending:false });
+
+  if(error){
+    console.error(error);
+    return;
+  }
+
+  const box =
+    document.getElementById('maintenanceHistory');
+
+  if(!data || data.length === 0){
+    box.innerHTML =
+      'Nog geen onderhoud geregistreerd.';
+    return;
+  }
+
+  box.innerHTML = data.map(x => `
+    <div class="item">
+      <b>${x.datum || ''}</b><br>
+      ${x.categorie || ''}<br>
+
+      <div class="muted">
+        ${x.werkzaamheden || ''}
+      </div>
+
+      ${x.uitvoerder
+        ? `<div>🔧 ${x.uitvoerder}</div>`
+        : ''}
+
+      ${x.kosten
+        ? `<div>💶 € ${x.kosten}</div>`
+        : ''}
+
+    </div>
+  `).join('');
+
+}
 
 });
 });
