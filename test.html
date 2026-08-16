@@ -762,7 +762,8 @@ window.addFuel=async()=>{
     status.textContent='De KM-stand moet hoger zijn dan de vorige tankbeurt.';
     status.className='status err';return;
   }
-
+console.log('Camper bij tanken:', activeCamperId);
+  
   const {error}=await supabase.from('tankbeurten').insert({
   datum,
   kmstand:km,
