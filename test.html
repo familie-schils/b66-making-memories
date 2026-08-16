@@ -37,7 +37,10 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </style>
 </head>
 <body>
-<header><h1>🚐 B66 – Making Memories</h1><p>Versie 0.6 · Reis → Stops → Tanken → Kilometerboek</p></header>
+<header>
+<h1>🚐 B66 – Making Memories</h1>
+<p id="versionText">Versie laden...</p>
+</header>
 
 <div id="loginView" class="card login">
 <h2>Welkom bij Making Memories</h2>
@@ -262,6 +265,8 @@ supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
 }
 function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
 async function showApp(){
+  document.getElementById('versionText').textContent =
+  'Build: ' + APP_VERSION;
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
 
