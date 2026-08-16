@@ -298,7 +298,9 @@ let activeTripId=null;
 let stopNumber=1;
   let selectedPhotos = [];
   let activeCamperId = null;
-  const APP_VERSION = 'v1.4.30 - 15:53';
+  const APP_VERSION =
+  new Date(document.lastModified)
+    .toLocaleString('nl-BE');
 
 console.log('🚐 Making Memories', APP_VERSION);
 
