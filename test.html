@@ -651,6 +651,8 @@ async function loadCrewOptions(){
  async function loadActiveTrip(){
 
   console.log('LOAD ACTIVE TRIP GESTART');
+   console.log('Actieve reis data:', data);
+console.log('Actieve reis error:', error);
 
   console.log('Zoeken naar actieve reis voor camper:', activeCamperId);
 
@@ -689,9 +691,15 @@ const { data: stops } = await supabase
   .from('reis_stops')
   .select('*')
   .eq('reis_id', activeTripId)
-  .order('volgorde',{ascending:false});
+  .order('volgorde', { ascending: false });
 
 stopNumber = (stops?.length || 0) + 1;
+
+if(stops?.length){
+  document.getElementById('sKm').value =
+    stops[0].km_aankomst || '';
+}
+
 
 document.getElementById('tripChooser').classList.add('hidden');
 document.getElementById('tripForm').classList.remove('hidden');
