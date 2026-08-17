@@ -622,6 +622,46 @@ async function loadCrewOptions(){
     .join('');
 
 }
+  async function loadActiveTrip(){
+
+  const { data, error } = await supabase
+    .from('reizen')
+    .select('*')
+    .eq('camper_id', activeCamperId)
+    .is('einddatum', null)
+    .maybeSingle();
+
+  if(error){
+    console.error('Actieve reis ophalen mislukt:', error);
+    return;
+  }
+
+  if(!data){
+    return;
+  }
+
+  activeTripId = data.id;
+
+  const { data: stops } = await supabase
+    .from('reis_stops')
+    .select('id')
+    .eq('reis_id', activeTripId);
+
+  stopNumber = (stops?.length || 0) + 1;
+
+  document.getElementById('tripChooser').classList.add('hidden');
+  document.getElementById('tripForm').classList.remove('hidden');
+
+  document.getElementById('tripTitle').textContent =
+    '🚐 Reis actief';
+
+  document.getElementById('stopHeading').textContent =
+    '📍 Stop ' + stopNumber;
+
+  document.getElementById('activeTripInfo').textContent =
+    'Actieve reis gevonden · verder met stop ' + stopNumber;
+
+}
 async function loadTrips(){
 const list=document.getElementById('tripList');list.textContent='Reizen laden...';
   console.log('Filter op camper:', activeCamperId);
