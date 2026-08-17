@@ -513,16 +513,23 @@ if(!currentStopSaved){
   showStatus('Sla eerst de huidige stop op.',false);
   return;
 }
+const lastKm = document.getElementById('sKm').value;
+
 stopNumber++;
 currentStopSaved=false;
+
 document.getElementById('tripStartFields').classList.add('hidden');
 document.getElementById('tripTitle').textContent='🚐 Reis actief';
 document.getElementById('stopHeading').textContent='📍 Stop '+stopNumber;
 document.getElementById('activeTripInfo').textContent=
   'Reis actief · vul de gegevens van stop '+stopNumber+' in';
+
 document.getElementById('saveStopBtn').classList.remove('hidden');
 document.getElementById('nextStopBtn').classList.add('hidden');
+
 clearStopFields();
+
+document.getElementById('sKm').value = lastKm;
 }
 
 function showEndTrip(){
