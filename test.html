@@ -319,10 +319,11 @@ const appView=document.getElementById('appView');
   const { data, error } = await supabase
   .from('reizen')
   .select('*')
-  .eq('*amper_id', activeCamperId)
-  .*s*'einddatum', null)
-  .order('id*, { ascending:false })
-  .limit(**
+  .eq('camper_id', activeCamperId)
+  .is('einddatum', null)
+  .order('id', { ascending: false })
+  .limit(1);
+
   .single();
 
   if(error){
