@@ -378,8 +378,7 @@ document.getElementById('endBox').classList.add('hidden');
 document.getElementById('tStartDate').value=today();
 document.getElementById('sDate').value=today();
 document.getElementById('tStartKm').value='';
-document.getElementById('tEndKm').value='';
-document.getElementById('tEndKm').readOnly=true;
+
 document.getElementById('tEndKmEndBox').value='';
 document.getElementById('kmResult').textContent='🚐 KM gereden: —';
 document.getElementById('activeTripInfo').textContent='';
@@ -398,7 +397,9 @@ if(latest!=null){
 };
 
 function updateKm(){
-const s=v('tStartKm'),e=v('tEndKmEndBox')||v('tEndKm'),el=document.getElementById('kmResult');
+const s=v('tStartKm'),
+      e=v('tEndKmEndBox'),
+      el=document.getElementById('kmResult');
 if(s===''||e===''){el.textContent='🚐 KM gereden: —';return}
 const diff=Number(e)-Number(s);
 if(diff<0){el.textContent='⚠️ Eind KM is lager dan Start KM';return}
@@ -408,7 +409,7 @@ el.textContent='🚐 KM gereden: '+diff.toLocaleString('nl-BE')+' km';
 document.getElementById('tEndKmEndBox').addEventListener('input',function(){
 const clean=this.value.replace(/\D/g,'');
 this.value=clean;
-document.getElementById('tEndKm').value=clean;
+
 updateKm();
 });
 
@@ -532,8 +533,8 @@ if(!currentStopSaved){
 document.getElementById('endBox').classList.remove('hidden');
 document.getElementById('tEndDate').value=today();
 document.getElementById('tEndKmEndBox').value='';
-document.getElementById('tEndKm').value='';
-document.getElementById('tEndKm').readOnly=true;
+
+
 document.getElementById('endBox').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
@@ -558,7 +559,7 @@ showStatus('Eind KM mag niet lager zijn dan Start KM.',false);
 return;
 }
 
-document.getElementById('tEndKm').value=endKm;
+
 
 const {error}=await supabase.from('reizen').update({
 einddatum:endDate,eind_km:endKm
