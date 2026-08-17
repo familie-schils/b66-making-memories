@@ -620,9 +620,10 @@ function clearStopFields(){
   document.getElementById('sDate').value=today();
 }
 function cancelTrip(){
-activeTripId=null;stopNumber=1;currentStopSaved=false;
-document.getElementById('tripForm').classList.add('hidden');
-document.getElementById('tripChooser').classList.remove('hidden');
+
+  document.getElementById('tripForm').classList.add('hidden');
+  document.getElementById('tripChooser').classList.remove('hidden');
+
 }
 function showStatus(text,ok){
 const el=document.getElementById('tripStatus');
