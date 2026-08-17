@@ -626,7 +626,12 @@ async function loadCrewOptions(){
 }
  async function loadActiveTrip(){
 
+  console.log('LOAD ACTIVE TRIP GESTART');
+
   console.log('Zoeken naar actieve reis voor camper:', activeCamperId);
+
+  ...
+}
 
   const { data, error } = await supabase
     .from('reizen')
