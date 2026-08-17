@@ -518,7 +518,7 @@ const lastKm = document.getElementById('sKm').value;
 console.log('LAATSTE KM:', lastKm);
 
 stopNumber++;
-``
+
 currentStopSaved=false;
 
 document.getElementById('tripStartFields').classList.add('hidden');
@@ -598,10 +598,21 @@ await loadTrips();await loadStats();
 window.saveCurrentStop=saveCurrentStop;window.prepareNextStop=prepareNextStop;window.showEndTrip=showEndTrip;window.hideEndTrip=hideEndTrip;window.finishTrip=finishTrip;window.cancelTrip = cancelTrip;
 
 function clearStopFields(){
-['sPlace','sCountry','sPrice','sFacilities','sNotes'].forEach(id=>document.getElementById(id).value='');
-document.getElementById('sRating').value='5';
-document.getElementById('sType').value='Camperplaats';
-document.getElementById('sDate').value=today();
+
+  [
+    'sPlace',
+    'sCountry',
+    'sKm',
+    'sPrice',
+    'sFacilities',
+    'sNotes'
+  ].forEach(id =>
+    document.getElementById(id).value=''
+  );
+
+  document.getElementById('sRating').value='5';
+  document.getElementById('sType').value='Camperplaats';
+  document.getElementById('sDate').value=today();
 }
 function cancelTrip(){
 activeTripId=null;stopNumber=1;currentStopSaved=false;
@@ -673,8 +684,9 @@ document.getElementById('tCrew').value =
 
 const { data: stops } = await supabase
   .from('reis_stops')
-  .select('id')
-  .eq('reis_id', activeTripId);
+  .select('*')
+  .eq('reis_id', activeTripId)
+  .order('volgorde',{ascending:false});
 
 stopNumber = (stops?.length || 0) + 1;
 
