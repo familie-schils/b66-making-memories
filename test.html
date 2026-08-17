@@ -316,20 +316,19 @@ const appView=document.getElementById('appView');
 
   if(!user) return;
 
-  const { data, error } = await supabase
+ const { data, error } = await supabase
   .from('reizen')
   .select('*')
   .eq('camper_id', activeCamperId)
   .is('einddatum', null)
   .order('id', { ascending: false })
-  .limit(1);
-
+  .limit(1)
   .single();
 
-  if(error){
-    console.error('Camper ophalen mislukt:', error);
-    return;
-  }
+if(error){
+  console.error('Camper ophalen mislukt:', error);
+  return;
+}
 
   activeCamperId = data.camper_id;
 
