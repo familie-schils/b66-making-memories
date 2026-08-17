@@ -664,7 +664,7 @@ async function loadCrewOptions(){
   .is('einddatum', null)
   .order('id', { ascending: false })
   .limit(1)
-  .single();
+  .maybeSingle();
 
   console.log('Actieve reis data:', data);
   console.log('Actieve reis error:', error);
