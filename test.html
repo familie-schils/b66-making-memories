@@ -347,6 +347,8 @@ await loadCurrentCamper();
 
 await loadCrewOptions();
 
+await loadActiveTrip();
+
 await loadTrips();
 await loadMaintenance();
 await loadStats();
@@ -583,7 +585,7 @@ document.getElementById('endBox').classList.add('hidden');
 await loadTrips();await loadStats();
 }
 
-window.saveCurrentStop=saveCurrentStop;window.prepareNextStop=prepareNextStop;window.showEndTrip=showEndTrip;window.hideEndTrip=hideEndTrip;window.finishTrip=finishTrip;
+window.saveCurrentStop=saveCurrentStop;window.prepareNextStop=prepareNextStop;window.showEndTrip=showEndTrip;window.hideEndTrip=hideEndTrip;window.finishTrip=finishTrip;window.cancelTrip = cancelTrip;
 
 function clearStopFields(){
 ['sPlace','sCountry','sPrice','sFacilities','sNotes'].forEach(id=>document.getElementById(id).value='');
