@@ -402,7 +402,7 @@ const diff=Number(e)-Number(s);
 if(diff<0){el.textContent='⚠️ Eind KM is lager dan Start KM';return}
 el.textContent='🚐 KM gereden: '+diff.toLocaleString('nl-BE')+' km';
 }
-document.getElementById('tEndKm').addEventListener('input',updateKm);
+
 document.getElementById('tEndKmEndBox').addEventListener('input',function(){
 const clean=this.value.replace(/\D/g,'');
 this.value=clean;
