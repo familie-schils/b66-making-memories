@@ -450,6 +450,8 @@ datum:v('sDate')||v('tStartDate'),
 type_stop:v('sType'),
 camperplaats:v('sPlace'),
 land:v('sCountry'),
+    km_aankomst:
+    v('sKm') ? Number(v('sKm')) : null,
 prijs_per_nacht:v('sPrice')?Number(v('sPrice')):null,
 beoordeling:Number(v('sRating')),
 voorzieningen:v('sFacilities'),
