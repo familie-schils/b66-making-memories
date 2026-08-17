@@ -651,10 +651,7 @@ async function loadCrewOptions(){
  async function loadActiveTrip(){
 
   console.log('LOAD ACTIVE TRIP GESTART');
-   console.log('Actieve reis data:', data);
-console.log('Actieve reis error:', error);
-
-  console.log('Zoeken naar actieve reis voor camper:', activeCamperId);
+   console.log('Zoeken naar actieve reis voor camper:', activeCamperId);
 
 
 
@@ -665,7 +662,8 @@ console.log('Actieve reis error:', error);
     .is('einddatum', null)
     .maybeSingle();
 
-  console.log('Actieve reis:', data);
+  console.log('Actieve reis data:', data);
+  console.log('Actieve reis error:', error);
 
   if(error){
     console.error('Actieve reis ophalen mislukt:', error);
