@@ -669,10 +669,15 @@ async function loadCrewOptions(){
   console.log('Actieve reis data:', data);
   console.log('Actieve reis error:', error);
 
-  if(error){
-    console.error('Actieve reis ophalen mislukt:', error);
+ if(error){
+  if(error.code === 'PGRST116'){
+    console.log('Geen actieve reis gevonden');
     return;
   }
+
+  console.error('Actieve reis ophalen mislukt:', error);
+  return;
+}
 
   if(!data){
   return;
