@@ -622,7 +622,9 @@ async function loadCrewOptions(){
     .join('');
 
 }
-  async function loadActiveTrip(){
+ async function loadActiveTrip(){
+
+  console.log('Zoeken naar actieve reis voor camper:', activeCamperId);
 
   const { data, error } = await supabase
     .from('reizen')
@@ -630,6 +632,8 @@ async function loadCrewOptions(){
     .eq('camper_id', activeCamperId)
     .is('einddatum', null)
     .maybeSingle();
+
+  console.log('Actieve reis:', data);
 
   if(error){
     console.error('Actieve reis ophalen mislukt:', error);
