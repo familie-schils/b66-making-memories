@@ -87,7 +87,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <h3>🚐 Start van de reis</h3>
 <div class="grid">
 <div><label>Wie maakt de reis?</label><select id="tCrew">
-</select>
+
 </select></div>
 <div><label>Startdatum</label><input id="tStartDate" type="date"></div>
 </div>
@@ -314,21 +314,23 @@ const appView=document.getElementById('appView');
 
   const { data:{ user } } = await supabase.auth.getUser();
 
+  console.log('USER:', user);
+
   if(!user) return;
 
- const { data, error } = await supabase
-  .from('reizen')
-  .select('*')
-  .eq('camper_id', activeCamperId)
-  .is('einddatum', null)
-  .order('id', { ascending: false })
-  .limit(1)
-  .single();
+  const { data, error } = await supabase
+    .from('camper_users')
+    .select('camper_id')
+    .eq('user_id', user.id)
+    .single();
 
-if(error){
-  console.error('Camper ophalen mislukt:', error);
-  return;
-}
+  console.log('CAMPER DATA:', data);
+  console.log('CAMPER ERROR:', error);
+
+  if(error){
+    console.error('Camper ophalen mislukt:', error);
+    return;
+  }
 
   activeCamperId = data.camper_id;
 
