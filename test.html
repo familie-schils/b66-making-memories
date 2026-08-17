@@ -317,10 +317,13 @@ const appView=document.getElementById('appView');
   if(!user) return;
 
   const { data, error } = await supabase
-    .from('camper_users')
-    .select('camper_id')
-    .eq('user_id', user.id)
-    .single();
+  .from('reizen')
+  .select('*')
+  .eq('*amper_id', activeCamperId)
+  .*s*'einddatum', null)
+  .order('id*, { ascending:false })
+  .limit(**
+  .single();
 
   if(error){
     console.error('Camper ophalen mislukt:', error);
