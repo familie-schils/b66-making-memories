@@ -648,29 +648,38 @@ async function loadCrewOptions(){
   }
 
   if(!data){
-    return;
-  }
+  return;
+}
 
-  activeTripId = data.id;
+activeTripId = data.id;
 
-  const { data: stops } = await supabase
-    .from('reis_stops')
-    .select('id')
-    .eq('reis_id', activeTripId);
+document.getElementById('tStartKm').value =
+  data.start_km || '';
 
-  stopNumber = (stops?.length || 0) + 1;
+document.getElementById('tStartDate').value =
+  data.datum || '';
 
-  document.getElementById('tripChooser').classList.add('hidden');
-  document.getElementById('tripForm').classList.remove('hidden');
+document.getElementById('tCrew').value =
+  data.crew || '';
 
-  document.getElementById('tripTitle').textContent =
-    '🚐 Reis actief';
+const { data: stops } = await supabase
+  .from('reis_stops')
+  .select('id')
+  .eq('reis_id', activeTripId);
 
-  document.getElementById('stopHeading').textContent =
-    '📍 Stop ' + stopNumber;
+stopNumber = (stops?.length || 0) + 1;
 
-  document.getElementById('activeTripInfo').textContent =
-    'Actieve reis gevonden · verder met stop ' + stopNumber;
+document.getElementById('tripChooser').classList.add('hidden');
+document.getElementById('tripForm').classList.remove('hidden');
+
+document.getElementById('tripTitle').textContent =
+  '🚐 Reis actief';
+
+document.getElementById('stopHeading').textContent =
+  '📍 Stop ' + stopNumber;
+
+document.getElementById('activeTripInfo').textContent =
+  'Actieve reis gevonden · verder met stop ' + stopNumber;
 
 }
 async function loadTrips(){
