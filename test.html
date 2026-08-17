@@ -658,11 +658,13 @@ async function loadCrewOptions(){
 
 
   const { data, error } = await supabase
-    .from('reizen')
-    .select('*')
-    .eq('camper_id', activeCamperId)
-    .is('einddatum', null)
-    .maybeSingle();
+  .from('reizen')
+  .select('*')
+  .eq('camper_id', activeCamperId)
+  .is('einddatum', null)
+  .order('id', { ascending: false })
+  .limit(1)
+  .single();
 
   console.log('Actieve reis data:', data);
   console.log('Actieve reis error:', error);
