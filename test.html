@@ -1386,7 +1386,7 @@ async function loadTravelCosts(){
   const { data, error } = await supabase
     .from('reiskosten')
     .select('*')
-    .eq('camper_id', activeCamperId)
+    
     .order('datum', { ascending:false });
   
   console.log('REISKOSTEN DATA:', data);
