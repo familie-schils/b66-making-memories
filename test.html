@@ -1385,7 +1385,33 @@ async function loadTravelCosts(){
 }
 ``
 
+async function loadTravelCostTrips(){
 
+  const select =
+    document.getElementById('costTrip');
+
+  if(!select) return;
+
+  const { data, error } = await supabase
+    .from('reizen')
+    .select('id, datum, crew')
+    .eq('camper_id', activeCamperId)
+    .order('datum', { ascending:false });
+
+  if(error){
+    console.error(error);
+    return;
+  }
+
+  select.innerHTML = (data || [])
+    .map(x => `
+      <option value="${x.id}">
+        ${x.datum} - ${x.crew}
+      </option>
+    `)
+    .join('');
+
+}
 
 init();
 
