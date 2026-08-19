@@ -1382,8 +1382,42 @@ async function loadTravelCosts(){
 
   if(!box) return;
 
-  box.innerHTML =
-    'Nog geen reiskosten geregistreerd.';
+  const { data, error } = await supabase
+    .from('reiskosten')
+    .select('*')
+    .eq('camper_id', activeCamperId)
+    .order('datum',{ascending:false});
+
+  if(error){
+    box.innerHTML = error.message;
+    return;
+  }
+
+  if(!data || data.length === 0){
+    box.innerHTML =
+      'Nog geen reiskosten geregistreerd.';
+    return;
+  }
+
+  box.innerHTML = data.map(x => `
+    <div class="item">
+
+      <b>${x.datum}</b><br>
+
+      ${x.type_kost}<br>
+
+      ${x.land || ''}<br>
+
+      <div>
+        💶 € ${Number(x.bedrag).toFixed(2)}
+      </div>
+
+      ${x.opmerking
+        ? `<div class="muted">${x.opmerking}</div>`
+        : ''}
+
+    </div>
+  `).join('');
 
 }
 
@@ -1481,7 +1515,14 @@ console.log('SUPABASE ERROR:', error);
     return;
   }
 
-  alert('✅ Reiskosten opgeslagen');
+  alif(error){
+  alert(error.message);
+  return;
+}
+
+await loadTravelCosts();
+
+alert('✅ Reiskosten opgeslagen');ert('✅ Reiskosten opgeslagen');
 
 };
 
