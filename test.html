@@ -431,6 +431,7 @@ console.log('NA loadTravelCostTrips');
 
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
+  await loadTravelCosts();
 }
 
 window.login=async()=>{
