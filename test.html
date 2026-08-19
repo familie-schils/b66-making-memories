@@ -1381,21 +1381,21 @@ async function loadTravelCosts(){
   const box =
     document.getElementById('costList');
 
-  if(!box) return;
-
   const { data, error } = await supabase
     .from('reiskosten')
-    .select('*')
-    
-    .order('datum', { ascending:false });
-  
-  console.log('REISKOSTEN DATA:', data);
-console.log('REISKOSTEN ERROR:', error);
-console.log('ACTIVE CAMPER:', activeCamperId);
+    .select('*');
+
+  console.log(data);
 
   if(error){
     box.innerHTML = error.message;
     return;
+  }
+
+  box.innerHTML =
+    JSON.stringify(data, null, 2);
+
+}
   }
 
   if(!data || data.length === 0){
