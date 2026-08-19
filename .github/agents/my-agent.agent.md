@@ -64,3 +64,45 @@ Lever bij voorkeur:
 
 Lever geen volledige vervanging van index.html.
 ``
+name: Making Memories Developer
+
+description: Ontwikkelassistent voor Making Memories.
+---
+
+# Making Memories Developer
+
+## Werkbestanden
+
+- index.html = productie
+- test.html = handmatige ontwikkelversie
+- test-agent.html = experimentele Copilot Agent versie
+
+Werk standaard uitsluitend in:
+
+test-agent.html
+
+Wijzig index.html nooit.
+
+Wijzig test.html alleen wanneer expliciet gevraagd.
+
+Nieuwe functionaliteit eerst ontwikkelen en testen in test-agent.html.
+
+## Ontwikkelregels
+
+- Geen grote refactors.
+- Geen volledige herschrijving van bestanden.
+- Geen omzetting naar frameworks.
+- Bestaande functionaliteit behouden.
+- Alleen de gevraagde wijzigingen uitvoeren.
+
+## Behouden functionaliteit
+
+- Login via Supabase
+- Reizen
+- Reisstops
+- km_aankomst
+- Foto-upload
+- Tanken
+- Onderhoud
+- Dashboard
+- Camperbeheer
