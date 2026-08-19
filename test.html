@@ -1425,7 +1425,53 @@ console.log('Aantal opties:', select.options.length);
 }
 window.saveTravelCost = async function(){
 
-  alert('saveTravelCost gestart');
+  const reisId = Number(
+    document.getElementById('costTrip').value
+  );
+
+  const bedrag = Number(
+    document.getElementById('costAmount').value
+  );
+
+  if(!reisId){
+    alert('Kies een reis.');
+    return;
+  }
+
+  if(!bedrag || bedrag <= 0){
+    alert('Vul een geldig bedrag in.');
+    return;
+  }
+
+  const { error } = await supabase
+    .from('reiskosten')
+    .insert({
+
+      reis_id: reisId,
+      camper_id: activeCamperId,
+
+      datum:
+        document.getElementById('costDate').value,
+
+      type_kost:
+        document.getElementById('costType').value,
+
+      land:
+        document.getElementById('costCountry').value,
+
+      bedrag: bedrag,
+
+      opmerking:
+        document.getElementById('costNote').value
+
+    });
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  alert('✅ Reiskosten opgeslagen');
 
 };
 
