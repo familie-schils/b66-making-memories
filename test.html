@@ -1420,27 +1420,6 @@ async function loadTravelCosts(){
 
 }
 
-  box.innerHTML = data.map(x => `
-    <div class="item">
-
-      <b>${x.datum}</b><br>
-
-      ${x.type_kost}<br>
-
-      ${x.land || ''}<br>
-
-      <div>
-        💶 € ${Number(x.bedrag).toFixed(2)}
-      </div>
-
-      ${x.opmerking
-        ? `<div class="muted">${x.opmerking}</div>`
-        : ''}
-
-    </div>
-  `).join('');
-
-}
 
 
 async function loadTravelCostTrips(){
