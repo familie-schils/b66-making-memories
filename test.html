@@ -1280,20 +1280,7 @@ document.getElementById('saveMaintenanceBtn')
   alert('✅ Onderhoud opgeslagen');
     await loadMaintenance();
     });
-    async function loadMaintenance(){
-
-
-}
-
-async function loadTravelCosts(){
-
-  const box =
-    document.getElementById('costList');
-
-  if(!box) return;
-
-}
-
+async function loadMaintenance(){
 
   const { data, error } = await supabase
     .from('onderhoud')
@@ -1336,6 +1323,7 @@ async function loadTravelCosts(){
   `).join('');
 
 }
+
 
 
 
