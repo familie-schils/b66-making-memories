@@ -385,10 +385,10 @@ const appView=document.getElementById('appView');
   if(!user) return;
 
   const { data, error } = await supabase
-    .from('camper_users')
-    
-    .eq('user_id', user.id)
-    .single();
+  .from('camper_users')
+  .select('*')
+  .eq('user_id', user.id)
+  .single();
 
   console.log('CAMPER DATA:', data);
   console.log('CAMPER ERROR:', error);
