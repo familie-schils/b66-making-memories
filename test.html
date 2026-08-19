@@ -1423,7 +1423,7 @@ async function loadTravelCostTrips(){
   console.log('REISKOSTEN DROPDOWN:', data);
 console.log('Aantal opties:', select.options.length);
 }
-window.saveTravelCost = async function(){
+window.saveTravelCost = async function(){console.log('SAVE GESTART');
 
   const reisId = Number(
     document.getElementById('costTrip').value
@@ -1442,10 +1442,20 @@ window.saveTravelCost = async function(){
     alert('Vul een geldig bedrag in.');
     return;
   }
+console.log({
+  reis_id: reisId,
+  camper_id: activeCamperId,
+  datum: document.getElementById('costDate').value,
+  type_kost: document.getElementById('costType').value,
+  land: document.getElementById('costCountry').value,
+  bedrag: bedrag,
+  opmerking: document.getElementById('costNote').value
+});
 
   const { error } = await supabase
     .from('reiskosten')
     .insert({
+      console.log('SUPABASE ERROR:', error);
 
       reis_id: reisId,
       camper_id: activeCamperId,
