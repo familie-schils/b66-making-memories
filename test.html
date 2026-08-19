@@ -1455,7 +1455,7 @@ console.log({
   const { error } = await supabase
     .from('reiskosten')
     .insert({
-      console.log('SUPABASE ERROR:', error);
+      
 
       reis_id: reisId,
       camper_id: activeCamperId,
@@ -1475,7 +1475,7 @@ console.log({
         document.getElementById('costNote').value
 
     });
-
+console.log('SUPABASE ERROR:', error);
   if(error){
     alert(error.message);
     return;
