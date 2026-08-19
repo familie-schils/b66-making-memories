@@ -196,6 +196,10 @@ Nog geen foto geselecteerd.
 Registreer péage, ferry, tunnel, brug, parkeren en andere reiskosten.
 </p>
 
+<div id="costList">
+Reiskosten laden...
+</div>
+
 </div>
 
 </section>
@@ -371,6 +375,7 @@ await loadActiveTrip();
 await loadTrips();
 await loadMaintenance();
 await loadStats();
+  await loadTravelCosts();
 
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
@@ -1276,6 +1281,21 @@ document.getElementById('saveMaintenanceBtn')
     await loadMaintenance();
     });
     async function loadMaintenance(){
+
+  ...
+
+}
+
+async function loadTravelCosts(){
+
+  const box =
+    document.getElementById('costList');
+
+  if(!box) return;
+
+  ...
+}
+
 
   const { data, error } = await supabase
     .from('onderhoud')
