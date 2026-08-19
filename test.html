@@ -1388,6 +1388,10 @@ async function loadTravelCosts(){
     .select('*')
     .eq('camper_id', activeCamperId)
     .order('datum', { ascending:false });
+  
+  console.log('REISKOSTEN DATA:', data);
+console.log('REISKOSTEN ERROR:', error);
+console.log('ACTIVE CAMPER:', activeCamperId);
 
   if(error){
     box.innerHTML = error.message;
