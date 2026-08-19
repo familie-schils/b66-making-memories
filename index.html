@@ -55,6 +55,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <nav>
 <button data-tab="trips" class="active">Reizen</button>
 <button data-tab="fuel">⛽ Tanken</button>
+<button data-tab="tol">🛣️ Tol</button>
 <button data-tab="home">Dashboard</button>
 <button data-tab="maintenance">Onderhoud</button>
 <button data-tab="camper">Mijn B66</button>
@@ -184,6 +185,25 @@ Nog geen foto geselecteerd.
 <button class="primary" onclick="addFuel()">⛽ Tankbeurt opslaan</button>
 </div>
 <div class="card"><h2>Tankhistorie</h2><div id="fuelList">Tankbeurten laden...</div></div>
+</section>
+
+<section id="tol">
+<div class="card">
+<h2>🛣️ Tol</h2>
+<p class="muted">Registreer péage en ferry kosten per bestaande reis.</p>
+<div id="tolStatus" class="status hidden"></div>
+<div class="grid">
+<div>
+<label>Reis</label>
+<select id="tolTrip"></select>
+</div>
+<div><label>Péage (€)</label><input id="tolPeage" type="number" min="0" step="0.01"></div>
+<div><label>Ferry (€)</label><input id="tolFerry" type="number" min="0" step="0.01"></div>
+</div>
+<br>
+<button class="primary" onclick="saveTol()">💾 Tol opslaan</button>
+</div>
+<div class="card"><h2>Tolhistorie</h2><div id="tolList">Tolregels laden...</div></div>
 </section>
 
 <section id="home">
@@ -357,6 +377,8 @@ await loadActiveTrip();
 await loadTrips();
 await loadMaintenance();
 await loadStats();
+await loadTolTrips();
+await loadTol();
 
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
@@ -983,6 +1005,123 @@ async function loadFuel(){
   }
 }
 
+async function loadTolTrips(){
+  const select = document.getElementById('tolTrip');
+  if(!select) return;
+
+  const { data, error } = await supabase
+    .from('reizen')
+    .select('id, datum, einddatum, crew')
+    .eq('camper_id', activeCamperId)
+    .order('datum', { ascending: false });
+
+  if(error){
+    select.innerHTML = '<option value="">Reizen laden mislukt</option>';
+    return;
+  }
+
+  if(!data || data.length === 0){
+    select.innerHTML = '<option value="">Geen reizen beschikbaar</option>';
+    return;
+  }
+
+  select.innerHTML = data.map((trip) => `
+    <option value="${trip.id}">
+      ${esc(trip.datum)}${trip.einddatum ? ' → ' + esc(trip.einddatum) : ' · actief'} · ${esc(trip.crew || '')}
+    </option>
+  `).join('');
+}
+
+async function loadTol(){
+  const list = document.getElementById('tolList');
+  if(!list) return;
+  list.textContent = 'Tolregels laden...';
+
+  const { data, error } = await supabase
+    .from('tol')
+    .select('id, reis_id, peage, ferry')
+    .eq('camper_id', activeCamperId)
+    .order('id', { ascending: false });
+
+  if(error){
+    list.textContent = 'Laden mislukt: ' + error.message;
+    list.className = 'status err';
+    return;
+  }
+
+  list.className = '';
+  list.innerHTML = (data || []).length
+    ? data.map((entry) => `
+      <div class="item">
+        <b>Reis #${entry.reis_id}</b>
+        <div>Péage: € ${Number(entry.peage || 0).toFixed(2).replace('.', ',')}</div>
+        <div>Ferry: € ${Number(entry.ferry || 0).toFixed(2).replace('.', ',')}</div>
+      </div>
+    `).join('')
+    : 'Nog geen tolregels opgeslagen.';
+}
+
+window.saveTol = async function(){
+  const status = document.getElementById('tolStatus');
+  status.className = 'status hidden';
+
+  const reisId = Number(v('tolTrip'));
+  const peage = Number(v('tolPeage') || 0);
+  const ferry = Number(v('tolFerry') || 0);
+
+  if(!Number.isInteger(reisId) || reisId <= 0){
+    status.textContent = 'Kies eerst een bestaande reis.';
+    status.className = 'status err';
+    return;
+  }
+
+  if(peage < 0 || ferry < 0){
+    status.textContent = 'Péage en ferry moeten 0 of hoger zijn.';
+    status.className = 'status err';
+    return;
+  }
+
+  if(peage === 0 && ferry === 0){
+    status.textContent = 'Vul minimaal één bedrag in.';
+    status.className = 'status err';
+    return;
+  }
+
+  const { data: tripCheck, error: tripCheckError } = await supabase
+    .from('reizen')
+    .select('id')
+    .eq('id', reisId)
+    .eq('camper_id', activeCamperId)
+    .maybeSingle();
+
+  if(tripCheckError || !tripCheck){
+    status.textContent = 'Deze reis hoort niet bij de actieve camper.';
+    status.className = 'status err';
+    return;
+  }
+
+  const { error } = await supabase
+    .from('tol')
+    .insert({
+      reis_id: reisId,
+      camper_id: activeCamperId,
+      peage,
+      ferry
+    });
+
+  if(error){
+    status.textContent = 'Tol opslaan mislukt: ' + error.message;
+    status.className = 'status err';
+    return;
+  }
+
+  status.textContent = '✓ Tolregel opgeslagen.';
+  status.className = 'status ok';
+  document.getElementById('tolPeage').value = '';
+  document.getElementById('tolFerry').value = '';
+  await loadTol();
+};
+
 async function loadStats(){
  const [{data:trips},{data:stops},{data:tanks}]=await Promise.all([
   supabase
@@ -1061,6 +1200,10 @@ document.getElementById(b.dataset.tab).classList.add('active');
 if(b.dataset.tab==='fuel'){
   await prepareFuelForm();
   await loadFuel();
+}
+if(b.dataset.tab==='tol'){
+  await loadTolTrips();
+  await loadTol();
 }
 });
 const photoUpload = document.getElementById('photoUpload');
