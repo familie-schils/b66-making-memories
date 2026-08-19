@@ -424,7 +424,11 @@ await loadActiveTrip();
 await loadTrips();
 await loadMaintenance();
 await loadStats();
-  await loadTravelCosts();
+  console.log('VOOR loadTravelCostTrips');
+
+await loadTravelCostTrips();
+
+console.log('NA loadTravelCostTrips');
 
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
