@@ -1387,10 +1387,15 @@ async function loadTravelCosts(){
 
 async function loadTravelCostTrips(){
 
+  console.log('loadTravelCostTrips gestart');
+
   const select =
     document.getElementById('costTrip');
 
+  console.log('SELECT:', select);
+
   if(!select) return;
+
 
   const { data, error } = await supabase
     .from('reizen')
