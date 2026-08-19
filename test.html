@@ -1386,7 +1386,7 @@ async function loadTravelCosts(){
     .from('reiskosten')
     .select('*')
     .eq('camper_id', activeCamperId)
-    .order('datum',{ascending:false});
+    .order('datum', { ascending:false });
 
   if(error){
     box.innerHTML = error.message;
@@ -1398,6 +1398,26 @@ async function loadTravelCosts(){
       'Nog geen reiskosten geregistreerd.';
     return;
   }
+
+  box.innerHTML = data.map(x => `
+    <div class="item">
+
+      <b>${x.datum}</b><br>
+
+      ${x.type_kost}<br>
+
+      ${x.land || ''}<br>
+
+      💶 € ${Number(x.bedrag).toFixed(2)}
+
+      ${x.opmerking
+        ? `<div class="muted">${x.opmerking}</div>`
+        : ''}
+
+    </div>
+  `).join('');
+
+}
 
   box.innerHTML = data.map(x => `
     <div class="item">
