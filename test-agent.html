@@ -58,6 +58,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <button data-tab="home">Dashboard</button>
 <button data-tab="maintenance">Onderhoud</button>
 <button data-tab="camper">Mijn B66</button>
+<button data-tab="travelcosts">🛣️ Reiskosten</button>
 <button onclick="logout()">Uitloggen</button>
 </nav>
 
@@ -286,7 +287,31 @@ Nog geen onderhoud geregistreerd.
 <div><label>Versnellingsbak</label><input value="8-traps automaat" readonly></div>
 <div><label>Max. massa</label><input value="3.500 kg" readonly></div>
 </div></div></section>
-</main>
+
+<section id="travelcosts">
+<div class="card">
+<h2>🛣️ Reiskosten</h2>
+<div id="travelCostStatus" class="status hidden"></div>
+<div class="grid">
+<div><label>Reis</label><select id="costTrip"><option value="">Kies reis...</option></select></div>
+<div><label>Datum</label><input id="tcDatum" type="date"></div>
+<div><label>Type kost</label><select id="tcTypeKost">
+<option value="tol">Tol</option>
+<option value="parkeren">Parkeren</option>
+<option value="veer">Veer</option>
+<option value="camping">Camping</option>
+<option value="andere">Andere</option>
+</select></div>
+<div><label>Land</label><input id="tcLand"></div>
+<div><label>Bedrag (€)</label><input id="tcBedrag" type="number" min="0" step="0.01"></div>
+</div>
+<br>
+<label>Opmerking</label><textarea id="tcOpmerking"></textarea>
+<br><br>
+<button class="primary" onclick="saveTravelCost()">💾 Reiskost opslaan</button>
+</div>
+<div class="card"><h2>Overzicht reiskosten</h2><div id="travelCostList">Reiskosten laden...</div></div>
+</section>
 </div>
 
 <script type="module">
@@ -1062,6 +1087,12 @@ if(b.dataset.tab==='fuel'){
   await prepareFuelForm();
   await loadFuel();
 }
+if(b.dataset.tab==='travelcosts'){
+  if(!document.getElementById('tcDatum').value)
+    document.getElementById('tcDatum').value = today();
+  await loadTravelCostTrips();
+  await loadTravelCosts();
+}
 });
 const photoUpload = document.getElementById('photoUpload');
 
@@ -1306,6 +1337,127 @@ document.getElementById('saveMaintenanceBtn')
 }
 
 
+
+// ── Reiskosten module ──────────────────────────────────────
+
+async function loadTravelCostTrips(){
+  const select = document.getElementById('costTrip');
+  select.innerHTML = '<option value="">Kies reis...</option>';
+  const { data, error } = await supabase
+    .from('reizen')
+    .select('id,datum,crew,einddatum')
+    .eq('camper_id', activeCamperId)
+    .order('datum', { ascending: false });
+  if(error){
+    console.error('Reizen laden voor reiskosten mislukt:', error);
+    return;
+  }
+  (data || []).forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = (r.datum || '?') + ' – ' + (r.crew || '?') + (r.einddatum ? '' : ' 🟢');
+    select.appendChild(opt);
+  });
+}
+
+window.saveTravelCost = async function(){
+  const statusEl = document.getElementById('travelCostStatus');
+  statusEl.className = 'status hidden';
+
+  const reis_id    = document.getElementById('costTrip').value || null;
+  const camper_id  = activeCamperId;
+  const datum      = document.getElementById('tcDatum').value.trim();
+  const type_kost  = document.getElementById('tcTypeKost').value.trim();
+  const land       = document.getElementById('tcLand').value.trim() || null;
+  const bedragRaw  = document.getElementById('tcBedrag').value.trim();
+  const opmerking  = document.getElementById('tcOpmerking').value.trim() || null;
+
+  console.log('🛣️ saveTravelCost – waarden voor opslaan:');
+  console.log('  reis_id   :', reis_id);
+  console.log('  camper_id :', camper_id);
+  console.log('  datum     :', datum);
+  console.log('  type_kost :', type_kost);
+  console.log('  land      :', land);
+  console.log('  bedrag    :', bedragRaw);
+  console.log('  opmerking :', opmerking);
+
+  if(!reis_id){
+    statusEl.textContent = 'Kies eerst een reis.';
+    statusEl.className = 'status err';
+    return;
+  }
+  if(!datum){
+    statusEl.textContent = 'Vul een datum in.';
+    statusEl.className = 'status err';
+    return;
+  }
+  if(bedragRaw === ''){
+    statusEl.textContent = 'Vul een bedrag in.';
+    statusEl.className = 'status err';
+    return;
+  }
+  const bedrag = Number(bedragRaw);
+  if(isNaN(bedrag) || bedrag < 0){
+    statusEl.textContent = 'Vul een geldig bedrag in.';
+    statusEl.className = 'status err';
+    return;
+  }
+
+  const payload = { reis_id, camper_id, datum, type_kost, land, bedrag, opmerking };
+  console.log('🛣️ saveTravelCost – payload naar Supabase:', payload);
+
+  const { data, error } = await supabase
+    .from('reiskosten')
+    .insert(payload)
+    .select()
+    .single();
+
+  if(error){
+    console.error('🛣️ saveTravelCost – Supabase fout:', error);
+    statusEl.textContent = 'Opslaan mislukt: [' + error.code + '] ' + error.message;
+    statusEl.className = 'status err';
+    return;
+  }
+
+  console.log('🛣️ saveTravelCost – opgeslagen:', data);
+  statusEl.textContent = '✓ Reiskost opgeslagen.';
+  statusEl.className = 'status ok';
+
+  document.getElementById('costTrip').value = '';
+  document.getElementById('tcDatum').value = today();
+  document.getElementById('tcTypeKost').value = 'tol';
+  document.getElementById('tcLand').value = '';
+  document.getElementById('tcBedrag').value = '';
+  document.getElementById('tcOpmerking').value = '';
+
+  await loadTravelCosts();
+};
+
+async function loadTravelCosts(){
+  const list = document.getElementById('travelCostList');
+  list.textContent = 'Reiskosten laden...';
+  const { data, error } = await supabase
+    .from('reiskosten')
+    .select('*')
+    .eq('camper_id', activeCamperId)
+    .order('datum', { ascending: false });
+  if(error){
+    console.error('🛣️ loadTravelCosts – fout:', error);
+    list.innerHTML = '<div class="status err">Laden mislukt: [' + error.code + '] ' + esc(error.message) + '</div>';
+    return;
+  }
+  const rows = data || [];
+  if(!rows.length){
+    list.innerHTML = '<div class="muted">Nog geen reiskosten opgeslagen.</div>';
+    return;
+  }
+  list.innerHTML = rows.map(x => `<div class="item">
+<b>${esc(x.datum)}</b> · ${esc(x.type_kost)} · ${esc(x.land || '—')}
+<div><b>€ ${Number(x.bedrag).toFixed(2).replace('.',',')}</b>${x.opmerking ? ' · ' + esc(x.opmerking) : ''}</div>
+</div>`).join('');
+}
+
+// ── einde Reiskosten module ────────────────────────────────
 
 init();
 
