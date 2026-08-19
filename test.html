@@ -1381,11 +1381,14 @@ async function loadTravelCosts(){
   const box =
     document.getElementById('costList');
 
+  if(!box) return;
+
   const { data, error } = await supabase
     .from('reiskosten')
     .select('*');
 
-  console.log(data);
+  console.log('REISKOSTEN:', data);
+  console.log('ERROR:', error);
 
   if(error){
     box.innerHTML = error.message;
@@ -1393,7 +1396,9 @@ async function loadTravelCosts(){
   }
 
   box.innerHTML =
-    JSON.stringify(data, null, 2);
+    '<pre>' +
+    JSON.stringify(data, null, 2) +
+    '</pre>';
 
 }
   
