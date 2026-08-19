@@ -1383,9 +1383,11 @@ async function loadTravelCosts(){
 
   if(!box) return;
 
-  const { data, error } = await supabase
-    .from('reiskosten')
-    .select('*');
+ const { data, error } = await supabase
+  .from('reiskosten')
+  .select('*')
+  .limit(100);
+   
 
   console.log('REISKOSTEN:', data);
   console.log('ERROR:', error);
