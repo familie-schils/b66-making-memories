@@ -386,7 +386,7 @@ const appView=document.getElementById('appView');
 
   const { data, error } = await supabase
     .from('camper_users')
-    .select('camper_id')
+    
     .eq('user_id', user.id)
     .single();
 
