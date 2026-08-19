@@ -195,7 +195,56 @@ Nog geen foto geselecteerd.
 <p class="muted">
 Registreer péage, ferry, tunnel, brug, parkeren en andere reiskosten.
 </p>
+<div class="grid">
 
+  <div>
+    <label>Reis</label>
+    <select id="costTrip"></select>
+  </div>
+
+  <div>
+    <label>Datum</label>
+    <input id="costDate" type="date">
+  </div>
+
+  <div>
+    <label>Type kosten</label>
+    <select id="costType">
+      <option>Péage</option>
+      <option>Ferry</option>
+      <option>Tunnel</option>
+      <option>Brug</option>
+      <option>Parkeren</option>
+      <option>Milieusticker</option>
+      <option>Vignet</option>
+      <option>Overig</option>
+    </select>
+  </div>
+
+  <div>
+    <label>Land</label>
+    <input id="costCountry">
+  </div>
+
+  <div>
+    <label>Bedrag (€)</label>
+    <input id="costAmount" type="number" step="0.01">
+  </div>
+
+</div>
+
+<br>
+
+<label>Opmerking</label>
+<input id="costNote">
+
+<br><br>
+
+<button class="primary">
+💾 Reiskosten opslaan
+</button>
+
+<hr>
 <div id="costList">
 Reiskosten laden...
 </div>
