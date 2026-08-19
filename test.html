@@ -1415,13 +1415,7 @@ async function loadTravelCostTrips(){
 
 }
 
-  select.innerHTML = (data || [])
-    .map(x => `
-      <option value="${x.id}">
-        ${x.datum} - ${x.crew}
-      </option>
-    `)
-    .join('');
+
 
 
 init();
