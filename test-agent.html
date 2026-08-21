@@ -57,7 +57,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <button data-tab="fuel">⛽ Tanken</button>
 <button data-tab="home">Dashboard</button>
 <button data-tab="maintenance">Onderhoud</button>
-<button data-tab="camper">Mijn B66</button>
+<button data-tab="camper">Mijn Camper</button>
 <button data-tab="reiskosten">🛣️ Reiskosten</button>
 <button data-tab="personen">👥 Personen</button>
 <button onclick="logout()">Uitloggen</button>
@@ -387,13 +387,64 @@ Nog geen onderhoud geregistreerd.
 </div>
 </section>
 
-<section id="camper"><div class="card"><h2>Mijn B66</h2><div class="grid">
-<div><label>Model</label><input value="Bürstner B66 TD 690 G" readonly></div>
-<div><label>Basisvoertuig</label><input value="Fiat Ducato" readonly></div>
-<div><label>Motor</label><input value="140 pk" readonly></div>
-<div><label>Versnellingsbak</label><input value="8-traps automaat" readonly></div>
-<div><label>Max. massa</label><input value="3.500 kg" readonly></div>
-</div></div></section>
+<!--
+  SQL-migratie – voeg deze kolommen toe aan de campers tabel in Supabase:
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS merk text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS model text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS basisvoertuig text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS motor text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS versnellingsbak text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS max_massa text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS kenteken text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS bouwjaar text;
+-->
+<section id="camper"><div class="card"><h2>Mijn Camper</h2>
+<div class="grid">
+<div><label>Campermerk</label>
+<select id="camperMerk">
+<option value="">— Kies merk —</option>
+<option>Adria</option>
+<option>Bürstner</option>
+<option>Carthago</option>
+<option>Challenger</option>
+<option>Chausson</option>
+<option>Dethleffs</option>
+<option>Hymer</option>
+<option>Knaus</option>
+<option>Laika</option>
+<option>McLouis</option>
+<option>Pilote</option>
+<option>Rapido</option>
+<option>Sunlight</option>
+<option>Weinsberg</option>
+<option>Overig</option>
+</select></div>
+<div><label>Model</label><input id="camperModel" type="text" placeholder="bijv. B66 TD 690 G"></div>
+<div><label>Basisvoertuig</label>
+<select id="camperBasisvoertuig">
+<option value="">— Kies basisvoertuig —</option>
+<option>Fiat Ducato</option>
+<option>Mercedes Sprinter</option>
+<option>Citroën Jumper</option>
+<option>Peugeot Boxer</option>
+<option>Ford Transit</option>
+<option>MAN TGE</option>
+<option>Volkswagen Crafter</option>
+<option>Renault Master</option>
+<option>Iveco Daily</option>
+<option>Overig</option>
+</select></div>
+<div><label>Motor</label><input id="camperMotor" type="text" placeholder="bijv. 140 pk"></div>
+<div><label>Versnellingsbak</label><input id="camperVersnellingsbak" type="text" placeholder="bijv. 8-traps automaat"></div>
+<div><label>Maximaal toegelaten massa</label><input id="camperMaxMassa" type="text" placeholder="bijv. 3500 kg"></div>
+<div><label>Kenteken</label><input id="camperKenteken" type="text" placeholder="bijv. AB-123-C"></div>
+<div><label>Bouwjaar</label><input id="camperBouwjaar" type="text" placeholder="bijv. 2022"></div>
+</div>
+<div style="margin-top:12px">
+<button onclick="saveCamperProfile()">💾 Opslaan</button>
+<span id="camperProfileStatus" class="status hidden"></span>
+</div>
+</div></section>
 </main>
 </div>
 
@@ -522,6 +573,7 @@ try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
   await loadTravelCosts();
   await loadPersonen();
+  await loadCamperProfile();
 }
 
 window.login=async()=>{
@@ -1671,6 +1723,45 @@ window.togglePersoon=async function(id,huidigActief){
   if(error){alert('Bijwerken mislukt: '+error.message);return;}
   await loadPersonen();
   await loadPersonOptions();
+};
+
+async function loadCamperProfile(){
+  if(!activeCamperId)return;
+  const {data,error}=await supabase
+    .from('campers')
+    .select('merk,model,basisvoertuig,motor,versnellingsbak,max_massa,kenteken,bouwjaar')
+    .eq('id',activeCamperId)
+    .single();
+  if(error){console.error('Camperprofiel laden mislukt:',error);return;}
+  if(!data)return;
+  const setVal=(id,val)=>{const el=document.getElementById(id);if(el&&val!=null)el.value=val;};
+  setVal('camperMerk',data.merk);
+  setVal('camperModel',data.model);
+  setVal('camperBasisvoertuig',data.basisvoertuig);
+  setVal('camperMotor',data.motor);
+  setVal('camperVersnellingsbak',data.versnellingsbak);
+  setVal('camperMaxMassa',data.max_massa);
+  setVal('camperKenteken',data.kenteken);
+  setVal('camperBouwjaar',data.bouwjaar);
+}
+
+window.saveCamperProfile=async function(){
+  const status=document.getElementById('camperProfileStatus');
+  status.className='status hidden';
+  if(!activeCamperId){status.textContent='Geen actieve camper gevonden.';status.className='status err';return;}
+  const payload={
+    merk:document.getElementById('camperMerk').value||null,
+    model:document.getElementById('camperModel').value||null,
+    basisvoertuig:document.getElementById('camperBasisvoertuig').value||null,
+    motor:document.getElementById('camperMotor').value||null,
+    versnellingsbak:document.getElementById('camperVersnellingsbak').value||null,
+    max_massa:document.getElementById('camperMaxMassa').value||null,
+    kenteken:document.getElementById('camperKenteken').value||null,
+    bouwjaar:document.getElementById('camperBouwjaar').value||null
+  };
+  const {error}=await supabase.from('campers').update(payload).eq('id',activeCamperId);
+  if(error){status.textContent='Opslaan mislukt: '+error.message;status.className='status err';return;}
+  status.textContent='✓ Camperprofiel opgeslagen';status.className='status ok';
 };
 
 init();
