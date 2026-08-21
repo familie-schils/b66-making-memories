@@ -458,7 +458,7 @@ appView.classList.remove('hidden');
 
 await loadCurrentCamper();
 
-await loadCrewOptions();
+await loadPersonOptions();
 
 await loadActiveTrip();
 
@@ -747,7 +747,7 @@ if(!text){el.className='status hidden';return}
 el.textContent=text;el.className='status '+(ok?'ok':'err');
 }
 function today(){return new Date().toISOString().slice(0,10)}
-async function loadCrewOptions(){
+async function loadPersonOptions(){
   const {data,error}=await supabase
     .from('personen')
     .select('*')
@@ -1604,7 +1604,7 @@ window.addPersoon=async function(){
   box.textContent='✓ '+naam+' toegevoegd.';box.className='status ok';
   document.getElementById('persoonNaam').value='';
   await loadPersonen();
-  await loadCrewOptions();
+  await loadPersonOptions();
 };
 
 window.deletePersoon=async function(id){
@@ -1612,14 +1612,14 @@ window.deletePersoon=async function(id){
   const {error}=await supabase.from('personen').delete().eq('id',id);
   if(error){alert('Verwijderen mislukt: '+error.message);return;}
   await loadPersonen();
-  await loadCrewOptions();
+  await loadPersonOptions();
 };
 
 window.togglePersoon=async function(id,huidigActief){
   const {error}=await supabase.from('personen').update({actief:!huidigActief}).eq('id',id);
   if(error){alert('Bijwerken mislukt: '+error.message);return;}
   await loadPersonen();
-  await loadCrewOptions();
+  await loadPersonOptions();
 };
 
 init();
