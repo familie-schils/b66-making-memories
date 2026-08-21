@@ -59,6 +59,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <button data-tab="maintenance">Onderhoud</button>
 <button data-tab="camper">Mijn B66</button>
 <button data-tab="reiskosten">🛣️ Reiskosten</button>
+<button data-tab="personen">👥 Personen</button>
 <button onclick="logout()">Uitloggen</button>
 </nav>
 
@@ -345,6 +346,34 @@ Nog geen onderhoud geregistreerd.
 
 </section>
 
+<section id="personen">
+<div class="card">
+<h2>👥 Personen</h2>
+<p class="muted">Beheer de bestuurders en passagiers die aan deze camper gekoppeld zijn.</p>
+
+<!--
+  SQL – maak deze tabel aan in Supabase:
+
+  create table personen (
+    id         bigint generated always as identity primary key,
+    camper_id  uuid references campers(id) on delete cascade,
+    naam       text not null,
+    actief     boolean not null default true,
+    created_at timestamptz not null default now()
+  );
+-->
+
+<div id="persoonStatus" class="status hidden"></div>
+<div class="grid">
+  <div><label>Naam</label><input id="persoonNaam" placeholder="Voornaam of volledige naam"></div>
+</div>
+<br>
+<button class="primary" onclick="addPersoon()">＋ Persoon toevoegen</button>
+<hr>
+<div id="persoonList">Personen laden...</div>
+</div>
+</section>
+
 <section id="camper"><div class="card"><h2>Mijn B66</h2><div class="grid">
 <div><label>Model</label><input value="Bürstner B66 TD 690 G" readonly></div>
 <div><label>Basisvoertuig</label><input value="Fiat Ducato" readonly></div>
@@ -432,6 +461,7 @@ console.log('NA loadTravelCostTrips');
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
   await loadTravelCosts();
+  await loadPersonen();
 }
 
 window.login=async()=>{
@@ -704,24 +734,15 @@ el.textContent=text;el.className='status '+(ok?'ok':'err');
 }
 function today(){return new Date().toISOString().slice(0,10)}
 async function loadCrewOptions(){
-
-  const { data, error } = await supabase
-    .from('camper_crew')
+  const {data,error}=await supabase
+    .from('personen')
     .select('*')
-    .eq('camper_id', activeCamperId)
+    .eq('camper_id',activeCamperId)
+    .eq('actief',true)
     .order('naam');
-
-  if(error){
-    console.error('Crew laden mislukt:', error);
-    return;
-  }
-
-  const select = document.getElementById('tCrew');
-
-  select.innerHTML = (data || [])
-    .map(x => `<option>${x.naam}</option>`)
-    .join('');
-
+  if(error){console.error('Personen laden mislukt:',error);return;}
+  const select=document.getElementById('tCrew');
+  select.innerHTML=(data||[]).map(x=>`<option>${esc(x.naam)}</option>`).join('');
 }
  async function loadActiveTrip(){
 
@@ -1134,6 +1155,9 @@ if(b.dataset.tab==='fuel'){
   await prepareFuelForm();
   await loadFuel();
 }
+if(b.dataset.tab==='personen'){
+  await loadPersonen();
+}
 });
 const photoUpload = document.getElementById('photoUpload');
 
@@ -1527,6 +1551,57 @@ await loadTravelCosts();
 
 alert('✅ Reiskosten opgeslagen');
 
+};
+
+async function loadPersonen(){
+  const box=document.getElementById('persoonList');
+  if(!box)return;
+  const {data,error}=await supabase
+    .from('personen')
+    .select('*')
+    .eq('camper_id',activeCamperId)
+    .order('naam');
+  if(error){box.textContent='Laden mislukt: '+error.message;return;}
+  if(!data||data.length===0){box.innerHTML='<div class="muted">Nog geen personen toegevoegd.</div>';return;}
+  box.innerHTML=data.map(p=>`
+    <div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <b>${esc(p.naam)}</b>
+        <span class="muted" style="margin-left:8px">${p.actief?'✅ actief':'⛔ inactief'}</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="secondary" onclick="togglePersoon(${p.id},${p.actief})">${p.actief?'Deactiveren':'Activeren'}</button>
+        <button class="secondary" onclick="deletePersoon(${p.id})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+window.addPersoon=async function(){
+  const box=document.getElementById('persoonStatus');
+  box.className='status hidden';
+  const naam=document.getElementById('persoonNaam').value.trim();
+  if(!naam){box.textContent='Vul een naam in.';box.className='status err';return;}
+  const {error}=await supabase.from('personen').insert({camper_id:activeCamperId,naam});
+  if(error){box.textContent='Opslaan mislukt: '+error.message;box.className='status err';return;}
+  box.textContent='✓ '+naam+' toegevoegd.';box.className='status ok';
+  document.getElementById('persoonNaam').value='';
+  await loadPersonen();
+  await loadCrewOptions();
+};
+
+window.deletePersoon=async function(id){
+  if(!confirm('Persoon verwijderen?'))return;
+  const {error}=await supabase.from('personen').delete().eq('id',id);
+  if(error){alert('Verwijderen mislukt: '+error.message);return;}
+  await loadPersonen();
+  await loadCrewOptions();
+};
+
+window.togglePersoon=async function(id,huidigActief){
+  const {error}=await supabase.from('personen').update({actief:!huidigActief}).eq('id',id);
+  if(error){alert('Bijwerken mislukt: '+error.message);return;}
+  await loadPersonen();
+  await loadCrewOptions();
 };
 
 init();
