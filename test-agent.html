@@ -66,6 +66,20 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <main>
 <section id="trips" class="active">
 
+<!--
+  SQL-migratie voor reizen: voeg bestuurder en passagier kolommen toe.
+
+  -- Nieuwe kolommen toevoegen:
+  alter table reizen add column if not exists bestuurder text;
+  alter table reizen add column if not exists passagier  text;
+
+  -- Migratieadvies bestaande reizen:
+  -- De huidige 'crew'-kolom kan worden overgezet naar 'bestuurder':
+  update reizen set bestuurder = crew where bestuurder is null and crew is not null;
+
+  -- Optioneel: crew-kolom verwijderen nadat migratie is geverifieerd:
+  -- alter table reizen drop column crew;
+-->
 <div id="tripChooser" class="card">
 <h2>🚐 Reizen</h2>
 <button class="primary" onclick="startNewTrip()">＋ Nieuwe reis starten</button>
@@ -88,9 +102,8 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="tripStartFields">
 <h3>🚐 Start van de reis</h3>
 <div class="grid">
-<div><label>Wie maakt de reis?</label><select id="tCrew">
-
-</select></div>
+<div><label>Bestuurder</label><select id="tBestuurder"></select></div>
+<div><label>Passagier</label><select id="tPassagier"><option value="">— geen —</option></select></div>
 <div><label>Startdatum</label><input id="tStartDate" type="date"></div>
 </div>
 </div>
@@ -525,8 +538,8 @@ updateKm();
 async function ensureTripCreated(){
 if(activeTripId)return true;
 const startDate=v('tStartDate'),startKmText=v('tStartKm');
-if(!v('tCrew')||!startDate||startKmText===''){
-showStatus('Vul eerst wie, startdatum en Start KM in.',false);return false}
+if(!v('tBestuurder')||!startDate||startKmText===''){
+showStatus('Vul eerst bestuurder, startdatum en Start KM in.',false);return false}
 const startKm=Number(startKmText);
   console.log('Actieve camper bij opslaan:', activeCamperId);
 if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige Start KM in.',false);return false}
@@ -534,7 +547,8 @@ if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige Start KM i
 
 const {data,error}=await supabase.from('reizen').insert({
   datum:startDate,
-  crew:v('tCrew'),
+  bestuurder:v('tBestuurder'),
+  passagier:v('tPassagier')||null,
   start_km:startKm,
   camper_id: activeCamperId
 }).select().single();
@@ -741,8 +755,9 @@ async function loadCrewOptions(){
     .eq('actief',true)
     .order('naam');
   if(error){console.error('Personen laden mislukt:',error);return;}
-  const select=document.getElementById('tCrew');
-  select.innerHTML=(data||[]).map(x=>`<option>${esc(x.naam)}</option>`).join('');
+  const opties=(data||[]).map(x=>`<option value="${esc(x.naam)}">${esc(x.naam)}</option>`).join('');
+  document.getElementById('tBestuurder').innerHTML=opties;
+  document.getElementById('tPassagier').innerHTML='<option value="">— geen —</option>'+opties;
 }
  async function loadActiveTrip(){
 
@@ -785,8 +800,11 @@ document.getElementById('tStartKm').value =
 document.getElementById('tStartDate').value =
   data.datum || '';
 
-document.getElementById('tCrew').value =
-  data.crew || '';
+document.getElementById('tBestuurder').value =
+  data.bestuurder || '';
+
+document.getElementById('tPassagier').value =
+  data.passagier || '';
 
 const { data: stops } = await supabase
   .from('reis_stops')
@@ -838,7 +856,7 @@ const ts=(stops||[]).filter(s=>s.reis_id===t.id);
 const closed=t.einddatum!=null;
 const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
 return `<div class="item">
-<b>${esc(t.crew)}</b> · ${esc(t.datum)}${closed?' → '+esc(t.einddatum):' · 🟢 actief'}
+<b>${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</b> · ${esc(t.datum)}${closed?' → '+esc(t.einddatum):' · 🟢 actief'}
 <div class="muted">${ts.length} stop${ts.length===1?'':'s'}${km!=null?' · '+km.toLocaleString('nl-BE')+' km':''}</div>
 ${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
@@ -861,7 +879,7 @@ const {data:fotos} = await supabase
 const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
 const detail=document.getElementById('tripDetail');
 detail.classList.remove('hidden');
-detail.innerHTML=`<h2>📖 Reis van ${esc(t.crew)}</h2>
+detail.innerHTML=`<h2>📖 Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</h2>
 <div class="muted">${esc(t.datum)}${t.einddatum?' → '+esc(t.einddatum):' · 🟢 nog actief'}</div>
 <p><b>Start KM:</b> ${t.start_km!=null?Number(t.start_km).toLocaleString('nl-BE'):'—'}
 ${t.eind_km!=null?' · <b>Eind KM:</b> '+Number(t.eind_km).toLocaleString('nl-BE'):''}
@@ -1467,7 +1485,7 @@ async function loadTravelCostTrips(){
 
   const { data, error } = await supabase
     .from('reizen')
-    .select('id, datum, crew')
+    .select('id, datum, bestuurder, passagier, crew')
     .eq('camper_id', activeCamperId)
     .order('datum', { ascending:false });
 
@@ -1481,7 +1499,7 @@ async function loadTravelCostTrips(){
   select.innerHTML = (data || [])
     .map(x => `
       <option value="${x.id}">
-        ${x.datum} - ${x.crew}
+        ${x.datum} - ${x.bestuurder||x.crew||''}${x.passagier?' & '+x.passagier:''}
       </option>
     `)
     .join('');
