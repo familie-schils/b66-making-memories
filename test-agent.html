@@ -356,7 +356,7 @@ Nog geen onderhoud geregistreerd.
 
   create table personen (
     id         bigint generated always as identity primary key,
-    camper_id  uuid references campers(id) on delete cascade,
+    camper_id  bigint references campers(id) on delete cascade,
     naam       text not null,
     actief     boolean not null default true,
     created_at timestamptz not null default now()
