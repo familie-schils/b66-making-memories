@@ -58,6 +58,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <button data-tab="home">Dashboard</button>
 <button data-tab="maintenance">Onderhoud</button>
 <button data-tab="camper">Mijn B66</button>
+<button data-tab="reiskosten">🛣️ Reiskosten</button>
 <button onclick="logout()">Uitloggen</button>
 </nav>
 
@@ -185,7 +186,72 @@ Nog geen foto geselecteerd.
 </div>
 <div class="card"><h2>Tankhistorie</h2><div id="fuelList">Tankbeurten laden...</div></div>
 </section>
+<section id="reiskosten">
 
+<div class="card">
+
+<h2>🛣️ Reiskosten</h2>
+
+<p class="muted">
+Registreer péage, ferry, tunnel, brug, parkeren en andere reiskosten.
+</p>
+<div class="grid">
+
+  <div>
+    <label>Reis</label>
+    <select id="costTrip"></select>
+  </div>
+
+  <div>
+    <label>Datum</label>
+    <input id="costDate" type="date">
+  </div>
+
+  <div>
+    <label>Type kosten</label>
+    <select id="costType">
+      <option>Péage</option>
+      <option>Ferry</option>
+      <option>Tunnel</option>
+      <option>Brug</option>
+      <option>Parkeren</option>
+      <option>Milieusticker</option>
+      <option>Vignet</option>
+      <option>Overig</option>
+    </select>
+  </div>
+
+  <div>
+    <label>Land</label>
+    <input id="costCountry">
+  </div>
+
+  <div>
+    <label>Bedrag (€)</label>
+    <input id="costAmount" type="number" step="0.01">
+  </div>
+
+</div>
+
+<br>
+
+<label>Opmerking</label>
+<input id="costNote">
+
+<br><br>
+
+<button class="primary" onclick="saveTravelCost()">
+💾 Reiskosten opslaan
+</button>
+<hr>
+<div id="costList">
+Reiskosten laden...
+</div>
+
+</div>
+
+</section>
+  
 <section id="home">
 <div class="card">
 <div class="muted">Camper</div><div class="big">Bürstner B66 TD 690 G</div>
@@ -319,10 +385,10 @@ const appView=document.getElementById('appView');
   if(!user) return;
 
   const { data, error } = await supabase
-    .from('camper_users')
-    .select('camper_id')
-    .eq('user_id', user.id)
-    .single();
+  .from('camper_users')
+  .select('*')
+  .eq('user_id', user.id)
+  .single();
 
   console.log('CAMPER DATA:', data);
   console.log('CAMPER ERROR:', error);
@@ -357,9 +423,15 @@ await loadActiveTrip();
 await loadTrips();
 await loadMaintenance();
 await loadStats();
+  console.log('VOOR loadTravelCostTrips');
+
+await loadTravelCostTrips();
+
+console.log('NA loadTravelCostTrips');
 
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
+  await loadTravelCosts();
 }
 
 window.login=async()=>{
@@ -1261,7 +1333,7 @@ document.getElementById('saveMaintenanceBtn')
   alert('✅ Onderhoud opgeslagen');
     await loadMaintenance();
     });
-    async function loadMaintenance(){
+async function loadMaintenance(){
 
   const { data, error } = await supabase
     .from('onderhoud')
@@ -1304,11 +1376,160 @@ document.getElementById('saveMaintenanceBtn')
   `).join('');
 
 }
+async function loadTravelCosts(){
+
+  const box =
+    document.getElementById('costList');
+
+  if(!box) return;
+
+ const { data, error } = await supabase
+  .from('reiskosten')
+  .select('*')
+  .eq('camper_id', activeCamperId)
+  .order('datum', { ascending:false });
+   
+
+  console.log('REISKOSTEN:', data);
+  console.log('ERROR:', error);
+
+  if(error){
+    box.innerHTML = error.message;
+    return;
+  }
+
+ if(!data || data.length === 0){
+  box.innerHTML =
+    'Nog geen reiskosten geregistreerd.';
+  return;
+}
+
+box.innerHTML = data.map(x => `
+  <div class="item">
+
+    <b>${x.datum}</b><br>
+
+    ${x.type_kost}<br>
+
+    ${x.land || ''}<br>
+
+    💶 € ${Number(x.bedrag).toFixed(2)}
+
+    ${x.opmerking
+      ? `<div class="muted">${x.opmerking}</div>`
+      : ''}
+
+  </div>
+`).join('');
+  
+  }
 
 
+
+
+
+
+async function loadTravelCostTrips(){
+
+  console.log('loadTravelCostTrips gestart');
+
+  const select =
+    document.getElementById('costTrip');
+
+  console.log('SELECT:', select);
+
+  if(!select) return;
+
+
+  const { data, error } = await supabase
+    .from('reizen')
+    .select('id, datum, crew')
+    .eq('camper_id', activeCamperId)
+    .order('datum', { ascending:false });
+
+  if(error){
+    console.error(error);
+    return;
+  }
+
+  console.log('REISKOSTEN DROPDOWN:', data);
+
+  select.innerHTML = (data || [])
+    .map(x => `
+      <option value="${x.id}">
+        ${x.datum} - ${x.crew}
+      </option>
+    `)
+    .join('');
+  console.log('REISKOSTEN DROPDOWN:', data);
+console.log('Aantal opties:', select.options.length);
+}
+window.saveTravelCost = async function(){console.log('SAVE GESTART');
+
+  const reisId = Number(
+    document.getElementById('costTrip').value
+  );
+
+  const bedrag = Number(
+    document.getElementById('costAmount').value
+  );
+
+  if(!reisId){
+    alert('Kies een reis.');
+    return;
+  }
+
+  if(!bedrag || bedrag <= 0){
+    alert('Vul een geldig bedrag in.');
+    return;
+  }
+console.log({
+  reis_id: reisId,
+  camper_id: activeCamperId,
+  datum: document.getElementById('costDate').value,
+  type_kost: document.getElementById('costType').value,
+  land: document.getElementById('costCountry').value,
+  bedrag: bedrag,
+  opmerking: document.getElementById('costNote').value
+});
+
+  const { error } = await supabase
+    .from('reiskosten')
+    .insert({
+      
+
+      reis_id: reisId,
+      camper_id: activeCamperId,
+
+      datum:
+        document.getElementById('costDate').value,
+
+      type_kost:
+        document.getElementById('costType').value,
+
+      land:
+        document.getElementById('costCountry').value,
+
+      bedrag: bedrag,
+
+      opmerking:
+        document.getElementById('costNote').value
+
+    });
+console.log('SUPABASE ERROR:', error);
+
+if(error){
+  alert(error.message);
+  return;
+}
+
+await loadTravelCosts();
+
+alert('✅ Reiskosten opgeslagen');
+
+};
 
 init();
-
 </script>
 </body>
 </html>
