@@ -120,7 +120,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <option>Andere</option>
 </select></div>
 <div><label>Naam / plaats</label><input id="sPlace"></div>
-<div><label>Land</label><input id="sCountry"></div>
+<div><label>Land</label><select id="sCountry"></select></div>
 <div>
 <label>KM bij aankomst</label>
 <input id="sKm" type="number" min="0" step="1">
@@ -191,7 +191,7 @@ Nog geen foto geselecteerd.
 <div><label>Liters diesel</label><input id="fLiters" type="number" min="0" step="0.01"></div>
 <div><label>Prijs per liter (€)</label><input id="fPrice" type="number" min="0" step="0.001"></div>
 <div><label>Waar getankt?</label><input id="fLocation"></div>
-<div><label>Land</label><input id="fCountry"></div>
+<div><label>Land</label><select id="fCountry"></select></div>
 </div>
 <br>
 <div id="fuelCalc" class="muted">Totaalbedrag: € 0,00 · KM sinds vorige tankbeurt: — · Verbruik: —</div>
@@ -237,7 +237,7 @@ Registreer péage, ferry, tunnel, brug, parkeren en andere reiskosten.
 
   <div>
     <label>Land</label>
-    <input id="costCountry">
+    <select id="costCountry"></select>
   </div>
 
   <div>
@@ -417,6 +417,52 @@ console.log('🚐 Making Memories', APP_VERSION);
 
 const loginView=document.getElementById('loginView');
 const appView=document.getElementById('appView');
+const CAMPER_COUNTRIES=[
+  'België',
+  'Nederland',
+  'Luxemburg',
+  'Duitsland',
+  'Frankrijk',
+  'Oostenrijk',
+  'Italië',
+  'Spanje',
+  'Portugal',
+  'Zwitserland',
+  'Denemarken',
+  'Kroatië',
+  'Slovenië',
+  'Tsjechië',
+  'Polen',
+  'Noorwegen',
+  'Zweden',
+  'Finland',
+  'Ierland',
+  'Verenigd Koninkrijk',
+  'Slowakije',
+  'Hongarije',
+  'Roemenië',
+  'Bulgarije',
+  'Estland',
+  'Letland',
+  'Litouwen',
+  'Griekenland',
+  'Turkije'
+];
+
+function populateCountrySelects(){
+  const options=
+    '<option value="">— kies land —</option>'+
+    CAMPER_COUNTRIES.map(country=>
+      `<option value="${esc(country)}">${esc(country)}</option>`
+    ).join('');
+  ['sCountry','fCountry','costCountry'].forEach(id=>{
+    const field=document.getElementById(id);
+    if(!field)return;
+    const current=field.value;
+    field.innerHTML=options;
+    if(CAMPER_COUNTRIES.includes(current))field.value=current;
+  });
+}
 
   async function loadCurrentCamper(){
 
@@ -455,6 +501,7 @@ async function showApp(){
   'Build: ' + APP_VERSION;
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
+populateCountrySelects();
 
 await loadCurrentCamper();
 
