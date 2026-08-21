@@ -1759,8 +1759,17 @@ window.saveCamperProfile=async function(){
     kenteken:document.getElementById('camperKenteken').value||null,
     bouwjaar:document.getElementById('camperBouwjaar').value||null
   };
-  const {error}=await supabase.from('campers').update(payload).eq('id',activeCamperId);
-  if(error){status.textContent='Opslaan mislukt: '+error.message;status.className='status err';return;}
+  console.log('ACTIVE CAMPER ID:', activeCamperId);
+  console.log('CAMPER PAYLOAD:', payload);
+  const result = await supabase
+    .from('campers')
+    .update(payload)
+    .eq('id', activeCamperId)
+    .select();
+  console.log('CAMPER UPDATE RESULT:', result);
+  console.log('result.data:', result.data);
+  console.log('result.error:', result.error);
+  if(result.error){status.textContent='Opslaan mislukt: '+result.error.message;status.className='status err';return;}
   status.textContent='✓ Camperprofiel opgeslagen';status.className='status ok';
 };
 
