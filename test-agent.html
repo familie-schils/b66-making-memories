@@ -545,10 +545,14 @@ const startKm=Number(startKmText);
 if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige Start KM in.',false);return false}
   console.log('Actieve camper bij opslaan:', activeCamperId);
 
+const bestuurder=v('tBestuurder');
+const passagier=v('tPassagier')||null;
+const crew=passagier?bestuurder+' & '+passagier:bestuurder;
 const {data,error}=await supabase.from('reizen').insert({
   datum:startDate,
-  bestuurder:v('tBestuurder'),
-  passagier:v('tPassagier')||null,
+  bestuurder:bestuurder,
+  passagier:passagier,
+  crew:crew,
   start_km:startKm,
   camper_id: activeCamperId
 }).select().single();
