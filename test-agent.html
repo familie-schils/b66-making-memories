@@ -439,6 +439,8 @@ Nog geen onderhoud geregistreerd.
 <div><label>Maximaal toegelaten massa</label><input id="camperMaxMassa" type="text" placeholder="bijv. 3500 kg"></div>
 <div><label>Kenteken</label><input id="camperKenteken" type="text" placeholder="bijv. AB-123-C"></div>
 <div><label>Bouwjaar</label><input id="camperBouwjaar" type="text" placeholder="bijv. 2022"></div>
+<div><label>Referentiedatum</label><input id="camperReferenceDate" type="date"></div>
+<div><label>Referentie kilometerstand</label><input id="camperReferenceKm" type="number" placeholder="bijv. 58240"></div>
 </div>
 <div style="margin-top:12px">
 <button onclick="saveCamperProfile()">💾 Opslaan</button>
@@ -1729,7 +1731,7 @@ async function loadCamperProfile(){
   if(!activeCamperId)return;
   const {data,error}=await supabase
     .from('campers')
-    .select('merk,model,basisvoertuig,motor,versnellingsbak,max_massa,kenteken,bouwjaar')
+    .select('merk,model,basisvoertuig,motor,versnellingsbak,max_massa,kenteken,bouwjaar,reference_date,reference_km')
     .eq('id',activeCamperId)
     .single();
   if(error){console.error('Camperprofiel laden mislukt:',error);return;}
@@ -1743,6 +1745,8 @@ async function loadCamperProfile(){
   setVal('camperMaxMassa',data.max_massa);
   setVal('camperKenteken',data.kenteken);
   setVal('camperBouwjaar',data.bouwjaar);
+  setVal('camperReferenceDate',data.reference_date);
+  setVal('camperReferenceKm',data.reference_km);
 }
 
 window.saveCamperProfile=async function(){
@@ -1757,18 +1761,15 @@ window.saveCamperProfile=async function(){
     versnellingsbak:document.getElementById('camperVersnellingsbak').value||null,
     max_massa:document.getElementById('camperMaxMassa').value||null,
     kenteken:document.getElementById('camperKenteken').value||null,
-    bouwjaar:document.getElementById('camperBouwjaar').value||null
+    bouwjaar:document.getElementById('camperBouwjaar').value||null,
+    reference_date:document.getElementById('camperReferenceDate').value||null,
+    reference_km:document.getElementById('camperReferenceKm').value||null
   };
-  console.log('ACTIVE CAMPER ID:', activeCamperId);
-  console.log('CAMPER PAYLOAD:', payload);
   const result = await supabase
     .from('campers')
     .update(payload)
     .eq('id', activeCamperId)
     .select();
-  console.log('CAMPER UPDATE RESULT:', result);
-  console.log('result.data:', result.data);
-  console.log('result.error:', result.error);
   if(result.error){status.textContent='Opslaan mislukt: '+result.error.message;status.className='status err';return;}
   status.textContent='✓ Camperprofiel opgeslagen';status.className='status ok';
 };
