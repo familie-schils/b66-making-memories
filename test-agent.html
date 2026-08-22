@@ -973,42 +973,99 @@ ${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'On
 window.showTripDetail=async(id)=>{
 const {data:t,error}=await supabase.from('reizen').select('*').eq('id',id).single();
 if(error)return;
-const {data:stops}=await supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde');
-  const stopIds = (stops || []).map(s => s.id);
-
-const {data:fotos} = await supabase
-  .from('fotos')
-  .select('*')
-  .in('stop_id', stopIds);
-  console.log('Fotos:', fotos);
+const eindDatum=t.einddatum||new Date().toISOString().slice(0,10);
+const [{data:stops},{data:reiskosten},{data:tankbeurten}]=await Promise.all([
+  supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde'),
+  supabase.from('reiskosten').select('*').eq('reis_id',id),
+  supabase.from('tankbeurten').select('datum,liters,prijs_per_liter,totaalbedrag').gte('datum',t.datum).lte('datum',eindDatum).order('datum')
+]);
+const stopIds=(stops||[]).map(s=>s.id);
+const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
 const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
+
+// Reissamenvatting
+const aantalStops=(stops||[]).length;
+
+// Overnachtingskosten
+const overnachtingKost=(stops||[]).reduce((s,x)=>s+(x.prijs_per_nacht!=null?Number(x.prijs_per_nacht):0),0);
+
+// Reiskosten per type
+const kostenTypes=['Péage','Ferry','Tunnel','Brug','Parkeren','Overig'];
+const kostenPerType={};
+let totaalReiskosten=0;
+for(const k of (reiskosten||[])){
+  const b=Number(k.bedrag||0);
+  totaalReiskosten+=b;
+  const type=kostenTypes.includes(k.type_kost)?k.type_kost:'Overig';
+  kostenPerType[type]=(kostenPerType[type]||0)+b;
+}
+
+// Brandstofkosten
+const tanks=tankbeurten||[];
+const aantalTankbeurten=tanks.length;
+const totaalLiters=tanks.reduce((s,x)=>s+Number(x.liters||0),0);
+const totaalBrandstof=tanks.reduce((s,x)=>s+(x.totaalbedrag!=null?Number(x.totaalbedrag):Number(x.liters||0)*Number(x.prijs_per_liter||0)),0);
+
+// Reistotaal
+const reistotaal=overnachtingKost+totaalReiskosten+totaalBrandstof;
+
+const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
+const fmtKm=n=>Number(n).toLocaleString('nl-BE');
+
 const detail=document.getElementById('tripDetail');
 detail.classList.remove('hidden');
 detail.innerHTML=`<h2>📖 Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</h2>
 <div class="muted">${esc(t.datum)}${t.einddatum?' → '+esc(t.einddatum):' · 🟢 nog actief'}</div>
-<p><b>Start KM:</b> ${t.start_km!=null?Number(t.start_km).toLocaleString('nl-BE'):'—'}
-${t.eind_km!=null?' · <b>Eind KM:</b> '+Number(t.eind_km).toLocaleString('nl-BE'):''}
-${km!=null?' · <b>'+km.toLocaleString('nl-BE')+' km gereden</b>':''}</p>
+<p><b>Start KM:</b> ${t.start_km!=null?fmtKm(t.start_km):'—'}
+${t.eind_km!=null?' · <b>Eind KM:</b> '+fmtKm(t.eind_km):''}
+${km!=null?' · <b>'+fmtKm(km)+' km gereden</b>':''}</p>
 <h3>Stops</h3>
 ${(stops||[]).map(s=>`<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div>
 <div>${esc(s.voorzieningen||'')}</div>
 <p>${esc(s.ervaring||'')}</p>
-
-<div class="muted">
-📸 ${((fotos||[]).filter(f => f.stop_id === s.id)).length} foto(s)
-</div>
-${((fotos||[]).filter(f=>f.stop_id===s.id)).map(f=>`
-<div style="margin-top:10px">
-<img src="${f.url}"
-style="max-width:150px;
-max-height:150px;
-border-radius:8px;">
-</div>
-`).join('')}
-
-
+<div class="muted">📸 ${((fotos||[]).filter(f=>f.stop_id===s.id)).length} foto(s)</div>
+${((fotos||[]).filter(f=>f.stop_id===s.id)).map(f=>`<div style="margin-top:10px"><img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;"></div>`).join('')}
 ${s.prijs_per_nacht!=null?'<div class="muted">€ '+Number(s.prijs_per_nacht).toFixed(2)+' / nacht</div>':''}</div>`).join('')||'<div class="muted">Geen stops.</div>'}
+
+<hr>
+<h3>📊 Reissamenvatting</h3>
+<div class="item">
+  <div><b>Aantal stops:</b> ${aantalStops}</div>
+  <div><b>Startdatum:</b> ${esc(t.datum||'—')}</div>
+  <div><b>Einddatum:</b> ${esc(t.einddatum||'nog actief')}</div>
+  <div><b>Start KM:</b> ${t.start_km!=null?fmtKm(t.start_km):'—'}</div>
+  <div><b>Eind KM:</b> ${t.eind_km!=null?fmtKm(t.eind_km):'—'}</div>
+  <div><b>Totaal gereden KM:</b> ${km!=null?fmtKm(km)+' km':'—'}</div>
+</div>
+
+<hr>
+<h3>💶 Kostenoverzicht</h3>
+
+<h4>🏕️ Overnachtingskosten</h4>
+<div class="item">
+  <div><b>Totaal overnachtingen:</b> ${fmt(overnachtingKost)}</div>
+</div>
+
+<h4>🛣️ Reiskosten</h4>
+<div class="item">
+  ${kostenTypes.map(type=>`<div><b>${type}:</b> ${fmt(kostenPerType[type]||0)}</div>`).join('')}
+  <div style="margin-top:6px"><b>Totaal reiskosten:</b> ${fmt(totaalReiskosten)}</div>
+</div>
+
+<h4>⛽ Brandstofkosten</h4>
+<div class="item">
+  <div><b>Aantal tankbeurten:</b> ${aantalTankbeurten}</div>
+  <div><b>Totaal liters:</b> ${totaalLiters.toFixed(2).replace('.',',')} l</div>
+  <div><b>Totale brandstofkost:</b> ${fmt(totaalBrandstof)}</div>
+</div>
+
+<h4>💰 Reistotaal</h4>
+<div class="item" style="font-size:1.1em">
+  <div>${fmt(overnachtingKost)} overnachtingen + ${fmt(totaalReiskosten)} reiskosten + ${fmt(totaalBrandstof)} brandstof</div>
+  <div style="margin-top:6px"><b>Totaal: ${fmt(reistotaal)}</b></div>
+</div>
+
 <br><button class="secondary" onclick="document.getElementById('tripDetail').classList.add('hidden')">Sluiten</button>`;
 detail.scrollIntoView({behavior:'smooth'});
 };
