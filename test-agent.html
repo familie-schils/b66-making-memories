@@ -737,15 +737,18 @@ function updateBeheerVisibility(){
   if(section)section.classList.toggle('hidden',!canAccessBeheer);
 }
 
-  async function loadCurrentCamper(){
+  async function loadCurrentCamper(sessionUser=null){
 
-  const { data:{ user } } = await supabase.auth.getUser();
+  const { data:{ user:authUser }, error:userError } = await supabase.auth.getUser();
+  const { data:{ session } } = await supabase.auth.getSession();
+  const user = authUser ?? sessionUser ?? session?.user ?? null;
   currentUser=user;
 
-  console.log('USER:', user);
-  console.log('CURRENT USER:', user?.id);
+  if(userError)console.error('GET USER ERROR:', userError);
+  console.log('USER ID:', user?.id);
 
   if(!user){
+    console.warn('Geen ingelogde gebruiker gevonden tijdens loadCurrentCamper().');
     activeCamperId=null;
     canAccessBeheer=false;
     updateBeheerVisibility();
@@ -754,15 +757,14 @@ function updateBeheerVisibility(){
 
   const { data, error } = await supabase
   .from('camper_users')
-  .select('camper_id,role')
+  .select('camper_id,role,user_id')
   .eq('user_id', user.id)
   .order('camper_id',{ascending:true})
   .limit(1)
   .maybeSingle();
 
-  console.log('CAMPER DATA:', data);
-  console.log('CAMPER_USERS RESULT:', data);
-  console.log('CAMPER ERROR:', error);
+  console.log('CAMPER QUERY RESULT:', data);
+  console.log('CAMPER QUERY ERROR:', error);
 
   if(error){
     console.error('Camper ophalen mislukt:', error);
@@ -770,6 +772,17 @@ function updateBeheerVisibility(){
     isCamperAdmin=false;
     updateBeheerVisibility();
     return;
+  }
+
+  if(!data){
+    console.warn('Geen camper_users record zichtbaar voor USER ID:', user.id, '- controleer user_id match en/of RLS policy.');
+  }else{
+    if(data.user_id!==user.id){
+      console.warn('Mismatch: camper_users.user_id komt niet overeen met USER ID.', {campersUserId:data.user_id,userId:user.id});
+    }
+    if(data.camper_id==null){
+      console.warn('camper_users record bevat geen camper_id:', data);
+    }
   }
 
   activeCamperId = data?.camper_id ?? null;
@@ -786,14 +799,13 @@ function updateBeheerVisibility(){
   canAccessBeheer = Number(activeCamperId)===1 || Boolean(beheerLink);
   updateBeheerVisibility();
 
-  console.log('Actieve camper:', activeCamperId);
-  console.log('ACTIVE CAMPER ID NA LOAD:', activeCamperId);
+  console.log('ACTIVE CAMPER ID:', activeCamperId);
 }
 async function init(){
 handleInviteRoute();
 const {data:{session}}=await supabase.auth.getSession();
-if(session)showApp();else showLogin();
-supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
+if(session)showApp(session.user);else showLogin();
+supabase.auth.onAuthStateChange((_e,s)=>s?showApp(s.user):showLogin());
 }
 function showLogin(){
   canAccessBeheer=false;
@@ -802,14 +814,14 @@ function showLogin(){
   loginView.classList.remove('hidden');
   appView.classList.add('hidden');
 }
-async function showApp(){
+async function showApp(sessionUser=null){
   document.getElementById('versionText').textContent =
   'Build: ' + APP_VERSION;
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
 populateCountrySelects();
 
-await loadCurrentCamper();
+await loadCurrentCamper(sessionUser);
 
 console.log('ACTIVE CAMPER ID IN showApp:', activeCamperId);
 
