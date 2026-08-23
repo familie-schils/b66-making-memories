@@ -738,7 +738,7 @@ function updateBeheerVisibility(){
   if(section)section.classList.toggle('hidden',!canAccessBeheer);
 }
 
-  async function loadCurrentCamper(sessionUser=null){
+ async function loadCurrentCamper(sessionUser = null){
 
   console.log('LOADCURRENTCAMPER START');
 
@@ -753,41 +753,58 @@ function updateBeheerVisibility(){
 
   currentUser = user;
 
-  if(userError)
+  if(userError){
     console.error('GET USER ERROR:', userError);
+  }
 
   console.log('USER ID:', user?.id);
 
-  console.log('LOADCURRENTCAMPER EINDE');
-}
-
-
   if(!user){
     console.warn('Geen ingelogde gebruiker gevonden tijdens loadCurrentCamper().');
-    activeCamperId=null;
-    canAccessBeheer=false;
+    activeCamperId = null;
+    canAccessBeheer = false;
     updateBeheerVisibility();
     return;
   }
 
   const { data, error } = await supabase
-  .from('camper_users')
-  .select('camper_id,role,user_id')
-  .eq('user_id', user.id)
-  .order('camper_id',{ascending:true})
-  .limit(1)
-  .maybeSingle();
+    .from('camper_users')
+    .select('camper_id,role,user_id')
+    .eq('user_id', user.id)
+    .order('camper_id', { ascending:true })
+    .limit(1)
+    .maybeSingle();
 
   console.log('CAMPER QUERY RESULT:', data);
   console.log('CAMPER QUERY ERROR:', error);
 
   if(error){
     console.error('Camper ophalen mislukt:', error);
-    canAccessBeheer=false;
-    isCamperAdmin=false;
+    canAccessBeheer = false;
+    isCamperAdmin = false;
     updateBeheerVisibility();
     return;
   }
+
+  activeCamperId = data?.camper_id ?? null;
+  isCamperAdmin = data?.role === 'admin';
+
+  const { data:beheerLink } = await supabase
+    .from('camper_users')
+    .select('camper_id')
+    .eq('user_id', user.id)
+    .eq('camper_id', 1)
+    .maybeSingle();
+
+  canAccessBeheer =
+    Number(activeCamperId) === 1 ||
+    Boolean(beheerLink);
+
+  updateBeheerVisibility();
+
+  console.log('ACTIVE CAMPER ID:', activeCamperId);
+  console.log('LOADCURRENTCAMPER EINDE');
+}
 
   if(!data){
     console.warn('Geen camper_users record zichtbaar voor USER ID:', user.id, '- controleer user_id match en/of RLS policy.');
