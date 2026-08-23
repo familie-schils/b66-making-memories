@@ -929,9 +929,10 @@ window.logout=()=>supabase.auth.signOut();
 async function processInvite(userId){
   if(!pendingInviteData)return;
   const invite=pendingInviteData;
+  const inviteType=invite.type||(invite.camper_id?'camper':'platform');
   const statusEl=document.getElementById('inviteRouteStatus');
   function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
-  if(invite.type==='camper'){
+  if(inviteType==='camper'){
     const {data:existing}=await supabase
       .from('camper_users')
       .select('id')
@@ -950,13 +951,47 @@ async function processInvite(userId){
       .eq('id',invite.id);
     pendingInviteData=null;
     setStatus('Welkom! Je bent gekoppeld aan de camper.','ok');
-  } else if(invite.type==='platform'){
+  } else if(inviteType==='platform'){
+    const {data:existing}=await supabase
+      .from('camper_users')
+      .select('camper_id')
+      .eq('user_id',userId)
+      .limit(1)
+      .maybeSingle();
+    if(!existing){
+      console.log('SESSION', await supabase.auth.getSession());
+      console.log('USER', await supabase.auth.getUser());
+      const sessionData=await supabase.auth.getUser();
+      const userEmail=sessionData?.data?.user?.email||invite.email||'onbekend';
+      const camperPayload={naam:'Camper van '+userEmail};
+      const {data:newCamper,error:camperErr}=await supabase
+        .from('campers')
+        .insert(camperPayload)
+        .select('id')
+        .single();
+      if(camperErr){
+        const camperErrDetails={
+          name:camperErr.name,
+          message:camperErr.message,
+          details:camperErr.details,
+          hint:camperErr.hint,
+          code:camperErr.code
+        };
+        console.error('CAMPER ERROR', camperErrDetails);
+        setStatus('Camper aanmaken mislukt: '+JSON.stringify(camperErrDetails,null,2),'err');
+        return;
+      }
+      const {error:linkErr}=await supabase
+        .from('camper_users')
+        .insert({user_id:userId,camper_id:newCamper.id,role:'admin'});
+      if(linkErr){setStatus('Koppeling aan camper mislukt: '+linkErr.message,'err');return;}
+    }
     await supabase
       .from('invite_codes')
       .update({used:true,used_at:new Date().toISOString()})
       .eq('id',invite.id);
     pendingInviteData=null;
-    setStatus('Welkom! Je account is aangemaakt.','ok');
+    setStatus('Welkom! Je camper is aangemaakt en klaar voor gebruik.','ok');
   }
   const formsEl=document.getElementById('inviteRouteForms');
   if(formsEl)formsEl.classList.add('hidden');
