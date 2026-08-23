@@ -743,6 +743,7 @@ function updateBeheerVisibility(){
   currentUser=user;
 
   console.log('USER:', user);
+  console.log('CURRENT USER:', user?.id);
 
   if(!user){
     activeCamperId=null;
@@ -760,6 +761,7 @@ function updateBeheerVisibility(){
   .maybeSingle();
 
   console.log('CAMPER DATA:', data);
+  console.log('CAMPER_USERS RESULT:', data);
   console.log('CAMPER ERROR:', error);
 
   if(error){
@@ -785,6 +787,7 @@ function updateBeheerVisibility(){
   updateBeheerVisibility();
 
   console.log('Actieve camper:', activeCamperId);
+  console.log('ACTIVE CAMPER ID NA LOAD:', activeCamperId);
 }
 async function init(){
 handleInviteRoute();
