@@ -2136,6 +2136,10 @@ async function loadTravelCosts(){
     document.getElementById('costList');
 
   if(!box) return;
+  if (!activeCamperId) {
+  console.warn('Geen actieve camper beschikbaar');
+  return;
+}
 
  const { data, error } = await supabase
   .from('reiskosten')
