@@ -1003,6 +1003,8 @@ window.inviteRegister=async()=>{
   if(error){setStatus('Registratie mislukt: '+error.message,'err');return;}
   const user=data?.user;
   if(!user){setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in.','ok');return;}
+  const {data:sessionData}=await supabase.auth.getSession();
+  if(!sessionData?.session){setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in om de uitnodiging te verwerken.','ok');return;}
   if(pendingPlatformInviteData)await processPlatformInvite(user.id);
   else await processInvite(user.id);
 };
