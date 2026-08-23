@@ -48,7 +48,18 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="inviteRouteView" class="card login hidden">
 <h2>🎟️ Registratie via uitnodiging</h2>
 <p id="inviteRouteCode" class="muted"></p>
-<p>Registratie via uitnodiging wordt later geactiveerd.</p>
+<div id="inviteRouteStatus" class="status hidden"></div>
+<div id="inviteRouteForms" class="hidden">
+  <h3>Nieuw account aanmaken</h3>
+  <label>E-mailadres</label><input id="inviteRegEmail" type="email"><br><br>
+  <label>Wachtwoord</label><input id="inviteRegPassword" type="password"><br><br>
+  <button class="primary" onclick="inviteRegister()">Registreren</button>
+  <br><br><hr><br>
+  <h3>Al een account? Inloggen</h3>
+  <label>E-mailadres</label><input id="inviteLoginEmail" type="email"><br><br>
+  <label>Wachtwoord</label><input id="inviteLoginPassword" type="password"><br><br>
+  <button class="primary" onclick="inviteLogin()">Inloggen</button>
+</div>
 </div>
 
 <div id="loginView" class="card login">
@@ -649,7 +660,6 @@ let stopNumber=1;
   let currentUser = null;
   let canAccessBeheer = false;
   let isCamperAdmin = false;
-  const INVITE_BASE_URL='https://makingmemories.app/invite/';
   const APP_VERSION =
   new Date(document.lastModified)
     .toLocaleString('nl-BE');
@@ -711,24 +721,46 @@ function populateCountrySelects(){
 }
 
 function getInviteCodeFromLocation(){
-  const pathMatch=window.location.pathname.match(/\/invite\/([^/?#]+)/i);
+  const pathMatch=window.location.pathname.match(/\/(?:invite|join-camper)\/([^/?#]+)/i);
   if(pathMatch)return decodeURIComponent(pathMatch[1]);
   const params=new URLSearchParams(window.location.search);
   return params.get('invite_code')||params.get('invite')||'';
 }
 
-function handleInviteRoute(){
+let pendingInviteData=null;
+
+async function handleInviteRoute(){
   const box=document.getElementById('inviteRouteView');
   const codeEl=document.getElementById('inviteRouteCode');
-  if(!box||!codeEl)return;
+  const statusEl=document.getElementById('inviteRouteStatus');
+  const formsEl=document.getElementById('inviteRouteForms');
+  if(!box||!codeEl)return false;
   const inviteCode=getInviteCodeFromLocation();
   if(!inviteCode){
     box.classList.add('hidden');
     codeEl.textContent='';
-    return;
+    return false;
   }
   codeEl.textContent='Uitnodigingscode: '+inviteCode;
   box.classList.remove('hidden');
+  if(statusEl)statusEl.className='status hidden';
+  if(formsEl)formsEl.classList.add('hidden');
+  const {data,error}=await supabase
+    .from('camper_invites')
+    .select('id,camper_id,email,invite_code,used')
+    .eq('invite_code',inviteCode)
+    .maybeSingle();
+  if(error||!data){
+    if(statusEl){statusEl.textContent='Uitnodigingscode niet gevonden.';statusEl.className='status err';}
+    return true;
+  }
+  if(data.used){
+    if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
+    return true;
+  }
+  pendingInviteData=data;
+  if(formsEl)formsEl.classList.remove('hidden');
+  return true;
 }
 
 function updateBeheerVisibility(){
@@ -809,15 +841,15 @@ function updateBeheerVisibility(){
  
 
 async function init(){
-handleInviteRoute();
+const isInviteRoute=await handleInviteRoute();
 const {data:{session}}=await supabase.auth.getSession();
-if(session)showApp(session.user);else showLogin();
-supabase.auth.onAuthStateChange((_e,s)=>s?showApp(s.user):showLogin());
+if(isInviteRoute){loginView.classList.add('hidden');}
+else if(session)showApp(session.user);else showLogin();
+supabase.auth.onAuthStateChange((_e,s)=>{if(!pendingInviteData)s?showApp(s.user):showLogin();});
 }
 function showLogin(){
   canAccessBeheer=false;
   updateBeheerVisibility();
-  handleInviteRoute();
   loginView.classList.remove('hidden');
   appView.classList.add('hidden');
 }
@@ -861,6 +893,62 @@ password:document.getElementById('password').value});
 if(error){box.textContent=error.message;box.classList.remove('hidden')}
 };
 window.logout=()=>supabase.auth.signOut();
+
+async function processInvite(userId){
+  if(!pendingInviteData)return;
+  const invite=pendingInviteData;
+  const statusEl=document.getElementById('inviteRouteStatus');
+  function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
+  const {data:existing}=await supabase
+    .from('camper_users')
+    .select('id')
+    .eq('user_id',userId)
+    .eq('camper_id',invite.camper_id)
+    .maybeSingle();
+  if(!existing){
+    const {error:insertErr}=await supabase
+      .from('camper_users')
+      .insert({user_id:userId,camper_id:invite.camper_id,role:'lid'});
+    if(insertErr){setStatus('Koppeling aan camper mislukt: '+insertErr.message,'err');return;}
+  }
+  await supabase
+    .from('camper_invites')
+    .update({used:true,used_at:new Date().toISOString()})
+    .eq('id',invite.id);
+  pendingInviteData=null;
+  setStatus('Welkom! Je bent gekoppeld aan de camper.','ok');
+  const formsEl=document.getElementById('inviteRouteForms');
+  if(formsEl)formsEl.classList.add('hidden');
+  setTimeout(()=>showApp(null),1500);
+}
+
+window.inviteRegister=async()=>{
+  const statusEl=document.getElementById('inviteRouteStatus');
+  function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
+  const email=document.getElementById('inviteRegEmail')?.value.trim();
+  const pw=document.getElementById('inviteRegPassword')?.value;
+  if(!email||!pw){setStatus('Vul e-mailadres en wachtwoord in.','err');return;}
+  setStatus('Bezig met registreren...','ok');
+  const {data,error}=await supabase.auth.signUp({email,password:pw});
+  if(error){setStatus('Registratie mislukt: '+error.message,'err');return;}
+  const user=data?.user;
+  if(!user){setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in.','ok');return;}
+  await processInvite(user.id);
+};
+
+window.inviteLogin=async()=>{
+  const statusEl=document.getElementById('inviteRouteStatus');
+  function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
+  const email=document.getElementById('inviteLoginEmail')?.value.trim();
+  const pw=document.getElementById('inviteLoginPassword')?.value;
+  if(!email||!pw){setStatus('Vul e-mailadres en wachtwoord in.','err');return;}
+  setStatus('Bezig met inloggen...','ok');
+  const {data,error}=await supabase.auth.signInWithPassword({email,password:pw});
+  if(error){setStatus('Inloggen mislukt: '+error.message,'err');return;}
+  const user=data?.user;
+  if(!user){setStatus('Inloggen mislukt.','err');return;}
+  await processInvite(user.id);
+};
 
 let currentStopSaved=false;
 
@@ -1671,7 +1759,8 @@ function generateInviteCode(length=9){
   return Array.from(bytes,x=>chars[x%chars.length]).join('');
 }
 function getInviteLink(inviteCode){
-  return INVITE_BASE_URL+encodeURIComponent(inviteCode);
+  const base=window.location.origin+window.location.pathname.replace(/\/[^/]*$/,'/').replace(/\/$/,'');
+  return base+'/?invite='+encodeURIComponent(inviteCode);
 }
 function renderGeneratedInvite(invite){
   const box=document.getElementById('inviteGeneratedBox');
