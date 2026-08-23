@@ -343,12 +343,14 @@ supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
 }
 function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
 async function showApp(){
+  console.log('SHOWAPP START');
   document.getElementById('versionText').textContent =
   'Build: ' + APP_VERSION;
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
 
 await loadCurrentCamper();
+  console.log('SHOWAPP ACTIVE CAMPER:', activeCamperId);
 
 await loadCrewOptions();
 
