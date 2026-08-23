@@ -429,10 +429,10 @@ Nog geen onderhoud geregistreerd.
 <section id="vrienden">
 <div class="card">
 <h2>🤝 Vrienden</h2>
-<p class="muted">Voeg vrienden toe op basis van hun e-mailadres. Zij kunnen jouw gedeelde stops zien en jij de hunne.</p>
+<p class="muted">Voeg vrienden toe op basis van hun gebruikers-ID (UUID). Zij kunnen jouw gedeelde stops zien en jij de hunne.</p>
 <div id="vriendenStatus" class="status hidden"></div>
 <div class="grid">
-  <div><label>E-mailadres</label><input id="vriendenEmail" type="email" placeholder="vriend@voorbeeld.be"></div>
+  <div><label>Gebruikers-ID (UUID)</label><input id="vriendenEmail" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
 </div>
 <br>
 <button class="primary" onclick="addVriend()">＋ Vriend toevoegen</button>
@@ -1970,15 +1970,15 @@ async function loadVrienden(){
   if(!user)return;
   const {data,error}=await supabase
     .from('friends')
-    .select('id,friend_email,created_at')
+    .select('id,friend_user_id,created_at')
     .eq('user_id',user.id)
     .order('created_at',{ascending:false});
-  if(error){box.innerHTML='<div class="status err">'+esc(error.message)+'</div>';return;}
+  if(error){box.innerHTML='<div class="status err">Fout bij laden vrienden: '+esc(error.message)+'</div>';return;}
   if(!data||data.length===0){box.innerHTML='<div class="muted">Nog geen vrienden toegevoegd.</div>';return;}
   box.innerHTML=data.map(f=>`
     <div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div>
-        <b>${esc(f.friend_email)}</b>
+        <b>${esc(f.friend_user_id)}</b>
         <div class="muted" style="font-size:12px">Toegevoegd: ${esc((f.created_at||'').slice(0,10))}</div>
       </div>
       <button class="secondary" onclick="removeVriend(${f.id})">🗑️ Verwijderen</button>
@@ -1988,25 +1988,26 @@ async function loadVrienden(){
 window.addVriend=async function(){
   const status=document.getElementById('vriendenStatus');
   status.className='status hidden';
-  const email=document.getElementById('vriendenEmail').value.trim();
-  if(!email){status.textContent='Vul een e-mailadres in.';status.className='status err';return;}
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)return;
-  if(email===user.email){
+  const friendUserId=document.getElementById('vriendenEmail').value.trim();
+  if(!friendUserId){status.textContent='Vul een gebruikers-ID in.';status.className='status err';return;}
+  if(friendUserId===user.id){
     status.textContent='Je kunt jezelf niet als vriend toevoegen.';
     status.className='status err';return;
   }
   // Controleer of al bevriend
-  const {data:bestaand}=await supabase
+  const {data:bestaand,error:bestaandErr}=await supabase
     .from('friends')
     .select('id')
     .eq('user_id',user.id)
-    .eq('friend_email',email)
+    .eq('friend_user_id',friendUserId)
     .maybeSingle();
+  if(bestaandErr){status.textContent='Fout bij controleren: '+esc(bestaandErr.message);status.className='status err';return;}
   if(bestaand){status.textContent='Deze vriend is al toegevoegd.';status.className='status err';return;}
   const {error}=await supabase
     .from('friends')
-    .insert({user_id:user.id,friend_email:email});
+    .insert({user_id:user.id,friend_user_id:friendUserId});
   if(error){status.textContent='Opslaan mislukt: '+esc(error.message);status.className='status err';return;}
   status.textContent='✓ Vriend toegevoegd.';status.className='status ok';
   document.getElementById('vriendenEmail').value='';
@@ -2028,12 +2029,12 @@ window.loadOntdektePlaatsen=async function(){
   const {data:{user}}=await supabase.auth.getUser();
   if(!user){box.innerHTML='<div class="muted">Niet ingelogd.</div>';return;}
 
-  // Haal mijn vrienden op (via friend_email)
+  // Haal mijn vrienden op (via friend_user_id)
   const {data:friends,error:fErr}=await supabase
     .from('friends')
-    .select('friend_user_id,friend_email')
+    .select('friend_user_id')
     .eq('user_id',user.id);
-  if(fErr){box.innerHTML='<div class="status err">'+esc(fErr.message)+'</div>';return;}
+  if(fErr){box.innerHTML='<div class="status err">Fout bij laden vrienden: '+esc(fErr.message)+'</div>';return;}
   if(!friends||friends.length===0){
     box.innerHTML='<div class="muted">Je hebt nog geen vrienden toegevoegd. Ga naar het tabblad 🤝 Vrienden.</div>';
     return;
@@ -2106,7 +2107,7 @@ window.loadOntdektePlaatsen=async function(){
   (camperUsers||[]).forEach(cu=>camperUserMap[cu.camper_id]=cu.user_id);
   // Vriend e-mail opzoeken
   const friendEmailMap={};
-  (friends||[]).forEach(f=>{ if(f.friend_user_id) friendEmailMap[f.friend_user_id]=f.friend_email||f.friend_user_id; });
+  (friends||[]).forEach(f=>{ if(f.friend_user_id) friendEmailMap[f.friend_user_id]=f.friend_user_id; });
 
   box.innerHTML=stops.map(s=>{
     const camperId=reisMap[s.reis_id];
