@@ -806,32 +806,7 @@ function updateBeheerVisibility(){
   console.log('LOADCURRENTCAMPER EINDE');
 }
 
-  if(!data){
-    console.warn('Geen camper_users record zichtbaar voor USER ID:', user.id, '- controleer user_id match en/of RLS policy.');
-  }else{
-    if(data.user_id!==user.id){
-      console.warn('Mismatch: camper_users.user_id komt niet overeen met USER ID.', {campersUserId:data.user_id,userId:user.id});
-    }
-    if(data.camper_id==null){
-      console.warn('camper_users record bevat geen camper_id:', data);
-    }
-  }
-
-  activeCamperId = data?.camper_id ?? null;
-  isCamperAdmin = data?.role === 'admin';
-
-  const { data:beheerLink, error:beheerError } = await supabase
-  .from('camper_users')
-  .select('camper_id')
-  .eq('user_id', user.id)
-  .eq('camper_id', 1)
-  .maybeSingle();
-
-  if(beheerError)console.error('Beheercontrole mislukt:', beheerError);
-  canAccessBeheer = Number(activeCamperId)===1 || Boolean(beheerLink);
-  updateBeheerVisibility();
-
-  console.log('ACTIVE CAMPER ID:', activeCamperId);
+ 
 
 async function init(){
 handleInviteRoute();
