@@ -33,6 +33,9 @@ button{font:inherit}
 .trip-header{background:#f7f7f7;border-radius:12px;padding:14px;margin-bottom:18px}
 .fuel-summary{background:#f7f7f7;border-radius:12px;padding:14px;margin-bottom:18px}
 .fuel-number{font-size:24px;font-weight:800}
+.inline-form{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.inline-form>div{flex:1 1 260px}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;word-break:break-all}
 hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </style>
 </head>
@@ -41,6 +44,12 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <h1>🚐 B66 – Making Memories</h1>
 <p id="versionText">Versie laden...</p>
 </header>
+
+<div id="inviteRouteView" class="card login hidden">
+<h2>🎟️ Registratie via uitnodiging</h2>
+<p id="inviteRouteCode" class="muted"></p>
+<p>Registratie via uitnodiging wordt later geactiveerd.</p>
+</div>
 
 <div id="loginView" class="card login">
 <h2>Welkom bij Making Memories</h2>
@@ -62,6 +71,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <button data-tab="personen">👥 Personen</button>
 <button data-tab="vrienden">🤝 Vrienden</button>
 <button data-tab="ontdekte-plaatsen">🗺️ Ontdekte plaatsen</button>
+<button id="beheerTabButton" data-tab="beheer" class="hidden">👑 Beheer</button>
 <button onclick="logout()">Uitloggen</button>
 </nav>
 
@@ -499,6 +509,69 @@ Nog geen onderhoud geregistreerd.
 <span id="camperProfileStatus" class="status hidden"></span>
 </div>
 </div></section>
+
+<section id="beheer" class="hidden">
+<!--
+  SQL – maak deze tabel aan in Supabase:
+
+  create table invite_codes (
+    id          bigint generated always as identity primary key,
+    invite_code text not null unique,
+    email       text not null,
+    created_by  uuid references auth.users(id),
+    created_at  timestamptz not null default now(),
+    used        boolean not null default false,
+    used_at     timestamptz
+  );
+-->
+
+<div class="card">
+<h2>👑 Beheer</h2>
+<p class="muted">Alleen zichtbaar voor de hoofdbeheerder van het platform.</p>
+</div>
+
+<div class="card">
+<h3>👥 Uitnodigingen</h3>
+<div id="inviteStatus" class="status hidden"></div>
+<div class="inline-form">
+  <div>
+    <label>E-mailadres</label>
+    <input id="inviteEmail" type="email" placeholder="naam@example.com">
+  </div>
+  <div style="flex:0 0 auto">
+    <button class="primary" onclick="createInviteCode()">Uitnodiging maken</button>
+  </div>
+</div>
+<div id="inviteGeneratedBox" class="status ok hidden" style="margin-top:12px"></div>
+<hr>
+<h3>Overzicht uitnodigingen</h3>
+<div id="inviteList">Uitnodigingen laden...</div>
+</div>
+
+<div class="card">
+<h3>🚐 Campers</h3>
+<div id="adminCampersList">Campers laden...</div>
+</div>
+
+<div class="card">
+<h3>👤 Gebruikers</h3>
+<div id="adminUsersList">Gebruikers laden...</div>
+</div>
+
+<div class="card">
+<h3>📊 Platform statistieken</h3>
+<div id="adminStatsStatus" class="status hidden"></div>
+<div class="grid">
+  <div class="card"><div class="muted">Aantal gebruikers</div><div class="big" id="adminUserCount">0</div></div>
+  <div class="card"><div class="muted">Aantal campers</div><div class="big" id="adminCamperCount">0</div></div>
+  <div class="card"><div class="muted">Aantal reizen</div><div class="big" id="adminTripCount">0</div></div>
+  <div class="card"><div class="muted">Aantal stops</div><div class="big" id="adminStopCount">0</div></div>
+  <div class="card"><div class="muted">Aantal foto's</div><div class="big" id="adminPhotoCount">0</div></div>
+  <div class="card"><div class="muted">Aantal tankbeurten</div><div class="big" id="adminFuelCount">0</div></div>
+  <div class="card"><div class="muted">Aantal reiskosten</div><div class="big" id="adminCostCount">0</div></div>
+</div>
+</div>
+</section>
 </main>
 </div>
 
@@ -528,6 +601,9 @@ let _ontdektePlaatsenData={};
 let stopNumber=1;
   let selectedPhotos = [];
   let activeCamperId = null;
+  let currentUser = null;
+  let canAccessBeheer = false;
+  const INVITE_BASE_URL='https://makingmemories.app/invite/';
   const APP_VERSION =
   new Date(document.lastModified)
     .toLocaleString('nl-BE');
@@ -588,38 +664,94 @@ function populateCountrySelects(){
   }
 }
 
+function getInviteCodeFromLocation(){
+  const pathMatch=window.location.pathname.match(/\/invite\/([^/?#]+)/i);
+  if(pathMatch)return decodeURIComponent(pathMatch[1]);
+  const params=new URLSearchParams(window.location.search);
+  return params.get('invite_code')||params.get('invite')||'';
+}
+
+function handleInviteRoute(){
+  const box=document.getElementById('inviteRouteView');
+  const codeEl=document.getElementById('inviteRouteCode');
+  if(!box||!codeEl)return;
+  const inviteCode=getInviteCodeFromLocation();
+  if(!inviteCode){
+    box.classList.add('hidden');
+    codeEl.textContent='';
+    return;
+  }
+  codeEl.textContent='Uitnodigingscode: '+inviteCode;
+  box.classList.remove('hidden');
+}
+
+function updateBeheerVisibility(){
+  const tab=document.getElementById('beheerTabButton');
+  const section=document.getElementById('beheer');
+  if(tab)tab.classList.toggle('hidden',!canAccessBeheer);
+  if(section)section.classList.toggle('hidden',!canAccessBeheer);
+}
+
   async function loadCurrentCamper(){
 
   const { data:{ user } } = await supabase.auth.getUser();
+  currentUser=user;
 
   console.log('USER:', user);
 
-  if(!user) return;
+  if(!user){
+    activeCamperId=null;
+    canAccessBeheer=false;
+    updateBeheerVisibility();
+    return;
+  }
 
   const { data, error } = await supabase
   .from('camper_users')
-  .select('*')
+  .select('camper_id')
   .eq('user_id', user.id)
-  .single();
+  .order('camper_id',{ascending:true})
+  .limit(1)
+  .maybeSingle();
 
   console.log('CAMPER DATA:', data);
   console.log('CAMPER ERROR:', error);
 
   if(error){
     console.error('Camper ophalen mislukt:', error);
+    canAccessBeheer=false;
+    updateBeheerVisibility();
     return;
   }
 
-  activeCamperId = data.camper_id;
+  activeCamperId = data?.camper_id ?? null;
+
+  const { data:beheerLink, error:beheerError } = await supabase
+  .from('camper_users')
+  .select('camper_id')
+  .eq('user_id', user.id)
+  .eq('camper_id', 1)
+  .maybeSingle();
+
+  if(beheerError)console.error('Beheercontrole mislukt:', beheerError);
+  canAccessBeheer = Number(activeCamperId)===1 || Boolean(beheerLink);
+  updateBeheerVisibility();
 
   console.log('Actieve camper:', activeCamperId);
 }
 async function init(){
+handleInviteRoute();
 const {data:{session}}=await supabase.auth.getSession();
 if(session)showApp();else showLogin();
 supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
 }
-function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
+function showLogin(){
+  canAccessBeheer=false;
+  updateBeheerVisibility();
+  handleInviteRoute();
+  loginView.classList.remove('hidden');
+  appView.classList.add('hidden');
+}
 async function showApp(){
   document.getElementById('versionText').textContent =
   'Build: ' + APP_VERSION;
@@ -1447,6 +1579,217 @@ async function loadStats(){
 
 function v(id){return document.getElementById(id).value.trim()}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function formatDate(value){
+  if(!value)return '—';
+  const date=new Date(value);
+  if(Number.isNaN(date.getTime()))return String(value).slice(0,10);
+  return date.toLocaleDateString('nl-BE');
+}
+function generateInviteCode(length=9){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes=crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes,x=>chars[x%chars.length]).join('');
+}
+function getInviteLink(inviteCode){
+  return INVITE_BASE_URL+encodeURIComponent(inviteCode);
+}
+function renderGeneratedInvite(invite){
+  const box=document.getElementById('inviteGeneratedBox');
+  if(!box)return;
+  if(!invite){
+    box.classList.add('hidden');
+    box.innerHTML='';
+    return;
+  }
+  const link=getInviteLink(invite.invite_code);
+  box.innerHTML=`
+    <div><b>Uitnodigingslink voor ${esc(invite.email)}</b></div>
+    <div class="code" style="margin-top:6px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
+    <div class="muted" style="margin-top:6px">Verstuur deze link zelf via WhatsApp, e-mail of Messenger.</div>`;
+  box.classList.remove('hidden');
+}
+
+async function loadInviteCodes(){
+  const list=document.getElementById('inviteList');
+  if(!list||!canAccessBeheer)return;
+  list.textContent='Uitnodigingen laden...';
+  const {data,error}=await supabase
+    .from('invite_codes')
+    .select('id,invite_code,email,created_at,used,used_at')
+    .order('created_at',{ascending:false})
+    .limit(100);
+  if(error){
+    list.innerHTML='<div class="status err">Uitnodigingen laden mislukt: '+esc(error.message)+'</div>';
+    return;
+  }
+  if(!data||data.length===0){
+    list.innerHTML='<div class="muted">Nog geen uitnodigingen aangemaakt.</div>';
+    return;
+  }
+  list.innerHTML=data.map(invite=>{
+    const statusLabel=invite.used?'🟢 Gebruikt':'🟡 Openstaand';
+    const link=getInviteLink(invite.invite_code);
+    return `<div class="item">
+      <div><b>${esc(invite.email||'—')}</b></div>
+      <div class="muted">Code: <span class="code">${esc(invite.invite_code||'—')}</span></div>
+      <div class="muted">Datum aangemaakt: ${esc(formatDate(invite.created_at))}</div>
+      <div class="muted">Status: ${statusLabel}</div>
+      <div class="muted">Link: <a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAdminCampers(){
+  const list=document.getElementById('adminCampersList');
+  if(!list||!canAccessBeheer)return;
+  list.textContent='Campers laden...';
+  const [{data:campers,error:campersError},{data:camperUsers,error:camperUsersError}]=await Promise.all([
+    supabase.from('campers').select('id,naam,merk,model,created_at').order('created_at',{ascending:false}),
+    supabase.from('camper_users').select('camper_id,user_id')
+  ]);
+  if(campersError||camperUsersError){
+    list.innerHTML='<div class="status err">Campers laden mislukt: '+esc(campersError?.message||camperUsersError?.message||'Onbekende fout')+'</div>';
+    return;
+  }
+  const userIds=[...new Set((camperUsers||[]).map(row=>row.user_id).filter(Boolean))];
+  const profileMap={};
+  if(userIds.length){
+    const {data:profiles,error:profilesError}=await supabase
+      .from('profiles')
+      .select('user_id,display_name,email')
+      .in('user_id',userIds);
+    if(profilesError){
+      list.innerHTML='<div class="status err">Camper-eigenaars laden mislukt: '+esc(profilesError.message)+'</div>';
+      return;
+    }
+    (profiles||[]).forEach(profile=>{profileMap[profile.user_id]=profile;});
+  }
+  const ownerByCamper={};
+  (camperUsers||[]).forEach(row=>{
+    if(ownerByCamper[row.camper_id])return;
+    const profile=profileMap[row.user_id]||{};
+    ownerByCamper[row.camper_id]=profile.display_name||profile.email||'Onbekend';
+  });
+  if(!campers||campers.length===0){
+    list.innerHTML='<div class="muted">Nog geen campers gevonden.</div>';
+    return;
+  }
+  list.innerHTML=campers.map(camper=>{
+    const camperNaam=camper.naam||[camper.merk,camper.model].filter(Boolean).join(' ')||('Camper #'+camper.id);
+    return `<div class="item">
+      <div><b>${esc(camperNaam)}</b></div>
+      <div class="muted">Eigenaar: ${esc(ownerByCamper[camper.id]||'Onbekend')}</div>
+      <div class="muted">Aangemaakt op: ${esc(formatDate(camper.created_at))}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAdminUsers(){
+  const list=document.getElementById('adminUsersList');
+  if(!list||!canAccessBeheer)return;
+  list.textContent='Gebruikers laden...';
+  const {data,error}=await supabase
+    .from('profiles')
+    .select('user_id,display_name,email')
+    .order('display_name',{ascending:true});
+  if(error){
+    list.innerHTML='<div class="status err">Gebruikers laden mislukt: '+esc(error.message)+'</div>';
+    return;
+  }
+  if(!data||data.length===0){
+    list.innerHTML='<div class="muted">Nog geen gebruikers gevonden.</div>';
+    return;
+  }
+  list.innerHTML=data.map(profile=>`<div class="item">
+    <div><b>${esc(profile.display_name||'—')}</b></div>
+    <div class="muted">${esc(profile.email||'—')}</div>
+  </div>`).join('');
+}
+
+async function loadAdminStats(){
+  const status=document.getElementById('adminStatsStatus');
+  if(!status||!canAccessBeheer)return;
+  status.className='status hidden';
+  const statTargets=[
+    ['adminUserCount','profiles'],
+    ['adminCamperCount','campers'],
+    ['adminTripCount','reizen'],
+    ['adminStopCount','reis_stops'],
+    ['adminPhotoCount','fotos'],
+    ['adminFuelCount','tankbeurten'],
+    ['adminCostCount','reiskosten']
+  ];
+  const results=await Promise.all(statTargets.map(([,table])=>
+    supabase.from(table).select('*',{count:'exact',head:true})
+  ));
+  const firstError=results.find(result=>result.error)?.error;
+  if(firstError){
+    status.textContent='Platform statistieken laden mislukt: '+firstError.message;
+    status.className='status err';
+  }
+  statTargets.forEach(([id],index)=>{
+    document.getElementById(id).textContent=String(results[index].count??0);
+  });
+}
+
+async function loadBeheer(){
+  if(!canAccessBeheer)return;
+  await Promise.all([
+    loadInviteCodes(),
+    loadAdminCampers(),
+    loadAdminUsers(),
+    loadAdminStats()
+  ]);
+}
+
+window.createInviteCode=async function(){
+  const status=document.getElementById('inviteStatus');
+  const emailField=document.getElementById('inviteEmail');
+  if(!status||!emailField)return;
+  status.className='status hidden';
+  if(!canAccessBeheer){
+    status.textContent='Geen toegang tot beheer.';
+    status.className='status err';
+    return;
+  }
+  const email=emailField.value.trim().toLowerCase();
+  if(!email){
+    status.textContent='Vul een e-mailadres in.';
+    status.className='status err';
+    return;
+  }
+  const isValidEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if(!isValidEmail){
+    status.textContent='Vul een geldig e-mailadres in.';
+    status.className='status err';
+    return;
+  }
+  let result=null;
+  for(let attempt=0;attempt<5;attempt++){
+    result=await supabase
+      .from('invite_codes')
+      .insert({
+        invite_code:generateInviteCode(),
+        email,
+        created_by:currentUser?.id||null,
+        used:false
+      })
+      .select('id,invite_code,email,created_at,used,used_at')
+      .single();
+    if(!result.error)break;
+    if(result.error.code!=='23505')break;
+  }
+  if(result?.error){
+    status.textContent='Uitnodiging maken mislukt: '+result.error.message;
+    status.className='status err';
+    return;
+  }
+  emailField.value='';
+  renderGeneratedInvite(result.data);
+  status.textContent='✓ Uitnodiging opgeslagen.';
+  status.className='status ok';
+  await loadInviteCodes();
+};
 
 document.querySelectorAll('nav button[data-tab]').forEach(b=>b.onclick=async()=>{
 document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
@@ -1465,6 +1808,9 @@ if(b.dataset.tab==='vrienden'){
 }
 if(b.dataset.tab==='ontdekte-plaatsen'){
   await loadOntdektePlaatsen();
+}
+if(b.dataset.tab==='beheer'){
+  await loadBeheer();
 }
 });
 const photoUpload = document.getElementById('photoUpload');
