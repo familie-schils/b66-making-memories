@@ -953,12 +953,16 @@ async function processPlatformInvite(userId){
     .maybeSingle();
   if(!existing){
     // Maak nieuwe camper aan
+    console.log('SESSION', await supabase.auth.getSession());
+    console.log('USER', await supabase.auth.getUser());
+    const sessionData=await supabase.auth.getUser();
+    const userEmail=sessionData?.data?.user?.email||'onbekend';
     const {data:newCamper,error:camperErr}=await supabase
       .from('campers')
-      .insert({naam:null})
+      .insert({naam:'Camper van '+userEmail})
       .select('id')
       .single();
-    if(camperErr){setStatus('Camper aanmaken mislukt: '+camperErr.message,'err');return;}
+    if(camperErr){console.error('CAMPER ERROR', camperErr);setStatus('Camper aanmaken mislukt: '+JSON.stringify(camperErr),'err');return;}
     const {error:linkErr}=await supabase
       .from('camper_users')
       .insert({user_id:userId,camper_id:newCamper.id,role:'admin'});
