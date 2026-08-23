@@ -738,6 +738,7 @@ function updateBeheerVisibility(){
 }
 
   async function loadCurrentCamper(){
+  console.log('LOAD CURRENT CAMPER START');
 
   const { data:{ user } } = await supabase.auth.getUser();
   currentUser=user;
@@ -773,6 +774,7 @@ function updateBeheerVisibility(){
   }
 
   activeCamperId = data?.camper_id ?? null;
+  console.log('ACTIVE CAMPER ID:', activeCamperId);
   isCamperAdmin = data?.role === 'admin';
 
   const { data:beheerLink, error:beheerError } = await supabase
