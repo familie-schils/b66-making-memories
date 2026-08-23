@@ -736,7 +736,9 @@ async function handleInviteRoute(){
   const formsEl=document.getElementById('inviteRouteForms');
   if(!box||!codeEl)return false;
   const inviteCode=getInviteCodeFromLocation();
+  console.log('[invite-debug] inviteCode uit URL:', inviteCode);
   if(!inviteCode){
+    console.log('[invite-debug] Geen uitnodigingscode in URL gevonden.');
     box.classList.add('hidden');
     codeEl.textContent='';
     return false;
@@ -750,11 +752,14 @@ async function handleInviteRoute(){
     .select('id,camper_id,email,invite_code,used')
     .eq('invite_code',inviteCode)
     .maybeSingle();
+  console.log('[invite-debug] camper_invites query resultaat:', camperInvite);
   if(camperInviteError){
+    console.error('[invite-debug] camper_invites query fout:', camperInviteError);
     if(statusEl){statusEl.textContent='Databasefout bij controleren van camper-uitnodiging: '+camperInviteError.message;statusEl.className='status err';}
     return true;
   }
   if(camperInvite){
+    console.log('[invite-debug] Gekozen uitnodigingstype: camper');
     if(camperInvite.used){
       if(statusEl){statusEl.textContent='Deze uitnodigingscode is al gebruikt.';statusEl.className='status err';}
       return true;
@@ -768,14 +773,18 @@ async function handleInviteRoute(){
     .select('id,email,invite_code,used')
     .eq('invite_code',inviteCode)
     .maybeSingle();
+  console.log('[invite-debug] invite_codes query resultaat:', platformInvite);
   if(platformInviteError){
+    console.error('[invite-debug] invite_codes query fout:', platformInviteError);
     if(statusEl){statusEl.textContent='Databasefout bij controleren van platform-uitnodiging: '+platformInviteError.message;statusEl.className='status err';}
     return true;
   }
   if(!platformInvite){
+    console.log('[invite-debug] Gekozen uitnodigingstype: geen (code niet gevonden).');
     if(statusEl){statusEl.textContent='Uitnodigingscode bestaat niet.';statusEl.className='status err';}
     return true;
   }
+  console.log('[invite-debug] Gekozen uitnodigingstype: platform');
   if(platformInvite.used){
     if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
     return true;
