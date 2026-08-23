@@ -728,6 +728,7 @@ function getInviteCodeFromLocation(){
 }
 
 let pendingInviteData=null;
+let pendingPlatformInviteData=null;
 
 async function handleInviteRoute(){
   const box=document.getElementById('inviteRouteView');
@@ -745,20 +746,36 @@ async function handleInviteRoute(){
   box.classList.remove('hidden');
   if(statusEl)statusEl.className='status hidden';
   if(formsEl)formsEl.classList.add('hidden');
-  const {data,error}=await supabase
+  // Probeer eerst camper-uitnodiging (camper_invites)
+  const {data:camperInvite,error:camperErr}=await supabase
     .from('camper_invites')
     .select('id,camper_id,email,invite_code,used')
     .eq('invite_code',inviteCode)
     .maybeSingle();
-  if(error||!data){
+  if(!camperErr&&camperInvite){
+    if(camperInvite.used){
+      if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
+      return true;
+    }
+    pendingInviteData=camperInvite;
+    if(formsEl)formsEl.classList.remove('hidden');
+    return true;
+  }
+  // Probeer platform-uitnodiging (invite_codes)
+  const {data:platformInvite,error:platformErr}=await supabase
+    .from('invite_codes')
+    .select('id,invite_code,email,used')
+    .eq('invite_code',inviteCode)
+    .maybeSingle();
+  if(platformErr||!platformInvite){
     if(statusEl){statusEl.textContent='Uitnodigingscode niet gevonden.';statusEl.className='status err';}
     return true;
   }
-  if(data.used){
+  if(platformInvite.used){
     if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
     return true;
   }
-  pendingInviteData=data;
+  pendingPlatformInviteData=platformInvite;
   if(formsEl)formsEl.classList.remove('hidden');
   return true;
 }
@@ -845,7 +862,7 @@ const isInviteRoute=await handleInviteRoute();
 const {data:{session}}=await supabase.auth.getSession();
 if(isInviteRoute){loginView.classList.add('hidden');}
 else if(session)showApp(session.user);else showLogin();
-supabase.auth.onAuthStateChange((_e,s)=>{if(!pendingInviteData)s?showApp(s.user):showLogin();});
+supabase.auth.onAuthStateChange((_e,s)=>{if(!pendingInviteData&&!pendingPlatformInviteData)s?showApp(s.user):showLogin();});
 }
 function showLogin(){
   canAccessBeheer=false;
@@ -922,6 +939,43 @@ async function processInvite(userId){
   setTimeout(()=>showApp(null),1500);
 }
 
+async function processPlatformInvite(userId){
+  if(!pendingPlatformInviteData)return;
+  const invite=pendingPlatformInviteData;
+  const statusEl=document.getElementById('inviteRouteStatus');
+  function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
+  // Controleer of gebruiker al een camper heeft
+  const {data:existing}=await supabase
+    .from('camper_users')
+    .select('camper_id')
+    .eq('user_id',userId)
+    .limit(1)
+    .maybeSingle();
+  if(!existing){
+    // Maak nieuwe camper aan
+    const {data:newCamper,error:camperErr}=await supabase
+      .from('campers')
+      .insert({naam:null})
+      .select('id')
+      .single();
+    if(camperErr){setStatus('Camper aanmaken mislukt: '+camperErr.message,'err');return;}
+    const {error:linkErr}=await supabase
+      .from('camper_users')
+      .insert({user_id:userId,camper_id:newCamper.id,role:'admin'});
+    if(linkErr){setStatus('Koppeling aan camper mislukt: '+linkErr.message,'err');return;}
+  }
+  // Markeer invite_code als gebruikt
+  await supabase
+    .from('invite_codes')
+    .update({used:true,used_at:new Date().toISOString()})
+    .eq('id',invite.id);
+  pendingPlatformInviteData=null;
+  setStatus('Welkom! Je camper is aangemaakt en klaar voor gebruik.','ok');
+  const formsEl=document.getElementById('inviteRouteForms');
+  if(formsEl)formsEl.classList.add('hidden');
+  setTimeout(()=>showApp(null),1500);
+}
+
 window.inviteRegister=async()=>{
   const statusEl=document.getElementById('inviteRouteStatus');
   function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
@@ -933,7 +987,8 @@ window.inviteRegister=async()=>{
   if(error){setStatus('Registratie mislukt: '+error.message,'err');return;}
   const user=data?.user;
   if(!user){setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in.','ok');return;}
-  await processInvite(user.id);
+  if(pendingPlatformInviteData)await processPlatformInvite(user.id);
+  else await processInvite(user.id);
 };
 
 window.inviteLogin=async()=>{
@@ -947,7 +1002,8 @@ window.inviteLogin=async()=>{
   if(error){setStatus('Inloggen mislukt: '+error.message,'err');return;}
   const user=data?.user;
   if(!user){setStatus('Inloggen mislukt.','err');return;}
-  await processInvite(user.id);
+  if(pendingPlatformInviteData)await processPlatformInvite(user.id);
+  else await processInvite(user.id);
 };
 
 let currentStopSaved=false;
