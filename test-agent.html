@@ -736,6 +736,7 @@ async function handleInviteRoute(){
   const formsEl=document.getElementById('inviteRouteForms');
   if(!box||!codeEl)return false;
   const inviteCode=getInviteCodeFromLocation();
+  console.log('[invite-debug] inviteCode uit URL:', inviteCode);
   if(!inviteCode){
     box.classList.add('hidden');
     codeEl.textContent='';
@@ -752,11 +753,14 @@ async function handleInviteRoute(){
     .select('id,camper_id,email,invite_code,used')
     .eq('invite_code',inviteCode)
     .maybeSingle();
+  console.log('[invite-debug] camperInvite:', camperInvite);
+  console.log('[invite-debug] camperInviteError:', camperInviteError);
 
   if(!camperInviteError&&camperInvite){
     // 2. Gevonden in camper_invites
     if(camperInvite.used){
       if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
+      console.log('[invite-debug] reden foutmelding:', 'camper_invites code is al gebruikt');
       return true;
     }
     pendingInviteData={type:'camper',...camperInvite};
@@ -770,11 +774,14 @@ async function handleInviteRoute(){
     .select('id,email,invite_code,used')
     .eq('invite_code',inviteCode)
     .maybeSingle();
+  console.log('[invite-debug] platformInvite:', platformInvite);
+  console.log('[invite-debug] platformInviteError:', platformInviteError);
 
   if(!platformInviteError&&platformInvite){
     // 4. Gevonden in invite_codes
     if(platformInvite.used){
       if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
+      console.log('[invite-debug] reden foutmelding:', 'invite_codes code is al gebruikt');
       return true;
     }
     pendingInviteData={type:'platform',...platformInvite};
@@ -784,6 +791,7 @@ async function handleInviteRoute(){
 
   // 5. Nergens gevonden
   if(statusEl){statusEl.textContent='Uitnodigingscode bestaat niet.';statusEl.className='status err';}
+  console.log('[invite-debug] reden foutmelding:', 'geen match in camper_invites en invite_codes');
   return true;
 }
 
