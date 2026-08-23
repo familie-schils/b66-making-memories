@@ -460,7 +460,26 @@ Nog geen onderhoud geregistreerd.
   ALTER TABLE campers ADD COLUMN IF NOT EXISTS kenteken text;
   ALTER TABLE campers ADD COLUMN IF NOT EXISTS bouwjaar text;
 -->
-<section id="camper"><div class="card"><h2>Mijn Camper</h2>
+<section id="camper">
+<!--
+  SQL-migratie – role kolom toevoegen aan camper_users:
+
+  ALTER TABLE camper_users ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'lid';
+
+  SQL – maak de camper_invites tabel aan in Supabase:
+
+  CREATE TABLE IF NOT EXISTS camper_invites (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    camper_id   BIGINT REFERENCES campers(id) ON DELETE CASCADE,
+    email       TEXT NOT NULL,
+    invite_code TEXT NOT NULL UNIQUE,
+    created_by  UUID REFERENCES auth.users(id),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    used        BOOLEAN NOT NULL DEFAULT FALSE,
+    used_at     TIMESTAMPTZ
+  );
+-->
+<div class="card"><h2>Mijn Camper</h2>
 <div class="grid">
 <div><label>Campermerk</label>
 <select id="camperMerk">
@@ -508,7 +527,32 @@ Nog geen onderhoud geregistreerd.
 <button onclick="saveCamperProfile()">💾 Opslaan</button>
 <span id="camperProfileStatus" class="status hidden"></span>
 </div>
-</div></section>
+</div>
+
+<div class="card">
+<h3>👥 Camperleden</h3>
+<div id="camperMembersList">Leden laden...</div>
+</div>
+
+<div id="camperInviteCard" class="card hidden">
+<h3>📨 Uitnodigen</h3>
+<div id="camperInviteStatus" class="status hidden"></div>
+<div class="inline-form">
+  <div>
+    <label>E-mailadres</label>
+    <input id="camperInviteEmail" type="email" placeholder="naam@example.com">
+  </div>
+  <div style="flex:0 0 auto;display:flex;gap:8px;align-items:flex-end">
+    <button class="primary" onclick="createCamperInvite()">Uitnodigen</button>
+    <button class="secondary" onclick="generateCamperInviteLink()">Link genereren</button>
+  </div>
+</div>
+<div id="camperInviteGeneratedBox" class="status ok hidden" style="margin-top:12px"></div>
+<hr>
+<h4>Openstaande uitnodigingen</h4>
+<div id="camperInvitesList">Uitnodigingen laden...</div>
+</div>
+</section>
 
 <section id="beheer" class="hidden">
 <!--
@@ -603,6 +647,7 @@ let stopNumber=1;
   let activeCamperId = null;
   let currentUser = null;
   let canAccessBeheer = false;
+  let isCamperAdmin = false;
   const INVITE_BASE_URL='https://makingmemories.app/invite/';
   const APP_VERSION =
   new Date(document.lastModified)
@@ -708,7 +753,7 @@ function updateBeheerVisibility(){
 
   const { data, error } = await supabase
   .from('camper_users')
-  .select('camper_id')
+  .select('camper_id,role')
   .eq('user_id', user.id)
   .order('camper_id',{ascending:true})
   .limit(1)
@@ -720,11 +765,13 @@ function updateBeheerVisibility(){
   if(error){
     console.error('Camper ophalen mislukt:', error);
     canAccessBeheer=false;
+    isCamperAdmin=false;
     updateBeheerVisibility();
     return;
   }
 
   activeCamperId = data?.camper_id ?? null;
+  isCamperAdmin = data?.role === 'admin';
 
   const { data:beheerLink, error:beheerError } = await supabase
   .from('camper_users')
@@ -779,6 +826,7 @@ await loadFuel();
   await loadTravelCosts();
   await loadPersonen();
   await loadCamperProfile();
+  await loadCamperMembers();
 }
 
 window.login=async()=>{
@@ -1812,6 +1860,9 @@ if(b.dataset.tab==='ontdekte-plaatsen'){
 if(b.dataset.tab==='beheer'){
   await loadBeheer();
 }
+if(b.dataset.tab==='camper'){
+  await loadCamperTab();
+}
 });
 const photoUpload = document.getElementById('photoUpload');
 
@@ -2257,6 +2308,124 @@ window.togglePersoon=async function(id,huidigActief){
   await loadPersonen();
   await loadPersonOptions();
 };
+
+async function loadCamperMembers(){
+  const list=document.getElementById('camperMembersList');
+  if(!list||!activeCamperId)return;
+  list.textContent='Leden laden...';
+  const {data:members,error}=await supabase
+    .from('camper_users')
+    .select('user_id,role')
+    .eq('camper_id',activeCamperId);
+  if(error){list.innerHTML='<div class="status err">Leden laden mislukt: '+esc(error.message)+'</div>';return;}
+  if(!members||members.length===0){list.innerHTML='<div class="muted">Nog geen leden gekoppeld.</div>';return;}
+  const userIds=members.map(m=>m.user_id).filter(Boolean);
+  let profileMap={};
+  if(userIds.length){
+    const {data:profiles}=await supabase.from('profiles').select('user_id,display_name,email').in('user_id',userIds);
+    if(profiles)profiles.forEach(p=>{profileMap[p.user_id]=p;});
+  }
+  list.innerHTML=members.map(m=>{
+    const p=profileMap[m.user_id]||{};
+    const label=p.display_name||p.email||'(onbekend)';
+    const roleLabel=m.role==='admin'?' <span class="muted">(admin)</span>':'';
+    return `<div class="item"><b>${esc(label)}</b>${roleLabel}</div>`;
+  }).join('');
+  const card=document.getElementById('camperInviteCard');
+  if(card)card.classList.toggle('hidden',!isCamperAdmin);
+}
+
+async function loadCamperInvites(){
+  const list=document.getElementById('camperInvitesList');
+  if(!list||!activeCamperId||!isCamperAdmin)return;
+  list.textContent='Uitnodigingen laden...';
+  const {data,error}=await supabase
+    .from('camper_invites')
+    .select('id,email,invite_code,created_at,used,used_at')
+    .eq('camper_id',activeCamperId)
+    .eq('used',false)
+    .order('created_at',{ascending:false})
+    .limit(50);
+  if(error){list.innerHTML='<div class="status err">Uitnodigingen laden mislukt: '+esc(error.message)+'</div>';return;}
+  if(!data||data.length===0){list.innerHTML='<div class="muted">Geen openstaande uitnodigingen.</div>';return;}
+  list.innerHTML=data.map(inv=>{
+    const link=getCamperInviteLink(inv.invite_code);
+    return `<div class="item">
+      <div><b>${esc(inv.email||'—')}</b></div>
+      <div class="muted">Status: In afwachting</div>
+      <div class="muted">Aangemaakt: ${esc(formatDate(inv.created_at))}</div>
+      <div class="muted" style="margin-top:4px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
+    </div>`;
+  }).join('');
+}
+
+function getCamperInviteLink(inviteCode){
+  const base=window.location.origin+window.location.pathname;
+  return base.replace(/\/[^/]*$/,'/')+`join-camper/${encodeURIComponent(inviteCode)}`;
+}
+
+function renderCamperInviteGenerated(invite){
+  const box=document.getElementById('camperInviteGeneratedBox');
+  if(!box)return;
+  if(!invite){box.classList.add('hidden');box.innerHTML='';return;}
+  const link=getCamperInviteLink(invite.invite_code);
+  box.innerHTML=`
+    <div><b>Uitnodigingslink voor ${esc(invite.email)}</b></div>
+    <div class="code" style="margin-top:6px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
+    <div class="muted" style="margin-top:6px">Verstuur deze link via WhatsApp, e-mail of Messenger.</div>`;
+  box.classList.remove('hidden');
+}
+
+async function saveCamperInvite(email){
+  const status=document.getElementById('camperInviteStatus');
+  status.className='status hidden';
+  if(!isCamperAdmin){status.textContent='Geen toegang: alleen camper-admins kunnen uitnodigingen maken.';status.className='status err';return null;}
+  if(!activeCamperId){status.textContent='Geen actieve camper gevonden.';status.className='status err';return null;}
+  if(!email){status.textContent='Vul een e-mailadres in.';status.className='status err';return null;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){status.textContent='Vul een geldig e-mailadres in.';status.className='status err';return null;}
+  let result=null;
+  for(let attempt=0;attempt<5;attempt++){
+    result=await supabase
+      .from('camper_invites')
+      .insert({camper_id:activeCamperId,email,invite_code:generateInviteCode(),created_by:currentUser?.id||null,used:false})
+      .select('id,email,invite_code,created_at,used,used_at')
+      .single();
+    if(!result.error)break;
+    if(result.error.code!=='23505')break;
+  }
+  if(result?.error){status.textContent='Uitnodiging maken mislukt: '+result.error.message;status.className='status err';return null;}
+  return result.data;
+}
+
+window.createCamperInvite=async function(){
+  const emailField=document.getElementById('camperInviteEmail');
+  const status=document.getElementById('camperInviteStatus');
+  if(!emailField||!status)return;
+  const email=emailField.value.trim().toLowerCase();
+  const invite=await saveCamperInvite(email);
+  if(!invite)return;
+  emailField.value='';
+  renderCamperInviteGenerated(invite);
+  status.textContent='✓ Uitnodiging opgeslagen.';
+  status.className='status ok';
+  await loadCamperInvites();
+};
+
+window.generateCamperInviteLink=async function(){
+  const emailField=document.getElementById('camperInviteEmail');
+  if(!emailField)return;
+  const email=emailField.value.trim().toLowerCase();
+  const invite=await saveCamperInvite(email);
+  if(!invite)return;
+  emailField.value='';
+  renderCamperInviteGenerated(invite);
+  await loadCamperInvites();
+};
+
+async function loadCamperTab(){
+  await loadCamperMembers();
+  if(isCamperAdmin)await loadCamperInvites();
+}
 
 async function loadCamperProfile(){
   if(!activeCamperId)return;
