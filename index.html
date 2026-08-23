@@ -390,11 +390,24 @@ Nog geen onderhoud geregistreerd.
     actief     boolean not null default true,
     created_at timestamptz not null default now()
   );
+
+  SQL-migratie – rol kolom toevoegen aan personen:
+
+  alter table personen
+    add column if not exists rol text not null default 'beide'
+    check (rol in ('bestuurder', 'passagier', 'beide'));
 -->
 
 <div id="persoonStatus" class="status hidden"></div>
 <div class="grid">
   <div><label>Naam</label><input id="persoonNaam" placeholder="Voornaam of volledige naam"></div>
+  <div><label>Rol</label>
+    <select id="persoonRol">
+      <option value="beide">Bestuurder &amp; Passagier</option>
+      <option value="bestuurder">Bestuurder</option>
+      <option value="passagier">Passagier</option>
+    </select>
+  </div>
 </div>
 <br>
 <button class="primary" onclick="addPersoon()">＋ Persoon toevoegen</button>
@@ -1137,9 +1150,11 @@ async function loadPersonOptions(){
     .eq('actief',true)
     .order('naam');
   if(error){console.error('Personen laden mislukt:',error);return;}
-  const opties=(data||[]).map(x=>`<option value="${esc(x.naam)}">${esc(x.naam)}</option>`).join('');
-  document.getElementById('tBestuurder').innerHTML=opties;
-  document.getElementById('tPassagier').innerHTML='<option value="">— geen —</option>'+opties;
+  const all=data||[];
+  const bestuurders=all.filter(x=>!x.rol||x.rol==='bestuurder'||x.rol==='beide');
+  const passagiers=all.filter(x=>!x.rol||x.rol==='passagier'||x.rol==='beide');
+  document.getElementById('tBestuurder').innerHTML=bestuurders.map(x=>`<option value="${esc(x.naam)}">${esc(x.naam)}</option>`).join('');
+  document.getElementById('tPassagier').innerHTML='<option value="">— geen —</option>'+passagiers.map(x=>`<option value="${esc(x.naam)}">${esc(x.naam)}</option>`).join('');
 }
  async function loadActiveTrip(){
 
@@ -2312,10 +2327,12 @@ async function loadPersonen(){
     .order('naam');
   if(error){box.textContent='Laden mislukt: '+error.message;return;}
   if(!data||data.length===0){box.innerHTML='<div class="muted">Nog geen personen toegevoegd.</div>';return;}
+  const rolLabel={bestuurder:'🚗 Bestuurder',passagier:'🧳 Passagier',beide:'🚗🧳 Bestuurder &amp; Passagier'};
   box.innerHTML=data.map(p=>`
     <div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div>
         <b>${esc(p.naam)}</b>
+        <span class="muted" style="margin-left:8px">${rolLabel[p.rol||'beide']||''}</span>
         <span class="muted" style="margin-left:8px">${p.actief?'✅ actief':'⛔ inactief'}</span>
       </div>
       <div style="display:flex;gap:6px">
@@ -2329,11 +2346,13 @@ window.addPersoon=async function(){
   const box=document.getElementById('persoonStatus');
   box.className='status hidden';
   const naam=document.getElementById('persoonNaam').value.trim();
+  const rol=document.getElementById('persoonRol').value||'beide';
   if(!naam){box.textContent='Vul een naam in.';box.className='status err';return;}
-  const {error}=await supabase.from('personen').insert({camper_id:activeCamperId,naam});
+  const {error}=await supabase.from('personen').insert({camper_id:activeCamperId,naam,rol});
   if(error){box.textContent='Opslaan mislukt: '+error.message;box.className='status err';return;}
   box.textContent='✓ '+naam+' toegevoegd.';box.className='status ok';
   document.getElementById('persoonNaam').value='';
+  document.getElementById('persoonRol').value='beide';
   await loadPersonen();
   await loadPersonOptions();
 };
