@@ -59,6 +59,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <button data-tab="maintenance">Onderhoud</button>
 <button data-tab="camper">Mijn B66</button>
 <button data-tab="reiskosten">🛣️ Reiskosten</button>
+<button data-tab="ontdekt">🗺️ Ontdekte plaatsen</button>
 <button onclick="logout()">Uitloggen</button>
 </nav>
 
@@ -137,6 +138,10 @@ Nog geen foto geselecteerd.
 📤 Test foto-upload
 </button>
 <div id="activeTripInfo" class="muted"></div><br>
+<label style="font-weight:400;display:flex;align-items:center;gap:8px;margin-bottom:12px">
+  <input type="checkbox" id="shareWithFriends" style="width:auto;margin:0">
+  ☑ Deel deze stop met vrienden
+</label>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
 <button class="secondary" onclick="showEndTrip()">🏁 Einde reis</button>
@@ -345,6 +350,25 @@ Nog geen onderhoud geregistreerd.
 
 </section>
 
+<section id="ontdekt">
+<div class="card">
+<h2>🗺️ Ontdekte plaatsen</h2>
+<p class="muted">Camperplaatsen die jouw vrienden met jou hebben gedeeld.</p>
+<div class="grid" style="margin-bottom:12px">
+  <div><label>Zoek land</label><input id="filterLand" placeholder="bijv. Frankrijk" oninput="filterOntdekt()"></div>
+  <div><label>Zoek plaats</label><input id="filterPlaats" placeholder="bijv. Nice" oninput="filterOntdekt()"></div>
+  <div><label>Zoek camperplaats</label><input id="filterNaam" placeholder="naam camperplaats" oninput="filterOntdekt()"></div>
+  <div><label>Sorteren</label><select id="sortOntdekt" onchange="filterOntdekt()">
+    <option value="nieuw">Nieuwste eerst</option>
+    <option value="rating">Hoogste beoordeling eerst</option>
+  </select></div>
+</div>
+<div id="ontdektList">Laden...</div>
+</div>
+
+<div id="ontdektDetail" class="card hidden"></div>
+</section>
+
 <section id="camper"><div class="card"><h2>Mijn B66</h2><div class="grid">
 <div><label>Model</label><input value="Bürstner B66 TD 690 G" readonly></div>
 <div><label>Basisvoertuig</label><input value="Fiat Ducato" readonly></div>
@@ -534,7 +558,8 @@ land:v('sCountry'),
 prijs_per_nacht:v('sPrice')?Number(v('sPrice')):null,
 beoordeling:Number(v('sRating')),
 voorzieningen:v('sFacilities'),
-ervaring:v('sNotes')
+ervaring:v('sNotes'),
+gedeeld_met_vrienden: document.getElementById('shareWithFriends').checked
 };
 
 if(!stop.camperplaats){
@@ -690,6 +715,7 @@ function clearStopFields(){
   document.getElementById('sRating').value='5';
   document.getElementById('sType').value='Camperplaats';
   document.getElementById('sDate').value=today();
+  document.getElementById('shareWithFriends').checked=false;
 }
 function cancelTrip(){
 
@@ -1134,6 +1160,9 @@ if(b.dataset.tab==='fuel'){
   await prepareFuelForm();
   await loadFuel();
 }
+if(b.dataset.tab==='ontdekt'){
+  await loadOntdekt();
+}
 });
 const photoUpload = document.getElementById('photoUpload');
 
@@ -1527,6 +1556,100 @@ await loadTravelCosts();
 
 alert('✅ Reiskosten opgeslagen');
 
+};
+
+let _ontdektAll = [];
+
+async function loadOntdekt(){
+  const box = document.getElementById('ontdektList');
+  box.textContent = 'Laden...';
+  document.getElementById('ontdektDetail').classList.add('hidden');
+
+  // Haal gedeelde stops op van andere campers (niet eigen camper)
+  const { data: stops, error } = await supabase
+    .from('reis_stops')
+    .select('*, reizen(camper_id, crew)')
+    .eq('gedeeld_met_vrienden', true)
+    .order('datum', { ascending: false });
+
+  if(error){
+    box.textContent = 'Laden mislukt: ' + error.message;
+    return;
+  }
+
+  // Alleen stops van andere campers tonen
+  _ontdektAll = (stops || []).filter(s =>
+    s.reizen && s.reizen.camper_id !== activeCamperId
+  );
+
+  renderOntdekt(_ontdektAll);
+}
+
+function renderOntdekt(list){
+  const box = document.getElementById('ontdektList');
+  if(!list.length){
+    box.innerHTML = '<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';
+    return;
+  }
+  box.innerHTML = list.map(s => `
+    <div class="card" style="cursor:pointer" onclick="showOntdektDetail(${s.id})">
+      <div><b>📍 ${esc(s.camperplaats || '—')}</b></div>
+      <div class="muted">🏳️ ${esc(s.land || '—')} &nbsp;·&nbsp; 🏙️ ${esc(s.camperplaats || '—')}</div>
+      <div>${'★'.repeat(Number(s.beoordeling||0))}${'☆'.repeat(5-Number(s.beoordeling||0))}</div>
+      ${s.prijs_per_nacht != null ? `<div class="muted">💶 € ${Number(s.prijs_per_nacht).toFixed(2)} / nacht</div>` : ''}
+      <div class="muted">👤 ${esc(s.reizen?.crew || '—')}</div>
+    </div>
+  `).join('');
+}
+
+window.filterOntdekt = function(){
+  const land = document.getElementById('filterLand').value.toLowerCase();
+  const plaats = document.getElementById('filterPlaats').value.toLowerCase();
+  const naam = document.getElementById('filterNaam').value.toLowerCase();
+  const sort = document.getElementById('sortOntdekt').value;
+
+  let filtered = _ontdektAll.filter(s => {
+    const sLand = (s.land || '').toLowerCase();
+    const sPlaats = (s.camperplaats || '').toLowerCase();
+    const sNaam = (s.camperplaats || '').toLowerCase();
+    return (!land || sLand.includes(land))
+        && (!plaats || sPlaats.includes(plaats))
+        && (!naam || sNaam.includes(naam));
+  });
+
+  if(sort === 'rating'){
+    filtered = [...filtered].sort((a,b) => Number(b.beoordeling||0) - Number(a.beoordeling||0));
+  }
+  // default: nieuwste eerst (al gesorteerd bij laden)
+
+  renderOntdekt(filtered);
+};
+
+window.showOntdektDetail = async function(id){
+  const stop = _ontdektAll.find(s => s.id === id);
+  if(!stop) return;
+
+  const { data: fotos } = await supabase
+    .from('fotos')
+    .select('url, bestandsnaam')
+    .eq('stop_id', id);
+
+  const detail = document.getElementById('ontdektDetail');
+  detail.classList.remove('hidden');
+  detail.innerHTML = `
+    <h2>📍 ${esc(stop.camperplaats || '—')}</h2>
+    <div class="muted">🏳️ Land: <b>${esc(stop.land || '—')}</b></div>
+    <div class="muted">🏙️ Plaats: <b>${esc(stop.camperplaats || '—')}</b></div>
+    <div>Type: ${esc(stop.type_stop || '—')}</div>
+    <div>${'★'.repeat(Number(stop.beoordeling||0))}${'☆'.repeat(5-Number(stop.beoordeling||0))} ⭐ Beoordeling</div>
+    ${stop.voorzieningen ? `<div>🏕️ Voorzieningen: ${esc(stop.voorzieningen)}</div>` : ''}
+    ${stop.ervaring ? `<div>📝 Ervaring: ${esc(stop.ervaring)}</div>` : ''}
+    ${stop.prijs_per_nacht != null ? `<div>💶 Prijs per nacht: € ${Number(stop.prijs_per_nacht).toFixed(2)}</div>` : ''}
+    <div>👤 Toegevoegd door: <b>${esc(stop.reizen?.crew || '—')}</b></div>
+    ${(fotos||[]).length ? `<div style="margin-top:10px">📸 Foto's:<br>${(fotos||[]).map(f=>`<img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;margin:4px">`).join('')}</div>` : ''}
+    <br><button class="secondary" onclick="document.getElementById('ontdektDetail').classList.add('hidden')">Sluiten</button>
+  `;
+  detail.scrollIntoView({behavior:'smooth'});
 };
 
 init();
