@@ -957,12 +957,24 @@ async function processPlatformInvite(userId){
     console.log('USER', await supabase.auth.getUser());
     const sessionData=await supabase.auth.getUser();
     const userEmail=sessionData?.data?.user?.email||'onbekend';
+    const camperPayload={naam:'Camper van '+userEmail};
     const {data:newCamper,error:camperErr}=await supabase
       .from('campers')
-      .insert({naam:'Camper van '+userEmail})
+      .insert(camperPayload)
       .select('id')
       .single();
-    if(camperErr){console.error('CAMPER ERROR', camperErr);setStatus('Camper aanmaken mislukt: '+JSON.stringify(camperErr),'err');return;}
+    if(camperErr){
+      const camperErrDetails={
+        name:camperErr.name,
+        message:camperErr.message,
+        details:camperErr.details,
+        hint:camperErr.hint,
+        code:camperErr.code
+      };
+      console.error('CAMPER ERROR', camperErrDetails);
+      setStatus('Camper aanmaken mislukt: '+JSON.stringify(camperErrDetails,null,2),'err');
+      return;
+    }
     const {error:linkErr}=await supabase
       .from('camper_users')
       .insert({user_id:userId,camper_id:newCamper.id,role:'admin'});
