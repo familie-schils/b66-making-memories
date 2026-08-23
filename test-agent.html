@@ -649,7 +649,6 @@ let stopNumber=1;
   let currentUser = null;
   let canAccessBeheer = false;
   let isCamperAdmin = false;
-  const INVITE_BASE_URL='https://makingmemories.app/invite/';
   const APP_VERSION =
   new Date(document.lastModified)
     .toLocaleString('nl-BE');
@@ -1671,7 +1670,8 @@ function generateInviteCode(length=9){
   return Array.from(bytes,x=>chars[x%chars.length]).join('');
 }
 function getInviteLink(inviteCode){
-  return INVITE_BASE_URL+encodeURIComponent(inviteCode);
+  const base=window.location.origin+window.location.pathname.replace(/\/[^/]*$/,'/').replace(/\/$/,'');
+  return base+'/?invite='+encodeURIComponent(inviteCode);
 }
 function renderGeneratedInvite(invite){
   const box=document.getElementById('inviteGeneratedBox');
