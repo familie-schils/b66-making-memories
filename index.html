@@ -33,6 +33,9 @@ button{font:inherit}
 .trip-header{background:#f7f7f7;border-radius:12px;padding:14px;margin-bottom:18px}
 .fuel-summary{background:#f7f7f7;border-radius:12px;padding:14px;margin-bottom:18px}
 .fuel-number{font-size:24px;font-weight:800}
+.inline-form{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.inline-form>div{flex:1 1 260px}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;word-break:break-all}
 hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </style>
 </head>
@@ -41,6 +44,12 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <h1>🚐 B66 – Making Memories</h1>
 <p id="versionText">Versie laden...</p>
 </header>
+
+<div id="inviteRouteView" class="card login hidden">
+<h2>🎟️ Registratie via uitnodiging</h2>
+<p id="inviteRouteCode" class="muted"></p>
+<p>Registratie via uitnodiging wordt later geactiveerd.</p>
+</div>
 
 <div id="loginView" class="card login">
 <h2>Welkom bij Making Memories</h2>
@@ -57,13 +66,32 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <button data-tab="fuel">⛽ Tanken</button>
 <button data-tab="home">Dashboard</button>
 <button data-tab="maintenance">Onderhoud</button>
-<button data-tab="camper">Mijn B66</button>
+<button data-tab="camper">Mijn Camper</button>
+<button data-tab="reiskosten">🛣️ Reiskosten</button>
+<button data-tab="personen">👥 Personen</button>
+<button data-tab="vrienden">🤝 Vrienden</button>
+<button data-tab="ontdekte-plaatsen">🗺️ Ontdekte plaatsen</button>
+<button id="beheerTabButton" data-tab="beheer" class="hidden">👑 Beheer</button>
 <button onclick="logout()">Uitloggen</button>
 </nav>
 
 <main>
 <section id="trips" class="active">
 
+<!--
+  SQL-migratie voor reizen: voeg bestuurder en passagier kolommen toe.
+
+  -- Nieuwe kolommen toevoegen:
+  alter table reizen add column if not exists bestuurder text;
+  alter table reizen add column if not exists passagier  text;
+
+  -- Migratieadvies bestaande reizen:
+  -- De huidige 'crew'-kolom kan worden overgezet naar 'bestuurder':
+  update reizen set bestuurder = crew where bestuurder is null and crew is not null;
+
+  -- Optioneel: crew-kolom verwijderen nadat migratie is geverifieerd:
+  -- alter table reizen drop column crew;
+-->
 <div id="tripChooser" class="card">
 <h2>🚐 Reizen</h2>
 <button class="primary" onclick="startNewTrip()">＋ Nieuwe reis starten</button>
@@ -86,9 +114,8 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="tripStartFields">
 <h3>🚐 Start van de reis</h3>
 <div class="grid">
-<div><label>Wie maakt de reis?</label><select id="tCrew">
-
-</select></div>
+<div><label>Bestuurder</label><select id="tBestuurder"></select></div>
+<div><label>Passagier</label><select id="tPassagier"><option value="">— geen —</option></select></div>
 <div><label>Startdatum</label><input id="tStartDate" type="date"></div>
 </div>
 </div>
@@ -105,7 +132,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <option>Andere</option>
 </select></div>
 <div><label>Naam / plaats</label><input id="sPlace"></div>
-<div><label>Land</label><input id="sCountry"></div>
+<div><label>Land</label><select id="sCountry"></select></div>
 <div>
 <label>KM bij aankomst</label>
 <input id="sKm" type="number" min="0" step="1">
@@ -136,6 +163,9 @@ Nog geen foto geselecteerd.
 📤 Test foto-upload
 </button>
 <div id="activeTripInfo" class="muted"></div><br>
+<label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin-bottom:12px">
+  <input id="shareWithFriends" type="checkbox"> ☑ Deel deze stop met vrienden
+</label>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
 <button class="secondary" onclick="showEndTrip()">🏁 Einde reis</button>
@@ -173,10 +203,11 @@ Nog geen foto geselecteerd.
 <div class="grid">
 <div><label>Datum</label><input id="fDate" type="date"></div>
 <div><label>KM-stand</label><input id="fKm" type="number" min="0" step="1"><div id="fuelKmHint" class="muted" style="margin-top:5px"></div></div>
-<div><label>Liters diesel</label><input id="fLiters" type="number" min="0" step="0.01"></div>
+<div><label>Type</label><select id="fFuelType"><option>Diesel</option><option>AdBlue</option><option>Gas</option></select></div>
+<div><label>Hoeveelheid</label><input id="fLiters" type="number" min="0" step="0.01"></div>
 <div><label>Prijs per liter (€)</label><input id="fPrice" type="number" min="0" step="0.001"></div>
 <div><label>Waar getankt?</label><input id="fLocation"></div>
-<div><label>Land</label><input id="fCountry"></div>
+<div><label>Land</label><select id="fCountry"></select></div>
 </div>
 <br>
 <div id="fuelCalc" class="muted">Totaalbedrag: € 0,00 · KM sinds vorige tankbeurt: — · Verbruik: —</div>
@@ -185,7 +216,72 @@ Nog geen foto geselecteerd.
 </div>
 <div class="card"><h2>Tankhistorie</h2><div id="fuelList">Tankbeurten laden...</div></div>
 </section>
+<section id="reiskosten">
 
+<div class="card">
+
+<h2>🛣️ Reiskosten</h2>
+
+<p class="muted">
+Registreer péage, ferry, tunnel, brug, parkeren en andere reiskosten.
+</p>
+<div class="grid">
+
+  <div>
+    <label>Reis</label>
+    <select id="costTrip"></select>
+  </div>
+
+  <div>
+    <label>Datum</label>
+    <input id="costDate" type="date">
+  </div>
+
+  <div>
+    <label>Type kosten</label>
+    <select id="costType">
+      <option>Péage</option>
+      <option>Ferry</option>
+      <option>Tunnel</option>
+      <option>Brug</option>
+      <option>Parkeren</option>
+      <option>Milieusticker</option>
+      <option>Vignet</option>
+      <option>Overig</option>
+    </select>
+  </div>
+
+  <div>
+    <label>Land</label>
+    <select id="costCountry"></select>
+  </div>
+
+  <div>
+    <label>Bedrag (€)</label>
+    <input id="costAmount" type="number" step="0.01">
+  </div>
+
+</div>
+
+<br>
+
+<label>Opmerking</label>
+<input id="costNote">
+
+<br><br>
+
+<button class="primary" onclick="saveTravelCost()">
+💾 Reiskosten opslaan
+</button>
+<hr>
+<div id="costList">
+Reiskosten laden...
+</div>
+
+</div>
+
+</section>
+  
 <section id="home">
 <div class="card">
 <div class="muted">Camper</div><div class="big">Bürstner B66 TD 690 G</div>
@@ -279,14 +375,262 @@ Nog geen onderhoud geregistreerd.
 
 </section>
 
-<section id="camper"><div class="card"><h2>Mijn B66</h2><div class="grid">
-<div><label>Model</label><input value="Bürstner B66 TD 690 G" readonly></div>
-<div><label>Basisvoertuig</label><input value="Fiat Ducato" readonly></div>
-<div><label>Motor</label><input value="140 pk" readonly></div>
-<div><label>Versnellingsbak</label><input value="8-traps automaat" readonly></div>
-<div><label>Max. massa</label><input value="3.500 kg" readonly></div>
-</div></div></section>
+<section id="personen">
+<div class="card">
+<h2>👥 Personen</h2>
+<p class="muted">Beheer de bestuurders en passagiers die aan deze camper gekoppeld zijn.</p>
+
+<!--
+  SQL – maak deze tabel aan in Supabase:
+
+  create table personen (
+    id         bigint generated always as identity primary key,
+    camper_id  bigint references campers(id) on delete cascade,
+    naam       text not null,
+    actief     boolean not null default true,
+    created_at timestamptz not null default now()
+  );
+-->
+
+<div id="persoonStatus" class="status hidden"></div>
+<div class="grid">
+  <div><label>Naam</label><input id="persoonNaam" placeholder="Voornaam of volledige naam"></div>
+</div>
+<br>
+<button class="primary" onclick="addPersoon()">＋ Persoon toevoegen</button>
+<hr>
+<div id="persoonList">Personen laden...</div>
+</div>
+</section>
+
+<!--
+  SQL-migratie – friends tabel aanmaken in Supabase:
+
+  create table friends (
+    id             bigint generated always as identity primary key,
+    user_id        uuid references auth.users(id) on delete cascade,
+    friend_user_id uuid references auth.users(id) on delete cascade,
+    created_at     timestamptz not null default now(),
+    unique(user_id, friend_user_id)
+  );
+
+  SQL-migratie – gedeeld_met_vrienden kolom toevoegen aan reis_stops:
+
+  alter table reis_stops
+    add column if not exists gedeeld_met_vrienden boolean not null default false;
+-->
+
+<section id="vrienden">
+<div class="card">
+<h2>🤝 Vrienden</h2>
+<p class="muted">Voeg vrienden toe op basis van hun e-mailadres. Zij kunnen jouw gedeelde stops zien en jij de hunne.</p>
+<div id="vriendenStatus" class="status hidden"></div>
+<div class="grid">
+  <div><label>E-mailadres</label><input id="vriendenEmail" type="email" placeholder="marie@example.com"></div>
+</div>
+<br>
+<button class="primary" onclick="addVriend()">＋ Vriend toevoegen</button>
+<hr>
+<h3>Mijn vrienden</h3>
+<div id="vriendenList">Vrienden laden...</div>
+</div>
+</section>
+
+<section id="ontdekte-plaatsen">
+<div class="card">
+<h2>🗺️ Ontdekte plaatsen</h2>
+<p class="muted">Stops die jouw vrienden met je hebben gedeeld.</p>
+
+<div class="grid">
+  <div><label>Filter op land</label><select id="opLand" onchange="filterOntdektePlaatsen()"><option value="">— Alle landen —</option></select></div>
+  <div><label>Filter op plaats</label><input id="opPlaats" placeholder="Bijv. Gent" oninput="filterOntdektePlaatsen()"></div>
+  <div><label>Filter op camperplaats</label><input id="opCamperplaats" placeholder="Bijv. Camping Les Pins" oninput="filterOntdektePlaatsen()"></div>
+</div>
+<br>
+<hr>
+<div id="ontdektePlaatsenList">Laden...</div>
+</div>
+</section>
+  <!--
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS merk text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS model text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS basisvoertuig text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS motor text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS versnellingsbak text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS max_massa text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS kenteken text;
+  ALTER TABLE campers ADD COLUMN IF NOT EXISTS bouwjaar text;
+-->
+<section id="camper">
+<!--
+  SQL-migratie – role kolom toevoegen aan camper_users:
+
+  ALTER TABLE camper_users ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'lid';
+
+  SQL – maak de camper_invites tabel aan in Supabase:
+
+  CREATE TABLE IF NOT EXISTS camper_invites (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    camper_id   BIGINT REFERENCES campers(id) ON DELETE CASCADE,
+    email       TEXT NOT NULL,
+    invite_code TEXT NOT NULL UNIQUE,
+    created_by  UUID REFERENCES auth.users(id),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    used        BOOLEAN NOT NULL DEFAULT FALSE,
+    used_at     TIMESTAMPTZ
+  );
+-->
+<div class="card"><h2>Mijn Camper</h2>
+<div class="grid">
+<div><label>Campermerk</label>
+<select id="camperMerk">
+<option value="">— Kies merk —</option>
+<option>Adria</option>
+<option>Bürstner</option>
+<option>Carthago</option>
+<option>Challenger</option>
+<option>Chausson</option>
+<option>Dethleffs</option>
+<option>Hymer</option>
+<option>Knaus</option>
+<option>Laika</option>
+<option>McLouis</option>
+<option>Pilote</option>
+<option>Rapido</option>
+<option>Sunlight</option>
+<option>Weinsberg</option>
+<option>Overig</option>
+</select></div>
+<div><label>Model</label><input id="camperModel" type="text" placeholder="bijv. B66 TD 690 G"></div>
+<div><label>Basisvoertuig</label>
+<select id="camperBasisvoertuig">
+<option value="">— Kies basisvoertuig —</option>
+<option>Fiat Ducato</option>
+<option>Mercedes Sprinter</option>
+<option>Citroën Jumper</option>
+<option>Peugeot Boxer</option>
+<option>Ford Transit</option>
+<option>MAN TGE</option>
+<option>Volkswagen Crafter</option>
+<option>Renault Master</option>
+<option>Iveco Daily</option>
+<option>Overig</option>
+</select></div>
+<div><label>Motor</label><input id="camperMotor" type="text" placeholder="bijv. 140 pk"></div>
+<div><label>Versnellingsbak</label><input id="camperVersnellingsbak" type="text" placeholder="bijv. 8-traps automaat"></div>
+<div><label>Maximaal toegelaten massa</label><input id="camperMaxMassa" type="text" placeholder="bijv. 3500 kg"></div>
+<div><label>Kenteken</label><input id="camperKenteken" type="text" placeholder="bijv. AB-123-C"></div>
+<div><label>Bouwjaar</label><input id="camperBouwjaar" type="text" placeholder="bijv. 2022"></div>
+<div><label>Referentiedatum</label><input id="camperReferenceDate" type="date"></div>
+<div><label>Referentie kilometerstand</label><input id="camperReferenceKm" type="number" placeholder="bijv. 58240"></div>
+</div>
+<div style="margin-top:12px">
+<button onclick="saveCamperProfile()">💾 Opslaan</button>
+<span id="camperProfileStatus" class="status hidden"></span>
+</div>
+</div>
+
+<div class="card">
+<h3>👥 Camperleden</h3>
+<div id="camperMembersList">Leden laden...</div>
+</div>
+
+<div id="camperInviteCard" class="card hidden">
+<h3>📨 Uitnodigen</h3>
+<div id="camperInviteStatus" class="status hidden"></div>
+<div class="inline-form">
+  <div>
+    <label>E-mailadres</label>
+    <input id="camperInviteEmail" type="email" placeholder="naam@example.com">
+  </div>
+  <div style="flex:0 0 auto;display:flex;gap:8px;align-items:flex-end">
+    <button class="primary" onclick="createCamperInvite()">Uitnodigen</button>
+    <button class="secondary" onclick="generateCamperInviteLink()">Link genereren</button>
+  </div>
+</div>
+<div id="camperInviteGeneratedBox" class="status ok hidden" style="margin-top:12px"></div>
+<hr>
+<h4>Openstaande uitnodigingen</h4>
+<div id="camperInvitesList">Uitnodigingen laden...</div>
+</div>
+</section>
+
+<section id="beheer" class="hidden">
+<!--
+  SQL – maak deze tabel aan in Supabase:
+
+  create table invite_codes (
+    id          bigint generated always as identity primary key,
+    invite_code text not null unique,
+    email       text not null,
+    created_by  uuid references auth.users(id),
+    created_at  timestamptz not null default now(),
+    used        boolean not null default false,
+    used_at     timestamptz
+  );
+-->
+
+<div class="card">
+<h2>👑 Beheer</h2>
+<p class="muted">Alleen zichtbaar voor de hoofdbeheerder van het platform.</p>
+</div>
+
+<div class="card">
+<h3>👥 Uitnodigingen</h3>
+<div id="inviteStatus" class="status hidden"></div>
+<div class="inline-form">
+  <div>
+    <label>E-mailadres</label>
+    <input id="inviteEmail" type="email" placeholder="naam@example.com">
+  </div>
+  <div style="flex:0 0 auto">
+    <button class="primary" onclick="createInviteCode()">Uitnodiging maken</button>
+  </div>
+</div>
+<div id="inviteGeneratedBox" class="status ok hidden" style="margin-top:12px"></div>
+<hr>
+<h3>Overzicht uitnodigingen</h3>
+<div id="inviteList">Uitnodigingen laden...</div>
+</div>
+
+<div class="card">
+<h3>🚐 Campers</h3>
+<div id="adminCampersList">Campers laden...</div>
+</div>
+
+<div class="card">
+<h3>👤 Gebruikers</h3>
+<div id="adminUsersList">Gebruikers laden...</div>
+</div>
+
+<div class="card">
+<h3>📊 Platform statistieken</h3>
+<div id="adminStatsStatus" class="status hidden"></div>
+<div class="grid">
+  <div class="card"><div class="muted">Aantal gebruikers</div><div class="big" id="adminUserCount">0</div></div>
+  <div class="card"><div class="muted">Aantal campers</div><div class="big" id="adminCamperCount">0</div></div>
+  <div class="card"><div class="muted">Aantal reizen</div><div class="big" id="adminTripCount">0</div></div>
+  <div class="card"><div class="muted">Aantal stops</div><div class="big" id="adminStopCount">0</div></div>
+  <div class="card"><div class="muted">Aantal foto's</div><div class="big" id="adminPhotoCount">0</div></div>
+  <div class="card"><div class="muted">Aantal tankbeurten</div><div class="big" id="adminFuelCount">0</div></div>
+  <div class="card"><div class="muted">Aantal reiskosten</div><div class="big" id="adminCostCount">0</div></div>
+</div>
+</div>
+</section>
 </main>
+</div>
+
+<!-- Foto lightbox -->
+<div id="fotoLightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:1000;align-items:center;justify-content:center;cursor:pointer" onclick="closeLightbox()">
+  <img id="fotoLightboxImg" style="max-width:95vw;max-height:90vh;border-radius:10px;box-shadow:0 4px 32px #000">
+</div>
+
+<!-- Stop detail modal -->
+<div id="stopDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;overflow:auto" onclick="closeStopDetail(event)">
+  <div style="background:white;max-width:600px;margin:30px auto;border-radius:14px;padding:20px" onclick="event.stopPropagation()">
+    <button class="secondary" style="margin-bottom:14px" onclick="closeStopDetail()">✕ Sluiten</button>
+    <div id="stopDetailBody"></div>
+  </div>
 </div>
 
 <script type="module">
@@ -298,9 +642,14 @@ const supabase=createClient(
 );
 
 let activeTripId=null;
+let _ontdektePlaatsenData={};
 let stopNumber=1;
   let selectedPhotos = [];
   let activeCamperId = null;
+  let currentUser = null;
+  let canAccessBeheer = false;
+  let isCamperAdmin = false;
+  const INVITE_BASE_URL='https://makingmemories.app/invite/';
   const APP_VERSION =
   new Date(document.lastModified)
     .toLocaleString('nl-BE');
@@ -309,57 +658,199 @@ console.log('🚐 Making Memories', APP_VERSION);
 
 const loginView=document.getElementById('loginView');
 const appView=document.getElementById('appView');
+const CAMPER_COUNTRIES=[
+  'België',
+  'Nederland',
+  'Luxemburg',
+  'Duitsland',
+  'Frankrijk',
+  'Oostenrijk',
+  'Italië',
+  'Spanje',
+  'Portugal',
+  'Zwitserland',
+  'Denemarken',
+  'Kroatië',
+  'Slovenië',
+  'Tsjechië',
+  'Polen',
+  'Noorwegen',
+  'Zweden',
+  'Finland',
+  'Ierland',
+  'Verenigd Koninkrijk',
+  'Slowakije',
+  'Hongarije',
+  'Roemenië',
+  'Bulgarije',
+  'Estland',
+  'Letland',
+  'Litouwen',
+  'Griekenland',
+  'Turkije'
+];
 
-  async function loadCurrentCamper(){
+function populateCountrySelects(){
+  const options=
+    '<option value="">— kies land —</option>'+
+    CAMPER_COUNTRIES.map(country=>
+      `<option value="${esc(country)}">${esc(country)}</option>`
+    ).join('');
+  ['sCountry','fCountry','costCountry'].forEach(id=>{
+    const field=document.getElementById(id);
+    if(!field)return;
+    const current=field.value;
+    field.innerHTML=options;
+    if(CAMPER_COUNTRIES.includes(current))field.value=current;
+  });
+  const opLand=document.getElementById('opLand');
+  if(opLand){
+    opLand.innerHTML='<option value="">— Alle landen —</option>'+
+      CAMPER_COUNTRIES.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  }
+}
 
-  const { data:{ user } } = await supabase.auth.getUser();
+function getInviteCodeFromLocation(){
+  const pathMatch=window.location.pathname.match(/\/invite\/([^/?#]+)/i);
+  if(pathMatch)return decodeURIComponent(pathMatch[1]);
+  const params=new URLSearchParams(window.location.search);
+  return params.get('invite_code')||params.get('invite')||'';
+}
 
-  console.log('USER:', user);
+function handleInviteRoute(){
+  const box=document.getElementById('inviteRouteView');
+  const codeEl=document.getElementById('inviteRouteCode');
+  if(!box||!codeEl)return;
+  const inviteCode=getInviteCodeFromLocation();
+  if(!inviteCode){
+    box.classList.add('hidden');
+    codeEl.textContent='';
+    return;
+  }
+  codeEl.textContent='Uitnodigingscode: '+inviteCode;
+  box.classList.remove('hidden');
+}
 
-  if(!user) return;
+function updateBeheerVisibility(){
+  const tab=document.getElementById('beheerTabButton');
+  const section=document.getElementById('beheer');
+  if(tab)tab.classList.toggle('hidden',!canAccessBeheer);
+  if(section)section.classList.toggle('hidden',!canAccessBeheer);
+}
 
-  const { data, error } = await supabase
-    .from('camper_users')
-    .select('camper_id')
-    .eq('user_id', user.id)
-    .single();
+ async function loadCurrentCamper(sessionUser = null){
 
-  console.log('CAMPER DATA:', data);
-  console.log('CAMPER ERROR:', error);
+  console.log('LOADCURRENTCAMPER START');
 
-  if(error){
-    console.error('Camper ophalen mislukt:', error);
+  const { data:{ user:authUser }, error:userError } =
+    await supabase.auth.getUser();
+
+  const { data:{ session } } =
+    await supabase.auth.getSession();
+
+  const user =
+    authUser ?? sessionUser ?? session?.user ?? null;
+
+  currentUser = user;
+
+  if(userError){
+    console.error('GET USER ERROR:', userError);
+  }
+
+  console.log('USER ID:', user?.id);
+
+  if(!user){
+    console.warn('Geen ingelogde gebruiker gevonden tijdens loadCurrentCamper().');
+    activeCamperId = null;
+    canAccessBeheer = false;
+    updateBeheerVisibility();
     return;
   }
 
-  activeCamperId = data.camper_id;
+  const { data, error } = await supabase
+    .from('camper_users')
+    .select('camper_id,role,user_id')
+    .eq('user_id', user.id)
+    .order('camper_id', { ascending:true })
+    .limit(1)
+    .maybeSingle();
 
-  console.log('Actieve camper:', activeCamperId);
+  console.log('CAMPER QUERY RESULT:', data);
+  console.log('CAMPER QUERY ERROR:', error);
+
+  if(error){
+    console.error('Camper ophalen mislukt:', error);
+    canAccessBeheer = false;
+    isCamperAdmin = false;
+    updateBeheerVisibility();
+    return;
+  }
+
+  activeCamperId = data?.camper_id ?? null;
+  isCamperAdmin = data?.role === 'admin';
+
+  const { data:beheerLink } = await supabase
+    .from('camper_users')
+    .select('camper_id')
+    .eq('user_id', user.id)
+    .eq('camper_id', 1)
+    .maybeSingle();
+
+  canAccessBeheer =
+    Number(activeCamperId) === 1 ||
+    Boolean(beheerLink);
+
+  updateBeheerVisibility();
+
+  console.log('ACTIVE CAMPER ID:', activeCamperId);
+  console.log('LOADCURRENTCAMPER EINDE');
 }
+
+ 
+
 async function init(){
+handleInviteRoute();
 const {data:{session}}=await supabase.auth.getSession();
-if(session)showApp();else showLogin();
-supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
+if(session)showApp(session.user);else showLogin();
+supabase.auth.onAuthStateChange((_e,s)=>s?showApp(s.user):showLogin());
 }
-function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
-async function showApp(){
+function showLogin(){
+  canAccessBeheer=false;
+  updateBeheerVisibility();
+  handleInviteRoute();
+  loginView.classList.remove('hidden');
+  appView.classList.add('hidden');
+}
+async function showApp(sessionUser=null){
   document.getElementById('versionText').textContent =
   'Build: ' + APP_VERSION;
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
+populateCountrySelects();
 
-await loadCurrentCamper();
+await loadCurrentCamper(sessionUser);
 
-await loadCrewOptions();
+console.log('ACTIVE CAMPER ID IN showApp:', activeCamperId);
+
+await loadPersonOptions();
 
 await loadActiveTrip();
 
 await loadTrips();
 await loadMaintenance();
 await loadStats();
+  console.log('VOOR loadTravelCostTrips');
+
+await loadTravelCostTrips();
+
+console.log('NA loadTravelCostTrips');
 
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
+  await loadTravelCosts();
+  await loadPersonen();
+  await loadCamperProfile();
+  await loadCamperMembers();
 }
 
 window.login=async()=>{
@@ -423,16 +914,21 @@ updateKm();
 async function ensureTripCreated(){
 if(activeTripId)return true;
 const startDate=v('tStartDate'),startKmText=v('tStartKm');
-if(!v('tCrew')||!startDate||startKmText===''){
-showStatus('Vul eerst wie, startdatum en Start KM in.',false);return false}
+if(!v('tBestuurder')||!startDate||startKmText===''){
+showStatus('Vul eerst bestuurder, startdatum en Start KM in.',false);return false}
 const startKm=Number(startKmText);
   console.log('Actieve camper bij opslaan:', activeCamperId);
 if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige Start KM in.',false);return false}
   console.log('Actieve camper bij opslaan:', activeCamperId);
 
+const bestuurder=v('tBestuurder');
+const passagier=v('tPassagier')||null;
+const crew=passagier?bestuurder+' & '+passagier:bestuurder;
 const {data,error}=await supabase.from('reizen').insert({
   datum:startDate,
-  crew:v('tCrew'),
+  bestuurder:bestuurder,
+  passagier:passagier,
+  crew:crew,
   start_km:startKm,
   camper_id: activeCamperId
 }).select().single();
@@ -462,7 +958,8 @@ land:v('sCountry'),
 prijs_per_nacht:v('sPrice')?Number(v('sPrice')):null,
 beoordeling:Number(v('sRating')),
 voorzieningen:v('sFacilities'),
-ervaring:v('sNotes')
+ervaring:v('sNotes'),
+gedeeld_met_vrienden:document.getElementById('shareWithFriends').checked
 };
 
 if(!stop.camperplaats){
@@ -618,6 +1115,7 @@ function clearStopFields(){
   document.getElementById('sRating').value='5';
   document.getElementById('sType').value='Camperplaats';
   document.getElementById('sDate').value=today();
+  document.getElementById('shareWithFriends').checked=false;
 }
 function cancelTrip(){
 
@@ -631,25 +1129,17 @@ if(!text){el.className='status hidden';return}
 el.textContent=text;el.className='status '+(ok?'ok':'err');
 }
 function today(){return new Date().toISOString().slice(0,10)}
-async function loadCrewOptions(){
-
-  const { data, error } = await supabase
-    .from('camper_crew')
+async function loadPersonOptions(){
+  const {data,error}=await supabase
+    .from('personen')
     .select('*')
-    .eq('camper_id', activeCamperId)
+    .eq('camper_id',activeCamperId)
+    .eq('actief',true)
     .order('naam');
-
-  if(error){
-    console.error('Crew laden mislukt:', error);
-    return;
-  }
-
-  const select = document.getElementById('tCrew');
-
-  select.innerHTML = (data || [])
-    .map(x => `<option>${x.naam}</option>`)
-    .join('');
-
+  if(error){console.error('Personen laden mislukt:',error);return;}
+  const opties=(data||[]).map(x=>`<option value="${esc(x.naam)}">${esc(x.naam)}</option>`).join('');
+  document.getElementById('tBestuurder').innerHTML=opties;
+  document.getElementById('tPassagier').innerHTML='<option value="">— geen —</option>'+opties;
 }
  async function loadActiveTrip(){
 
@@ -692,8 +1182,11 @@ document.getElementById('tStartKm').value =
 document.getElementById('tStartDate').value =
   data.datum || '';
 
-document.getElementById('tCrew').value =
-  data.crew || '';
+document.getElementById('tBestuurder').value =
+  data.bestuurder || '';
+
+document.getElementById('tPassagier').value =
+  data.passagier || '';
 
 const { data: stops } = await supabase
   .from('reis_stops')
@@ -727,6 +1220,10 @@ const list=document.getElementById('tripList');list.textContent='Reizen laden...
   console.log('Filter op camper:', activeCamperId);
 console.log('Filter op camper:', activeCamperId);
 
+if (!activeCamperId) {
+  console.warn('Geen actieve camper beschikbaar');
+  return;
+}
 const {data:trips,error}=await supabase
   .from('reizen')
   .select('*')
@@ -745,7 +1242,7 @@ const ts=(stops||[]).filter(s=>s.reis_id===t.id);
 const closed=t.einddatum!=null;
 const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
 return `<div class="item">
-<b>${esc(t.crew)}</b> · ${esc(t.datum)}${closed?' → '+esc(t.einddatum):' · 🟢 actief'}
+<b>${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</b> · ${esc(t.datum)}${closed?' → '+esc(t.einddatum):' · 🟢 actief'}
 <div class="muted">${ts.length} stop${ts.length===1?'':'s'}${km!=null?' · '+km.toLocaleString('nl-BE')+' km':''}</div>
 ${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
@@ -757,42 +1254,139 @@ ${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'On
 window.showTripDetail=async(id)=>{
 const {data:t,error}=await supabase.from('reizen').select('*').eq('id',id).single();
 if(error)return;
-const {data:stops}=await supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde');
-  const stopIds = (stops || []).map(s => s.id);
-
-const {data:fotos} = await supabase
-  .from('fotos')
-  .select('*')
-  .in('stop_id', stopIds);
-  console.log('Fotos:', fotos);
+const eindDatum=t.einddatum||new Date().toISOString().slice(0,10);
+const [{data:stops},{data:reiskosten},{data:tankbeurten}]=await Promise.all([
+  supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde'),
+  supabase.from('reiskosten').select('*').eq('reis_id',id).order('datum'),
+  supabase.from('tankbeurten').select('datum,liters,prijs_per_liter,totaalbedrag,brandstof_type,locatie,land').gte('datum',t.datum).lte('datum',eindDatum).order('datum')
+]);
+const stopIds=(stops||[]).map(s=>s.id);
+const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
 const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
+
+// Reissamenvatting
+const aantalStops=(stops||[]).length;
+
+// Overnachtingskosten
+const overnachtingKost=(stops||[]).reduce((s,x)=>s+(x.prijs_per_nacht!=null?Number(x.prijs_per_nacht):0),0);
+
+// Reiskosten per type
+const kostenTypes=['Péage','Ferry','Tunnel','Brug','Parkeren','Milieusticker','Vignet','Overig'];
+const kostenPerType={};
+let totaalReiskosten=0;
+for(const k of (reiskosten||[])){
+  const b=Number(k.bedrag||0);
+  totaalReiskosten+=b;
+  const type=kostenTypes.includes(k.type_kost)?k.type_kost:'Overig';
+  kostenPerType[type]=(kostenPerType[type]||0)+b;
+}
+
+// Brandstofkosten per type
+const tanks=tankbeurten||[];
+const brandstofTypes=['Diesel','AdBlue','Gas'];
+const brandstofPerType={Diesel:{liters:0,kost:0,aantal:0},AdBlue:{liters:0,kost:0,aantal:0},Gas:{liters:0,kost:0,aantal:0}};
+let totaalLiters=0,totaalBrandstof=0;
+for(const x of tanks){
+  const liters=Number(x.liters||0);
+  const kost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*Number(x.prijs_per_liter||0);
+  totaalLiters+=liters;totaalBrandstof+=kost;
+  const btype=brandstofTypes.includes(x.brandstof_type)?x.brandstof_type:'Diesel';
+  brandstofPerType[btype].liters+=liters;
+  brandstofPerType[btype].kost+=kost;
+  brandstofPerType[btype].aantal++;
+}
+const aantalTankbeurten=tanks.length;
+
+// Reistotaal
+const reistotaal=overnachtingKost+totaalReiskosten+totaalBrandstof;
+
+const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
+const fmtKm=n=>Number(n).toLocaleString('nl-BE');
+
+// Chronologische reislog: stops + reiskosten + tankbeurten gemengd op datum
+const logItems=[];
+(stops||[]).forEach(s=>logItems.push({datum:s.datum,volgorde:s.volgorde||0,type:'stop',data:s}));
+(reiskosten||[]).forEach(k=>logItems.push({datum:k.datum,volgorde:0,type:'kost',data:k}));
+tanks.forEach(x=>logItems.push({datum:x.datum,volgorde:0,type:'tank',data:x}));
+logItems.sort((a,b)=>a.datum<b.datum?-1:a.datum>b.datum?1:a.volgorde-b.volgorde);
+
 const detail=document.getElementById('tripDetail');
 detail.classList.remove('hidden');
-detail.innerHTML=`<h2>📖 Reis van ${esc(t.crew)}</h2>
+detail.innerHTML=`<h2>📖 Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</h2>
 <div class="muted">${esc(t.datum)}${t.einddatum?' → '+esc(t.einddatum):' · 🟢 nog actief'}</div>
-<p><b>Start KM:</b> ${t.start_km!=null?Number(t.start_km).toLocaleString('nl-BE'):'—'}
-${t.eind_km!=null?' · <b>Eind KM:</b> '+Number(t.eind_km).toLocaleString('nl-BE'):''}
-${km!=null?' · <b>'+km.toLocaleString('nl-BE')+' km gereden</b>':''}</p>
-<h3>Stops</h3>
-${(stops||[]).map(s=>`<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
+
+<hr>
+<h3>📊 Reissamenvatting</h3>
+<div class="item">
+  <div><b>Bestuurder:</b> ${esc(t.bestuurder||t.crew||'—')}</div>
+  <div><b>Passagier:</b> ${esc(t.passagier||'—')}</div>
+  <div><b>Startdatum:</b> ${esc(t.datum||'—')}</div>
+  <div><b>Einddatum:</b> ${esc(t.einddatum||'nog actief')}</div>
+  <div><b>Start KM:</b> ${t.start_km!=null?fmtKm(t.start_km):'—'}</div>
+  <div><b>Eind KM:</b> ${t.eind_km!=null?fmtKm(t.eind_km):'—'}</div>
+  <div><b>Totaal gereden KM:</b> ${km!=null?fmtKm(km)+' km':'—'}</div>
+  <div><b>Aantal stops:</b> ${aantalStops}</div>
+</div>
+
+<hr>
+<h3>💶 Kostenoverzicht</h3>
+
+<h4>🏕️ Overnachtingskosten</h4>
+<div class="item">
+  ${(stops||[]).filter(s=>s.prijs_per_nacht!=null).map(s=>`<div>${esc(s.datum)} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${fmt(s.prijs_per_nacht)}/nacht</div>`).join('')}
+  <div style="margin-top:6px"><b>Totaal overnachtingen:</b> ${fmt(overnachtingKost)}</div>
+</div>
+
+<h4>🛣️ Reiskosten</h4>
+<div class="item">
+  ${kostenTypes.map(type=>kostenPerType[type]?`<div><b>${esc(type)}:</b> ${fmt(kostenPerType[type])}</div>`:``).join('')}
+  <div style="margin-top:6px"><b>Totaal reiskosten:</b> ${fmt(totaalReiskosten)}</div>
+</div>
+
+<h4>⛽ Brandstofkosten</h4>
+<div class="item">
+  ${brandstofTypes.filter(bt=>brandstofPerType[bt].aantal>0).map(bt=>`<div><b>${esc(bt)}:</b> ${brandstofPerType[bt].liters.toFixed(2).replace('.',',')} l · ${fmt(brandstofPerType[bt].kost)} (${brandstofPerType[bt].aantal} tankbeurt${brandstofPerType[bt].aantal===1?'':'en'})</div>`).join('')}
+  <div style="margin-top:6px"><b>Totaal liters:</b> ${totaalLiters.toFixed(2).replace('.',',')} l</div>
+  <div><b>Totale brandstofkost:</b> ${fmt(totaalBrandstof)}</div>
+</div>
+
+<h4>💰 Reistotaal</h4>
+<div class="item" style="font-size:1.1em">
+  <div>${fmt(overnachtingKost)} overnachtingen + ${fmt(totaalReiskosten)} reiskosten + ${fmt(totaalBrandstof)} brandstof</div>
+  <div style="margin-top:6px"><b>Totaal: ${fmt(reistotaal)}</b></div>
+</div>
+
+<hr>
+<h3>🗓️ Chronologische reislog</h3>
+${logItems.length?logItems.map(item=>{
+  if(item.type==='stop'){
+    const s=item.data;
+    const stopFotos=(fotos||[]).filter(f=>f.stop_id===s.id);
+    return `<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div>
-<div>${esc(s.voorzieningen||'')}</div>
-<p>${esc(s.ervaring||'')}</p>
+${s.voorzieningen?`<div>${esc(s.voorzieningen)}</div>`:''}
+${s.ervaring?`<p>${esc(s.ervaring)}</p>`:''}
+${s.prijs_per_nacht!=null?`<div class="muted">💶 ${fmt(s.prijs_per_nacht)} / nacht</div>`:''}
+${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+''+stopFotos.map(f=>`<div style="margin-top:10px"><img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;"></div>`).join(''):''}
+</div>`;
+  }
+  if(item.type==='kost'){
+    const k=item.data;
+    return `<div class="trip-stop" style="border-left-color:#e0a800"><b>🛣️ ${esc(k.type_kost)}</b>${k.land?' · '+esc(k.land):''}
+<div class="muted">${esc(k.datum)}${k.opmerking?' · '+esc(k.opmerking):''}</div>
+<div>💶 ${fmt(k.bedrag)}</div></div>`;
+  }
+  if(item.type==='tank'){
+    const x=item.data;
+    const liters=Number(x.liters||0);
+    const kost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*Number(x.prijs_per_liter||0);
+    return `<div class="trip-stop" style="border-left-color:#2e7d32"><b>⛽ Tanken${x.brandstof_type?' ('+esc(x.brandstof_type)+')':''}</b>${x.locatie?' · '+esc(x.locatie):''}${x.land?' · '+esc(x.land):''}
+<div class="muted">${esc(x.datum)}</div>
+<div>${liters.toFixed(2).replace('.',',')} l · ${fmt(kost)}</div></div>`;
+  }
+  return '';
+}).join(''):'<div class="muted">Geen activiteiten.</div>'}
 
-<div class="muted">
-📸 ${((fotos||[]).filter(f => f.stop_id === s.id)).length} foto(s)
-</div>
-${((fotos||[]).filter(f=>f.stop_id===s.id)).map(f=>`
-<div style="margin-top:10px">
-<img src="${f.url}"
-style="max-width:150px;
-max-height:150px;
-border-radius:8px;">
-</div>
-`).join('')}
-
-
-${s.prijs_per_nacht!=null?'<div class="muted">€ '+Number(s.prijs_per_nacht).toFixed(2)+' / nacht</div>':''}</div>`).join('')||'<div class="muted">Geen stops.</div>'}
 <br><button class="secondary" onclick="document.getElementById('tripDetail').classList.add('hidden')">Sluiten</button>`;
 detail.scrollIntoView({behavior:'smooth'});
 };
@@ -901,6 +1495,7 @@ console.log('Camper bij tanken:', activeCamperId);
   prijs_per_liter:price,
   locatie:v('fLocation')||null,
   land:v('fCountry')||null,
+  brandstof_type:document.getElementById('fFuelType').value,
   camper_id: activeCamperId
 });
 
@@ -913,6 +1508,7 @@ console.log('Camper bij tanken:', activeCamperId);
   status.textContent='✓ Tankbeurt opgeslagen.';
   status.className='status ok';
   ['fKm','fLiters','fPrice','fLocation','fCountry'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fFuelType').value='Diesel';
   document.getElementById('fDate').value=today();
   document.getElementById('fuelKmHint').textContent='';
   document.getElementById('fuelCalc').textContent='Totaalbedrag: € 0,00 · Eerste/nieuwe tankbeurt — · Verbruik: —';
@@ -936,6 +1532,10 @@ async function prepareFuelForm(){
 async function loadFuel(){
   const list=document.getElementById('fuelList');
   if(!list)return;
+  if (!activeCamperId) {
+    console.warn('Geen actieve camper beschikbaar');
+    return;
+  }
   list.textContent='Tankbeurten laden...';
   try{
     const result=await supabase.from('tankbeurten')
@@ -951,26 +1551,30 @@ async function loadFuel(){
 
     let totalLiters=0,totalCost=0;
     const rows=result.data||[];
+    const fuelIcon={Diesel:'⛽',AdBlue:'💧',Gas:'🔥'};
 
     list.innerHTML=rows.length?rows.map((x,i)=>{
       const liters=Number(x.liters||0);
       const price=Number(x.prijs_per_liter||0);
       const cost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*price;
-      totalLiters+=liters;
-      totalCost+=cost;
-      const prev=rows[i-1];
+      const btype=x.brandstof_type||'Diesel';
+      const isDiesel=btype==='Diesel';
+      if(isDiesel){totalLiters+=liters;totalCost+=cost;}else{totalCost+=cost;}
+      const icon=fuelIcon[btype]||'⛽';
+      const prev=isDiesel?rows.slice(0,i).filter(r=>(!r.brandstof_type||r.brandstof_type==='Diesel')).pop():null;
       const distance=prev?Number(x.kmstand)-Number(prev.kmstand):null;
-      const consumption=(distance>0&&liters>0)?liters/distance*100:null;
+      const consumption=(isDiesel&&distance>0&&liters>0)?liters/distance*100:null;
 
       return `<div class="item">
-        <b>⛽ ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}
+        <b>${icon} ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}${btype!=='Diesel'?' · '+esc(btype):''}
         <div class="muted">${x.locatie?esc(x.locatie)+' · ':''}${x.land?esc(x.land):''}</div>
         <div>${liters.toFixed(2).replace('.',',')} liter · € ${price.toFixed(3).replace('.',',')}/l · <b>€ ${cost.toFixed(2).replace('.',',')}</b></div>
-        ${consumption!=null
+        ${isDiesel?(consumption!=null
           ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · ${consumption.toFixed(2).replace('.',',')} l/100 km</div>`
           :distance!=null
             ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · verbruik niet berekend (liters ontbreken of zijn 0)</div>`
-            :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>'}
+            :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>')
+          :''}
       </div>`;
     }).join(''):'Nog geen tankbeurten opgeslagen.';
 
@@ -1019,15 +1623,18 @@ async function loadStats(){
     currentKm!=null&&firstKm!=null?(currentKm-firstKm).toLocaleString('nl-BE')+' km':'—';
 
   const sortedTanks=[...tankRows].sort((a,b)=>Number(a.kmstand)-Number(b.kmstand));
+  const dieselTanks=sortedTanks.filter(x=>!x.brandstof_type||x.brandstof_type==='Diesel');
   let intervalLiters=0,intervalKm=0,totalLiters=0,totalCost=0;
-  sortedTanks.forEach((x,i)=>{
+  sortedTanks.forEach((x)=>{
     const liters=Number(x.liters||0);
     const price=Number(x.prijs_per_liter||0);
     const cost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*price;
-    totalLiters+=liters;
     totalCost+=cost;
+    if(!x.brandstof_type||x.brandstof_type==='Diesel') totalLiters+=liters;
+  });
+  dieselTanks.forEach((x,i)=>{
     if(i>0){
-      intervalKm+=Number(x.kmstand)-Number(sortedTanks[i-1].kmstand);
+      intervalKm+=Number(x.kmstand)-Number(dieselTanks[i-1].kmstand);
       intervalLiters+=Number(x.liters||0);
     }
   });
@@ -1052,6 +1659,217 @@ async function loadStats(){
 
 function v(id){return document.getElementById(id).value.trim()}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function formatDate(value){
+  if(!value)return '—';
+  const date=new Date(value);
+  if(Number.isNaN(date.getTime()))return String(value).slice(0,10);
+  return date.toLocaleDateString('nl-BE');
+}
+function generateInviteCode(length=9){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes=crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes,x=>chars[x%chars.length]).join('');
+}
+function getInviteLink(inviteCode){
+  return INVITE_BASE_URL+encodeURIComponent(inviteCode);
+}
+function renderGeneratedInvite(invite){
+  const box=document.getElementById('inviteGeneratedBox');
+  if(!box)return;
+  if(!invite){
+    box.classList.add('hidden');
+    box.innerHTML='';
+    return;
+  }
+  const link=getInviteLink(invite.invite_code);
+  box.innerHTML=`
+    <div><b>Uitnodigingslink voor ${esc(invite.email)}</b></div>
+    <div class="code" style="margin-top:6px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
+    <div class="muted" style="margin-top:6px">Verstuur deze link zelf via WhatsApp, e-mail of Messenger.</div>`;
+  box.classList.remove('hidden');
+}
+
+async function loadInviteCodes(){
+  const list=document.getElementById('inviteList');
+  if(!list||!canAccessBeheer)return;
+  list.textContent='Uitnodigingen laden...';
+  const {data,error}=await supabase
+    .from('invite_codes')
+    .select('id,invite_code,email,created_at,used,used_at')
+    .order('created_at',{ascending:false})
+    .limit(100);
+  if(error){
+    list.innerHTML='<div class="status err">Uitnodigingen laden mislukt: '+esc(error.message)+'</div>';
+    return;
+  }
+  if(!data||data.length===0){
+    list.innerHTML='<div class="muted">Nog geen uitnodigingen aangemaakt.</div>';
+    return;
+  }
+  list.innerHTML=data.map(invite=>{
+    const statusLabel=invite.used?'🟢 Gebruikt':'🟡 Openstaand';
+    const link=getInviteLink(invite.invite_code);
+    return `<div class="item">
+      <div><b>${esc(invite.email||'—')}</b></div>
+      <div class="muted">Code: <span class="code">${esc(invite.invite_code||'—')}</span></div>
+      <div class="muted">Datum aangemaakt: ${esc(formatDate(invite.created_at))}</div>
+      <div class="muted">Status: ${statusLabel}</div>
+      <div class="muted">Link: <a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAdminCampers(){
+  const list=document.getElementById('adminCampersList');
+  if(!list||!canAccessBeheer)return;
+  list.textContent='Campers laden...';
+  const [{data:campers,error:campersError},{data:camperUsers,error:camperUsersError}]=await Promise.all([
+    supabase.from('campers').select('id,naam,merk,model,created_at').order('created_at',{ascending:false}),
+    supabase.from('camper_users').select('camper_id,user_id')
+  ]);
+  if(campersError||camperUsersError){
+    list.innerHTML='<div class="status err">Campers laden mislukt: '+esc(campersError?.message||camperUsersError?.message||'Onbekende fout')+'</div>';
+    return;
+  }
+  const userIds=[...new Set((camperUsers||[]).map(row=>row.user_id).filter(Boolean))];
+  const profileMap={};
+  if(userIds.length){
+    const {data:profiles,error:profilesError}=await supabase
+      .from('profiles')
+      .select('user_id,display_name,email')
+      .in('user_id',userIds);
+    if(profilesError){
+      list.innerHTML='<div class="status err">Camper-eigenaars laden mislukt: '+esc(profilesError.message)+'</div>';
+      return;
+    }
+    (profiles||[]).forEach(profile=>{profileMap[profile.user_id]=profile;});
+  }
+  const ownerByCamper={};
+  (camperUsers||[]).forEach(row=>{
+    if(ownerByCamper[row.camper_id])return;
+    const profile=profileMap[row.user_id]||{};
+    ownerByCamper[row.camper_id]=profile.display_name||profile.email||'Onbekend';
+  });
+  if(!campers||campers.length===0){
+    list.innerHTML='<div class="muted">Nog geen campers gevonden.</div>';
+    return;
+  }
+  list.innerHTML=campers.map(camper=>{
+    const camperNaam=camper.naam||[camper.merk,camper.model].filter(Boolean).join(' ')||('Camper #'+camper.id);
+    return `<div class="item">
+      <div><b>${esc(camperNaam)}</b></div>
+      <div class="muted">Eigenaar: ${esc(ownerByCamper[camper.id]||'Onbekend')}</div>
+      <div class="muted">Aangemaakt op: ${esc(formatDate(camper.created_at))}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadAdminUsers(){
+  const list=document.getElementById('adminUsersList');
+  if(!list||!canAccessBeheer)return;
+  list.textContent='Gebruikers laden...';
+  const {data,error}=await supabase
+    .from('profiles')
+    .select('user_id,display_name,email')
+    .order('display_name',{ascending:true});
+  if(error){
+    list.innerHTML='<div class="status err">Gebruikers laden mislukt: '+esc(error.message)+'</div>';
+    return;
+  }
+  if(!data||data.length===0){
+    list.innerHTML='<div class="muted">Nog geen gebruikers gevonden.</div>';
+    return;
+  }
+  list.innerHTML=data.map(profile=>`<div class="item">
+    <div><b>${esc(profile.display_name||'—')}</b></div>
+    <div class="muted">${esc(profile.email||'—')}</div>
+  </div>`).join('');
+}
+
+async function loadAdminStats(){
+  const status=document.getElementById('adminStatsStatus');
+  if(!status||!canAccessBeheer)return;
+  status.className='status hidden';
+  const statTargets=[
+    ['adminUserCount','profiles'],
+    ['adminCamperCount','campers'],
+    ['adminTripCount','reizen'],
+    ['adminStopCount','reis_stops'],
+    ['adminPhotoCount','fotos'],
+    ['adminFuelCount','tankbeurten'],
+    ['adminCostCount','reiskosten']
+  ];
+  const results=await Promise.all(statTargets.map(([,table])=>
+    supabase.from(table).select('*',{count:'exact',head:true})
+  ));
+  const firstError=results.find(result=>result.error)?.error;
+  if(firstError){
+    status.textContent='Platform statistieken laden mislukt: '+firstError.message;
+    status.className='status err';
+  }
+  statTargets.forEach(([id],index)=>{
+    document.getElementById(id).textContent=String(results[index].count??0);
+  });
+}
+
+async function loadBeheer(){
+  if(!canAccessBeheer)return;
+  await Promise.all([
+    loadInviteCodes(),
+    loadAdminCampers(),
+    loadAdminUsers(),
+    loadAdminStats()
+  ]);
+}
+
+window.createInviteCode=async function(){
+  const status=document.getElementById('inviteStatus');
+  const emailField=document.getElementById('inviteEmail');
+  if(!status||!emailField)return;
+  status.className='status hidden';
+  if(!canAccessBeheer){
+    status.textContent='Geen toegang tot beheer.';
+    status.className='status err';
+    return;
+  }
+  const email=emailField.value.trim().toLowerCase();
+  if(!email){
+    status.textContent='Vul een e-mailadres in.';
+    status.className='status err';
+    return;
+  }
+  const isValidEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if(!isValidEmail){
+    status.textContent='Vul een geldig e-mailadres in.';
+    status.className='status err';
+    return;
+  }
+  let result=null;
+  for(let attempt=0;attempt<5;attempt++){
+    result=await supabase
+      .from('invite_codes')
+      .insert({
+        invite_code:generateInviteCode(),
+        email,
+        created_by:currentUser?.id||null,
+        used:false
+      })
+      .select('id,invite_code,email,created_at,used,used_at')
+      .single();
+    if(!result.error)break;
+    if(result.error.code!=='23505')break;
+  }
+  if(result?.error){
+    status.textContent='Uitnodiging maken mislukt: '+result.error.message;
+    status.className='status err';
+    return;
+  }
+  emailField.value='';
+  renderGeneratedInvite(result.data);
+  status.textContent='✓ Uitnodiging opgeslagen.';
+  status.className='status ok';
+  await loadInviteCodes();
+};
 
 document.querySelectorAll('nav button[data-tab]').forEach(b=>b.onclick=async()=>{
 document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
@@ -1061,6 +1879,21 @@ document.getElementById(b.dataset.tab).classList.add('active');
 if(b.dataset.tab==='fuel'){
   await prepareFuelForm();
   await loadFuel();
+}
+if(b.dataset.tab==='personen'){
+  await loadPersonen();
+}
+if(b.dataset.tab==='vrienden'){
+  await loadVrienden();
+}
+if(b.dataset.tab==='ontdekte-plaatsen'){
+  await loadOntdektePlaatsen();
+}
+if(b.dataset.tab==='beheer'){
+  await loadBeheer();
+}
+if(b.dataset.tab==='camper'){
+  await loadCamperTab();
 }
 });
 const photoUpload = document.getElementById('photoUpload');
@@ -1261,7 +2094,7 @@ document.getElementById('saveMaintenanceBtn')
   alert('✅ Onderhoud opgeslagen');
     await loadMaintenance();
     });
-    async function loadMaintenance(){
+async function loadMaintenance(){
 
   const { data, error } = await supabase
     .from('onderhoud')
@@ -1304,11 +2137,617 @@ document.getElementById('saveMaintenanceBtn')
   `).join('');
 
 }
+async function loadTravelCosts(){
+
+  const box =
+    document.getElementById('costList');
+
+  if(!box) return;
+  if (!activeCamperId) {
+  console.warn('Geen actieve camper beschikbaar');
+  return;
+}
+
+ const { data, error } = await supabase
+  .from('reiskosten')
+  .select('*')
+  .eq('camper_id', activeCamperId)
+  .order('datum', { ascending:false });
+   
+
+  console.log('REISKOSTEN:', data);
+  console.log('ERROR:', error);
+
+  if(error){
+    box.innerHTML = error.message;
+    return;
+  }
+
+ if(!data || data.length === 0){
+  box.innerHTML =
+    'Nog geen reiskosten geregistreerd.';
+  return;
+}
+
+box.innerHTML = data.map(x => `
+  <div class="item">
+
+    <b>${x.datum}</b><br>
+
+    ${x.type_kost}<br>
+
+    ${x.land || ''}<br>
+
+    💶 € ${Number(x.bedrag).toFixed(2)}
+
+    ${x.opmerking
+      ? `<div class="muted">${x.opmerking}</div>`
+      : ''}
+
+  </div>
+`).join('');
+  
+  }
 
 
+
+
+
+
+async function loadTravelCostTrips(){
+
+  console.log('loadTravelCostTrips gestart');
+
+  const select =
+    document.getElementById('costTrip');
+
+  console.log('SELECT:', select);
+
+  if(!select) return;
+
+  if (!activeCamperId) {
+    console.warn('Geen actieve camper beschikbaar');
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('reizen')
+    .select('id, datum, bestuurder, passagier, crew')
+    .eq('camper_id', activeCamperId)
+    .order('datum', { ascending:false });
+
+  if(error){
+    console.error(error);
+    return;
+  }
+
+  console.log('REISKOSTEN DROPDOWN:', data);
+
+  select.innerHTML = (data || [])
+    .map(x => `
+      <option value="${x.id}">
+        ${x.datum} - ${x.bestuurder||x.crew||''}${x.passagier?' & '+x.passagier:''}
+      </option>
+    `)
+    .join('');
+  console.log('REISKOSTEN DROPDOWN:', data);
+console.log('Aantal opties:', select.options.length);
+}
+window.saveTravelCost = async function(){console.log('SAVE GESTART');
+
+  const reisId = Number(
+    document.getElementById('costTrip').value
+  );
+
+  const bedrag = Number(
+    document.getElementById('costAmount').value
+  );
+
+  if(!reisId){
+    alert('Kies een reis.');
+    return;
+  }
+
+  if(!bedrag || bedrag <= 0){
+    alert('Vul een geldig bedrag in.');
+    return;
+  }
+console.log({
+  reis_id: reisId,
+  camper_id: activeCamperId,
+  datum: document.getElementById('costDate').value,
+  type_kost: document.getElementById('costType').value,
+  land: document.getElementById('costCountry').value,
+  bedrag: bedrag,
+  opmerking: document.getElementById('costNote').value
+});
+
+  const { error } = await supabase
+    .from('reiskosten')
+    .insert({
+      
+
+      reis_id: reisId,
+      camper_id: activeCamperId,
+
+      datum:
+        document.getElementById('costDate').value,
+
+      type_kost:
+        document.getElementById('costType').value,
+
+      land:
+        document.getElementById('costCountry').value,
+
+      bedrag: bedrag,
+
+      opmerking:
+        document.getElementById('costNote').value
+
+    });
+console.log('SUPABASE ERROR:', error);
+
+if(error){
+  alert(error.message);
+  return;
+}
+
+await loadTravelCosts();
+
+alert('✅ Reiskosten opgeslagen');
+
+};
+
+async function loadPersonen(){
+  const box=document.getElementById('persoonList');
+  if(!box)return;
+  if (!activeCamperId) {
+    console.warn('Geen actieve camper beschikbaar');
+    return;
+  }
+  const {data,error}=await supabase
+    .from('personen')
+    .select('*')
+    .eq('camper_id',activeCamperId)
+    .order('naam');
+  if(error){box.textContent='Laden mislukt: '+error.message;return;}
+  if(!data||data.length===0){box.innerHTML='<div class="muted">Nog geen personen toegevoegd.</div>';return;}
+  box.innerHTML=data.map(p=>`
+    <div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <b>${esc(p.naam)}</b>
+        <span class="muted" style="margin-left:8px">${p.actief?'✅ actief':'⛔ inactief'}</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="secondary" onclick="togglePersoon(${p.id},${p.actief})">${p.actief?'Deactiveren':'Activeren'}</button>
+        <button class="secondary" onclick="deletePersoon(${p.id})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+window.addPersoon=async function(){
+  const box=document.getElementById('persoonStatus');
+  box.className='status hidden';
+  const naam=document.getElementById('persoonNaam').value.trim();
+  if(!naam){box.textContent='Vul een naam in.';box.className='status err';return;}
+  const {error}=await supabase.from('personen').insert({camper_id:activeCamperId,naam});
+  if(error){box.textContent='Opslaan mislukt: '+error.message;box.className='status err';return;}
+  box.textContent='✓ '+naam+' toegevoegd.';box.className='status ok';
+  document.getElementById('persoonNaam').value='';
+  await loadPersonen();
+  await loadPersonOptions();
+};
+
+window.deletePersoon=async function(id){
+  if(!confirm('Persoon verwijderen?'))return;
+  const {error}=await supabase.from('personen').delete().eq('id',id);
+  if(error){alert('Verwijderen mislukt: '+error.message);return;}
+  await loadPersonen();
+  await loadPersonOptions();
+};
+
+window.togglePersoon=async function(id,huidigActief){
+  const {error}=await supabase.from('personen').update({actief:!huidigActief}).eq('id',id);
+  if(error){alert('Bijwerken mislukt: '+error.message);return;}
+  await loadPersonen();
+  await loadPersonOptions();
+};
+
+async function loadCamperMembers(){
+  const list=document.getElementById('camperMembersList');
+  if(!list||!activeCamperId)return;
+  list.textContent='Leden laden...';
+  const {data:members,error}=await supabase
+    .from('camper_users')
+    .select('user_id,role')
+    .eq('camper_id',activeCamperId);
+  if(error){list.innerHTML='<div class="status err">Leden laden mislukt: '+esc(error.message)+'</div>';return;}
+  if(!members||members.length===0){list.innerHTML='<div class="muted">Nog geen leden gekoppeld.</div>';return;}
+  const userIds=members.map(m=>m.user_id).filter(Boolean);
+  let profileMap={};
+  if(userIds.length){
+    const {data:profiles}=await supabase.from('profiles').select('user_id,display_name,email').in('user_id',userIds);
+    if(profiles)profiles.forEach(p=>{profileMap[p.user_id]=p;});
+  }
+  list.innerHTML=members.map(m=>{
+    const p=profileMap[m.user_id]||{};
+    const label=p.display_name||p.email||'(onbekend)';
+    const roleLabel=m.role==='admin'?' <span class="muted">(admin)</span>':'';
+    return `<div class="item"><b>${esc(label)}</b>${roleLabel}</div>`;
+  }).join('');
+  const card=document.getElementById('camperInviteCard');
+  if(card)card.classList.toggle('hidden',!isCamperAdmin);
+}
+
+async function loadCamperInvites(){
+  const list=document.getElementById('camperInvitesList');
+  if(!list||!activeCamperId||!isCamperAdmin)return;
+  list.textContent='Uitnodigingen laden...';
+  const {data,error}=await supabase
+    .from('camper_invites')
+    .select('id,email,invite_code,created_at,used,used_at')
+    .eq('camper_id',activeCamperId)
+    .eq('used',false)
+    .order('created_at',{ascending:false})
+    .limit(50);
+  if(error){list.innerHTML='<div class="status err">Uitnodigingen laden mislukt: '+esc(error.message)+'</div>';return;}
+  if(!data||data.length===0){list.innerHTML='<div class="muted">Geen openstaande uitnodigingen.</div>';return;}
+  list.innerHTML=data.map(inv=>{
+    const link=getCamperInviteLink(inv.invite_code);
+    return `<div class="item">
+      <div><b>${esc(inv.email||'—')}</b></div>
+      <div class="muted">Status: In afwachting</div>
+      <div class="muted">Aangemaakt: ${esc(formatDate(inv.created_at))}</div>
+      <div class="muted" style="margin-top:4px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
+    </div>`;
+  }).join('');
+}
+
+function getCamperInviteLink(inviteCode){
+  const base=window.location.origin+window.location.pathname;
+  return base.replace(/\/[^/]*$/,'/')+`join-camper/${encodeURIComponent(inviteCode)}`;
+}
+
+function renderCamperInviteGenerated(invite){
+  const box=document.getElementById('camperInviteGeneratedBox');
+  if(!box)return;
+  if(!invite){box.classList.add('hidden');box.innerHTML='';return;}
+  const link=getCamperInviteLink(invite.invite_code);
+  box.innerHTML=`
+    <div><b>Uitnodigingslink voor ${esc(invite.email)}</b></div>
+    <div class="code" style="margin-top:6px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
+    <div class="muted" style="margin-top:6px">Verstuur deze link via WhatsApp, e-mail of Messenger.</div>`;
+  box.classList.remove('hidden');
+}
+
+async function saveCamperInvite(email){
+  const status=document.getElementById('camperInviteStatus');
+  status.className='status hidden';
+  if(!isCamperAdmin){status.textContent='Geen toegang: alleen camper-admins kunnen uitnodigingen maken.';status.className='status err';return null;}
+  if(!activeCamperId){status.textContent='Geen actieve camper gevonden.';status.className='status err';return null;}
+  if(!email){status.textContent='Vul een e-mailadres in.';status.className='status err';return null;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){status.textContent='Vul een geldig e-mailadres in.';status.className='status err';return null;}
+  let result=null;
+  for(let attempt=0;attempt<5;attempt++){
+    result=await supabase
+      .from('camper_invites')
+      .insert({camper_id:activeCamperId,email,invite_code:generateInviteCode(),created_by:currentUser?.id||null,used:false})
+      .select('id,email,invite_code,created_at,used,used_at')
+      .single();
+    if(!result.error)break;
+    if(result.error.code!=='23505')break;
+  }
+  if(result?.error){status.textContent='Uitnodiging maken mislukt: '+result.error.message;status.className='status err';return null;}
+  return result.data;
+}
+
+window.createCamperInvite=async function(){
+  const emailField=document.getElementById('camperInviteEmail');
+  const status=document.getElementById('camperInviteStatus');
+  if(!emailField||!status)return;
+  const email=emailField.value.trim().toLowerCase();
+  const invite=await saveCamperInvite(email);
+  if(!invite)return;
+  emailField.value='';
+  renderCamperInviteGenerated(invite);
+  status.textContent='✓ Uitnodiging opgeslagen.';
+  status.className='status ok';
+  await loadCamperInvites();
+};
+
+window.generateCamperInviteLink=async function(){
+  const emailField=document.getElementById('camperInviteEmail');
+  if(!emailField)return;
+  const email=emailField.value.trim().toLowerCase();
+  const invite=await saveCamperInvite(email);
+  if(!invite)return;
+  emailField.value='';
+  renderCamperInviteGenerated(invite);
+  await loadCamperInvites();
+};
+
+async function loadCamperTab(){
+  await loadCamperMembers();
+  if(isCamperAdmin)await loadCamperInvites();
+}
+
+async function loadCamperProfile(){
+  if(!activeCamperId)return;
+  const {data,error}=await supabase
+    .from('campers')
+    .select('merk,model,basisvoertuig,motor,versnellingsbak,max_massa,kenteken,bouwjaar,reference_date,reference_km')
+    .eq('id',activeCamperId)
+    .single();
+  if(error){console.error('Camperprofiel laden mislukt:',error);return;}
+  if(!data)return;
+  const setVal=(id,val)=>{const el=document.getElementById(id);if(el&&val!=null)el.value=val;};
+  setVal('camperMerk',data.merk);
+  setVal('camperModel',data.model);
+  setVal('camperBasisvoertuig',data.basisvoertuig);
+  setVal('camperMotor',data.motor);
+  setVal('camperVersnellingsbak',data.versnellingsbak);
+  setVal('camperMaxMassa',data.max_massa);
+  setVal('camperKenteken',data.kenteken);
+  setVal('camperBouwjaar',data.bouwjaar);
+  setVal('camperReferenceDate',data.reference_date);
+  setVal('camperReferenceKm',data.reference_km);
+}
+
+window.saveCamperProfile=async function(){
+  const status=document.getElementById('camperProfileStatus');
+  status.className='status hidden';
+  if(!activeCamperId){status.textContent='Geen actieve camper gevonden.';status.className='status err';return;}
+  const payload={
+    merk:document.getElementById('camperMerk').value||null,
+    model:document.getElementById('camperModel').value||null,
+    basisvoertuig:document.getElementById('camperBasisvoertuig').value||null,
+    motor:document.getElementById('camperMotor').value||null,
+    versnellingsbak:document.getElementById('camperVersnellingsbak').value||null,
+    max_massa:document.getElementById('camperMaxMassa').value||null,
+    kenteken:document.getElementById('camperKenteken').value||null,
+    bouwjaar:document.getElementById('camperBouwjaar').value||null,
+    reference_date:document.getElementById('camperReferenceDate').value||null,
+    reference_km:document.getElementById('camperReferenceKm').value||null
+  };
+  const result = await supabase
+    .from('campers')
+    .update(payload)
+    .eq('id', activeCamperId)
+    .select();
+  if(result.error){status.textContent='Opslaan mislukt: '+result.error.message;status.className='status err';return;}
+  status.textContent='✓ Camperprofiel opgeslagen';status.className='status ok';
+};
+
+// ── Vrienden ──────────────────────────────────────────────
+async function loadVrienden(){
+  const box=document.getElementById('vriendenList');
+  if(!box)return;
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user)return;
+  const {data,error}=await supabase
+    .from('friends')
+    .select('id,friend_user_id,created_at')
+    .eq('user_id',user.id)
+    .order('created_at',{ascending:false});
+  if(error){box.innerHTML='<div class="status err">Fout bij laden vrienden: '+esc(error.message)+'</div>';return;}
+  if(!data||data.length===0){box.innerHTML='<div class="muted">Nog geen vrienden toegevoegd.</div>';return;}
+  // Laad profielen voor alle vrienden
+  const friendIds=data.map(f=>f.friend_user_id).filter(Boolean);
+  let profileMap={};
+  if(friendIds.length>0){
+    const {data:profiles}=await supabase
+      .from('profiles')
+      .select('user_id,email,display_name')
+      .in('user_id',friendIds);
+    if(profiles)profiles.forEach(p=>{profileMap[p.user_id]=p;});
+  }
+  box.innerHTML=data.map(f=>{
+    const p=profileMap[f.friend_user_id]||{};
+    const label=p.display_name||p.email||'(onbekend)';
+    return `<div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <b>${esc(label)}</b>
+        <div class="muted" style="font-size:12px">Toegevoegd: ${esc((f.created_at||'').slice(0,10))}</div>
+      </div>
+      <button class="secondary" onclick="removeVriend(${f.id})">🗑️ Verwijderen</button>
+    </div>`;
+  }).join('');
+}
+
+window.addVriend=async function(){
+  const status=document.getElementById('vriendenStatus');
+  status.className='status hidden';
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user)return;
+  const friendEmail=document.getElementById('vriendenEmail').value.trim().toLowerCase();
+  if(!friendEmail){status.textContent='Vul een e-mailadres in.';status.className='status err';return;}
+  if(friendEmail===user.email){
+    status.textContent='Je kunt jezelf niet toevoegen.';
+    status.className='status err';return;
+  }
+  // Zoek friend_user_id via profiles tabel
+  const {data:profileData,error:profileErr}=await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('email',friendEmail)
+    .maybeSingle();
+  if(profileErr){status.textContent='Fout bij zoeken: '+esc(profileErr.message);status.className='status err';return;}
+  if(!profileData){status.textContent='Geen gebruiker gevonden met dit e-mailadres.';status.className='status err';return;}
+  const friendUserId=profileData.user_id;
+  // Controleer of al bevriend
+  const {data:bestaand,error:bestaandErr}=await supabase
+    .from('friends')
+    .select('id')
+    .eq('user_id',user.id)
+    .eq('friend_user_id',friendUserId)
+    .maybeSingle();
+  if(bestaandErr){status.textContent='Fout bij controleren: '+esc(bestaandErr.message);status.className='status err';return;}
+  if(bestaand){status.textContent='Deze gebruiker staat reeds in je vriendenlijst.';status.className='status err';return;}
+  const {error}=await supabase
+    .from('friends')
+    .insert({user_id:user.id,friend_user_id:friendUserId});
+  if(error){status.textContent='Opslaan mislukt: '+esc(error.message);status.className='status err';return;}
+  status.textContent='✓ Vriend toegevoegd.';status.className='status ok';
+  document.getElementById('vriendenEmail').value='';
+  await loadVrienden();
+};
+
+window.removeVriend=async function(id){
+  if(!confirm('Vriend verwijderen?'))return;
+  const {error}=await supabase.from('friends').delete().eq('id',id);
+  if(error){alert('Verwijderen mislukt: '+error.message);return;}
+  await loadVrienden();
+};
+
+// ── Ontdekte plaatsen ─────────────────────────────────────
+function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
+  const box=document.getElementById('ontdektePlaatsenList');
+  const filterLand=document.getElementById('opLand').value;
+  const filterPlaats=document.getElementById('opPlaats').value.trim().toLowerCase();
+  const filterCamper=document.getElementById('opCamperplaats').value.trim().toLowerCase();
+  let filtered=stops;
+  if(filterLand)filtered=filtered.filter(s=>s.land===filterLand);
+  if(filterPlaats)filtered=filtered.filter(s=>(s.camperplaats||'').toLowerCase().includes(filterPlaats));
+  if(filterCamper)filtered=filtered.filter(s=>(s.camperplaats||'').toLowerCase().includes(filterCamper));
+  if(!filtered.length){box.innerHTML='<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';return;}
+  const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
+  box.innerHTML=filtered.map(s=>{
+    const stopFotos=(fotosAll||[]).filter(f=>f.stop_id===s.id);
+    const eigenaar=eigenaarMap[s.reis_id]||'Onbekend';
+    const fotoHtml=stopFotos.map(f=>`<img src="${esc(f.url)}" style="max-width:80px;max-height:80px;border-radius:6px;margin:4px;cursor:pointer" onclick="event.stopPropagation();openFotoLightbox('${esc(f.url)}')">`).join('');
+    return `<div class="card" style="cursor:pointer;margin-bottom:14px" onclick="showStopDetail(${s.id})">
+      <div><b>📍 ${esc(s.camperplaats||'Onbenoemde stop')}</b></div>
+      <div>🏙️ ${esc(s.camperplaats||'—')}</div>
+      <div>🏳️ ${esc(s.land||'—')}</div>
+      <div>${'⭐'.repeat(Number(s.beoordeling||0))}</div>
+      <div>🏕️ ${esc(s.type_stop||'—')}</div>
+      ${s.prijs_per_nacht!=null?`<div>💶 ${fmt(s.prijs_per_nacht)}/nacht</div>`:''}
+      ${s.ervaring?`<div>📝 ${esc(s.ervaring)}</div>`:''}
+      <div class="muted">📸 ${stopFotos.length} foto(s)</div>
+      ${fotoHtml}
+      <div class="muted" style="margin-top:8px">👤 Gedeeld door: ${esc(eigenaar)}</div>
+    </div>`;
+  }).join('');
+}
+
+window.filterOntdektePlaatsen=function(){
+  if(!_ontdektePlaatsenData.stops)return;
+  renderOntdektePlaatsen(_ontdektePlaatsenData.stops,_ontdektePlaatsenData.fotos,_ontdektePlaatsenData.eigenaarMap);
+};
+
+window.openFotoLightbox=function(url){
+  const lb=document.getElementById('fotoLightbox');
+  document.getElementById('fotoLightboxImg').src=url;
+  lb.style.display='flex';
+};
+
+window.closeLightbox=function(){
+  document.getElementById('fotoLightbox').style.display='none';
+};
+
+window.showStopDetail=function(stopId){
+  const s=(_ontdektePlaatsenData.stops||[]).find(x=>x.id===stopId||x.id==stopId);
+  if(!s)return;
+  const fotos=(_ontdektePlaatsenData.fotos||[]).filter(f=>f.stop_id===s.id);
+  const eigenaar=_ontdektePlaatsenData.eigenaarMap[s.reis_id]||'Onbekend';
+  const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
+  document.getElementById('stopDetailBody').innerHTML=`
+    <h2>📍 ${esc(s.camperplaats||'Onbenoemde stop')}</h2>
+    <div><b>🏙️ Plaats:</b> ${esc(s.camperplaats||'—')}</div>
+    <div><b>🏳️ Land:</b> ${esc(s.land||'—')}</div>
+    <div><b>🏕️ Type stop:</b> ${esc(s.type_stop||'—')}</div>
+    ${s.voorzieningen?`<div><b>Voorzieningen:</b> ${esc(s.voorzieningen)}</div>`:''}
+    <div><b>⭐ Beoordeling:</b> ${'★'.repeat(Number(s.beoordeling||0))}</div>
+    ${s.prijs_per_nacht!=null?`<div><b>💶 Prijs per nacht:</b> ${fmt(s.prijs_per_nacht)}</div>`:''}
+    ${s.ervaring?`<div style="margin-top:10px"><b>📝 Ervaring:</b><p>${esc(s.ervaring)}</p></div>`:''}
+    ${fotos.length?'<div><b>📸 Foto\'s:</b></div>'+fotos.map(f=>`<img src="${esc(f.url)}" style="max-width:150px;max-height:150px;border-radius:8px;margin:4px;cursor:pointer" onclick="openFotoLightbox('${esc(f.url)}')">`).join(''):''}
+    <div class="muted" style="margin-top:12px">👤 Gedeeld door: ${esc(eigenaar)}</div>`;
+  document.getElementById('stopDetailModal').style.display='block';
+};
+
+window.closeStopDetail=function(e){
+  if(!e||e.target===document.getElementById('stopDetailModal')){
+    document.getElementById('stopDetailModal').style.display='none';
+  }
+};
+
+window.loadOntdektePlaatsen=async function(){
+  const box=document.getElementById('ontdektePlaatsenList');
+  if(!box)return;
+  box.innerHTML='<div class="muted">Laden...</div>';
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user){box.innerHTML='<div class="muted">Niet ingelogd.</div>';return;}
+
+  const {data:friends,error:fErr}=await supabase
+    .from('friends')
+    .select('friend_user_id')
+    .eq('user_id',user.id);
+  if(fErr){box.innerHTML='<div class="status err">Fout bij laden vrienden: '+esc(fErr.message)+'</div>';return;}
+  if(!friends||friends.length===0){
+    box.innerHTML='<div class="muted">Je hebt nog geen vrienden toegevoegd. Ga naar het tabblad 🤝 Vrienden.</div>';
+    return;
+  }
+
+  const friendUserIds=friends.map(f=>f.friend_user_id).filter(Boolean);
+  if(friendUserIds.length===0){
+    box.innerHTML='<div class="muted">Jouw vrienden zijn nog niet aan het systeem gekoppeld. Controleer of ze zijn ingelogd en hun profiel hebben aangemaakt.</div>';
+    return;
+  }
+
+  const {data:camperUsers,error:cuErr}=await supabase
+    .from('camper_users')
+    .select('camper_id,user_id')
+    .in('user_id',friendUserIds);
+  if(cuErr){box.innerHTML='<div class="status err">'+esc(cuErr.message)+'</div>';return;}
+  const friendCamperIds=(camperUsers||[]).map(x=>x.camper_id);
+  if(friendCamperIds.length===0){
+    box.innerHTML='<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';
+    return;
+  }
+
+  const {data:reizen,error:rErr}=await supabase
+    .from('reizen')
+    .select('id,camper_id')
+    .in('camper_id',friendCamperIds);
+  if(rErr){box.innerHTML='<div class="status err">'+esc(rErr.message)+'</div>';return;}
+  const reisIds=(reizen||[]).map(x=>x.id);
+  if(reisIds.length===0){
+    box.innerHTML='<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';
+    return;
+  }
+
+  const {data:stops,error:sErr}=await supabase
+    .from('reis_stops')
+    .select('*')
+    .in('reis_id',reisIds)
+    .eq('gedeeld_met_vrienden',true)
+    .order('datum',{ascending:false})
+    .limit(200);
+  if(sErr){box.innerHTML='<div class="status err">'+esc(sErr.message)+'</div>';return;}
+  if(!stops||stops.length===0){
+    box.innerHTML='<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';
+    return;
+  }
+
+  const stopIds=stops.map(s=>s.id);
+  const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
+
+  const reisMap={};
+  (reizen||[]).forEach(r=>reisMap[r.id]=r.camper_id);
+  const camperUserMap={};
+  (camperUsers||[]).forEach(cu=>camperUserMap[cu.camper_id]=cu.user_id);
+  const eigenaarMap={};
+  stops.forEach(s=>{
+    const camperId=reisMap[s.reis_id];
+    const userId=camperId?camperUserMap[camperId]:null;
+    eigenaarMap[s.reis_id]=userId?userId.slice(0,8)+'…':'Onbekend';
+  });
+
+  _ontdektePlaatsenData={stops,fotos:fotos||[],eigenaarMap};
+  renderOntdektePlaatsen(stops,fotos||[],eigenaarMap);
+};
 
 init();
-
 </script>
 </body>
 </html>
