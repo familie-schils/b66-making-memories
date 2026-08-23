@@ -740,13 +740,27 @@ function updateBeheerVisibility(){
 
   async function loadCurrentCamper(sessionUser=null){
 
-  const { data:{ user:authUser }, error:userError } = await supabase.auth.getUser();
-  const { data:{ session } } = await supabase.auth.getSession();
-  const user = authUser ?? sessionUser ?? session?.user ?? null;
-  currentUser=user;
+  console.log('LOADCURRENTCAMPER START');
 
-  if(userError)console.error('GET USER ERROR:', userError);
+  const { data:{ user:authUser }, error:userError } =
+    await supabase.auth.getUser();
+
+  const { data:{ session } } =
+    await supabase.auth.getSession();
+
+  const user =
+    authUser ?? sessionUser ?? session?.user ?? null;
+
+  currentUser = user;
+
+  if(userError)
+    console.error('GET USER ERROR:', userError);
+
   console.log('USER ID:', user?.id);
+
+  console.log('LOADCURRENTCAMPER EINDE');
+}
+
 
   if(!user){
     console.warn('Geen ingelogde gebruiker gevonden tijdens loadCurrentCamper().');
