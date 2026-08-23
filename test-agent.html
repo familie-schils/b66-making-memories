@@ -808,6 +808,8 @@ populateCountrySelects();
 
 await loadCurrentCamper();
 
+console.log('ACTIVE CAMPER ID IN showApp:', activeCamperId);
+
 await loadPersonOptions();
 
 await loadActiveTrip();
@@ -1196,6 +1198,10 @@ const list=document.getElementById('tripList');list.textContent='Reizen laden...
   console.log('Filter op camper:', activeCamperId);
 console.log('Filter op camper:', activeCamperId);
 
+if (!activeCamperId) {
+  console.warn('Geen actieve camper beschikbaar');
+  return;
+}
 const {data:trips,error}=await supabase
   .from('reizen')
   .select('*')
@@ -1504,6 +1510,10 @@ async function prepareFuelForm(){
 async function loadFuel(){
   const list=document.getElementById('fuelList');
   if(!list)return;
+  if (!activeCamperId) {
+    console.warn('Geen actieve camper beschikbaar');
+    return;
+  }
   list.textContent='Tankbeurten laden...';
   try{
     const result=await supabase.from('tankbeurten')
@@ -2169,6 +2179,10 @@ async function loadTravelCostTrips(){
 
   if(!select) return;
 
+  if (!activeCamperId) {
+    console.warn('Geen actieve camper beschikbaar');
+    return;
+  }
 
   const { data, error } = await supabase
     .from('reizen')
@@ -2261,6 +2275,10 @@ alert('✅ Reiskosten opgeslagen');
 async function loadPersonen(){
   const box=document.getElementById('persoonList');
   if(!box)return;
+  if (!activeCamperId) {
+    console.warn('Geen actieve camper beschikbaar');
+    return;
+  }
   const {data,error}=await supabase
     .from('personen')
     .select('*')
