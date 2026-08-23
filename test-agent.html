@@ -188,7 +188,8 @@ Nog geen foto geselecteerd.
 <div class="grid">
 <div><label>Datum</label><input id="fDate" type="date"></div>
 <div><label>KM-stand</label><input id="fKm" type="number" min="0" step="1"><div id="fuelKmHint" class="muted" style="margin-top:5px"></div></div>
-<div><label>Liters diesel</label><input id="fLiters" type="number" min="0" step="0.01"></div>
+<div><label>Type</label><select id="fFuelType"><option>Diesel</option><option>AdBlue</option><option>Gas</option></select></div>
+<div><label>Hoeveelheid</label><input id="fLiters" type="number" min="0" step="0.01"></div>
 <div><label>Prijs per liter (€)</label><input id="fPrice" type="number" min="0" step="0.001"></div>
 <div><label>Waar getankt?</label><input id="fLocation"></div>
 <div><label>Land</label><select id="fCountry"></select></div>
@@ -1214,6 +1215,7 @@ console.log('Camper bij tanken:', activeCamperId);
   prijs_per_liter:price,
   locatie:v('fLocation')||null,
   land:v('fCountry')||null,
+  brandstof_type:document.getElementById('fFuelType').value,
   camper_id: activeCamperId
 });
 
@@ -1226,6 +1228,7 @@ console.log('Camper bij tanken:', activeCamperId);
   status.textContent='✓ Tankbeurt opgeslagen.';
   status.className='status ok';
   ['fKm','fLiters','fPrice','fLocation','fCountry'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fFuelType').value='Diesel';
   document.getElementById('fDate').value=today();
   document.getElementById('fuelKmHint').textContent='';
   document.getElementById('fuelCalc').textContent='Totaalbedrag: € 0,00 · Eerste/nieuwe tankbeurt — · Verbruik: —';
@@ -1264,26 +1267,30 @@ async function loadFuel(){
 
     let totalLiters=0,totalCost=0;
     const rows=result.data||[];
+    const fuelIcon={Diesel:'⛽',AdBlue:'💧',Gas:'🔥'};
 
     list.innerHTML=rows.length?rows.map((x,i)=>{
       const liters=Number(x.liters||0);
       const price=Number(x.prijs_per_liter||0);
       const cost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*price;
-      totalLiters+=liters;
-      totalCost+=cost;
-      const prev=rows[i-1];
+      const btype=x.brandstof_type||'Diesel';
+      const isDiesel=btype==='Diesel';
+      if(isDiesel){totalLiters+=liters;totalCost+=cost;}else{totalCost+=cost;}
+      const icon=fuelIcon[btype]||'⛽';
+      const prev=isDiesel?rows.slice(0,i).filter(r=>(!r.brandstof_type||r.brandstof_type==='Diesel')).pop():null;
       const distance=prev?Number(x.kmstand)-Number(prev.kmstand):null;
-      const consumption=(distance>0&&liters>0)?liters/distance*100:null;
+      const consumption=(isDiesel&&distance>0&&liters>0)?liters/distance*100:null;
 
       return `<div class="item">
-        <b>⛽ ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}
+        <b>${icon} ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}${btype!=='Diesel'?' · '+esc(btype):''}
         <div class="muted">${x.locatie?esc(x.locatie)+' · ':''}${x.land?esc(x.land):''}</div>
         <div>${liters.toFixed(2).replace('.',',')} liter · € ${price.toFixed(3).replace('.',',')}/l · <b>€ ${cost.toFixed(2).replace('.',',')}</b></div>
-        ${consumption!=null
+        ${isDiesel?(consumption!=null
           ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · ${consumption.toFixed(2).replace('.',',')} l/100 km</div>`
           :distance!=null
             ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · verbruik niet berekend (liters ontbreken of zijn 0)</div>`
-            :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>'}
+            :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>')
+          :''}
       </div>`;
     }).join(''):'Nog geen tankbeurten opgeslagen.';
 
@@ -1332,15 +1339,18 @@ async function loadStats(){
     currentKm!=null&&firstKm!=null?(currentKm-firstKm).toLocaleString('nl-BE')+' km':'—';
 
   const sortedTanks=[...tankRows].sort((a,b)=>Number(a.kmstand)-Number(b.kmstand));
+  const dieselTanks=sortedTanks.filter(x=>!x.brandstof_type||x.brandstof_type==='Diesel');
   let intervalLiters=0,intervalKm=0,totalLiters=0,totalCost=0;
-  sortedTanks.forEach((x,i)=>{
+  sortedTanks.forEach((x)=>{
     const liters=Number(x.liters||0);
     const price=Number(x.prijs_per_liter||0);
     const cost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*price;
-    totalLiters+=liters;
     totalCost+=cost;
+    if(!x.brandstof_type||x.brandstof_type==='Diesel') totalLiters+=liters;
+  });
+  dieselTanks.forEach((x,i)=>{
     if(i>0){
-      intervalKm+=Number(x.kmstand)-Number(sortedTanks[i-1].kmstand);
+      intervalKm+=Number(x.kmstand)-Number(dieselTanks[i-1].kmstand);
       intervalLiters+=Number(x.liters||0);
     }
   });
