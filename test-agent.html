@@ -745,21 +745,45 @@ async function handleInviteRoute(){
   box.classList.remove('hidden');
   if(statusEl)statusEl.className='status hidden';
   if(formsEl)formsEl.classList.add('hidden');
-  const {data,error}=await supabase
+
+  // 1. Controleer camper_invites
+  const {data:camperInvite,error:camperInviteError}=await supabase
     .from('camper_invites')
     .select('id,camper_id,email,invite_code,used')
     .eq('invite_code',inviteCode)
     .maybeSingle();
-  if(error||!data){
-    if(statusEl){statusEl.textContent='Uitnodigingscode niet gevonden.';statusEl.className='status err';}
+
+  if(!camperInviteError&&camperInvite){
+    // 2. Gevonden in camper_invites
+    if(camperInvite.used){
+      if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
+      return true;
+    }
+    pendingInviteData={type:'camper',...camperInvite};
+    if(formsEl)formsEl.classList.remove('hidden');
     return true;
   }
-  if(data.used){
-    if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
+
+  // 3. Controleer invite_codes
+  const {data:platformInvite,error:platformInviteError}=await supabase
+    .from('invite_codes')
+    .select('id,email,invite_code,used')
+    .eq('invite_code',inviteCode)
+    .maybeSingle();
+
+  if(!platformInviteError&&platformInvite){
+    // 4. Gevonden in invite_codes
+    if(platformInvite.used){
+      if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
+      return true;
+    }
+    pendingInviteData={type:'platform',...platformInvite};
+    if(formsEl)formsEl.classList.remove('hidden');
     return true;
   }
-  pendingInviteData=data;
-  if(formsEl)formsEl.classList.remove('hidden');
+
+  // 5. Nergens gevonden
+  if(statusEl){statusEl.textContent='Uitnodigingscode bestaat niet.';statusEl.className='status err';}
   return true;
 }
 
@@ -899,24 +923,33 @@ async function processInvite(userId){
   const invite=pendingInviteData;
   const statusEl=document.getElementById('inviteRouteStatus');
   function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
-  const {data:existing}=await supabase
-    .from('camper_users')
-    .select('id')
-    .eq('user_id',userId)
-    .eq('camper_id',invite.camper_id)
-    .maybeSingle();
-  if(!existing){
-    const {error:insertErr}=await supabase
+  if(invite.type==='camper'){
+    const {data:existing}=await supabase
       .from('camper_users')
-      .insert({user_id:userId,camper_id:invite.camper_id,role:'lid'});
-    if(insertErr){setStatus('Koppeling aan camper mislukt: '+insertErr.message,'err');return;}
+      .select('id')
+      .eq('user_id',userId)
+      .eq('camper_id',invite.camper_id)
+      .maybeSingle();
+    if(!existing){
+      const {error:insertErr}=await supabase
+        .from('camper_users')
+        .insert({user_id:userId,camper_id:invite.camper_id,role:'lid'});
+      if(insertErr){setStatus('Koppeling aan camper mislukt: '+insertErr.message,'err');return;}
+    }
+    await supabase
+      .from('camper_invites')
+      .update({used:true,used_at:new Date().toISOString()})
+      .eq('id',invite.id);
+    pendingInviteData=null;
+    setStatus('Welkom! Je bent gekoppeld aan de camper.','ok');
+  } else if(invite.type==='platform'){
+    await supabase
+      .from('invite_codes')
+      .update({used:true,used_at:new Date().toISOString()})
+      .eq('id',invite.id);
+    pendingInviteData=null;
+    setStatus('Welkom! Je account is aangemaakt.','ok');
   }
-  await supabase
-    .from('camper_invites')
-    .update({used:true,used_at:new Date().toISOString()})
-    .eq('id',invite.id);
-  pendingInviteData=null;
-  setStatus('Welkom! Je bent gekoppeld aan de camper.','ok');
   const formsEl=document.getElementById('inviteRouteForms');
   if(formsEl)formsEl.classList.add('hidden');
   setTimeout(()=>showApp(null),1500);
