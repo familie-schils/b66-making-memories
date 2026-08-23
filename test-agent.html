@@ -397,28 +397,12 @@ Nog geen onderhoud geregistreerd.
   SQL-migratie – friends tabel aanmaken in Supabase:
 
   create table friends (
-    id         bigint generated always as identity primary key,
-    user_id    uuid references auth.users(id) on delete cascade,
-    friend_email text not null,
-    friend_user_id uuid references auth.users(id) on delete set null,
-    created_at timestamptz not null default now(),
-    unique(user_id, friend_email)
+    id             bigint generated always as identity primary key,
+    user_id        uuid references auth.users(id) on delete cascade,
+    friend_user_id uuid references auth.users(id) on delete cascade,
+    created_at     timestamptz not null default now(),
+    unique(user_id, friend_user_id)
   );
-
-  -- Trigger om friend_user_id automatisch te koppelen na insert:
-  create or replace function link_friend_user_id()
-  returns trigger language plpgsql security definer as $$
-  begin
-    new.friend_user_id := (
-      select id from auth.users where email = new.friend_email limit 1
-    );
-    return new;
-  end;
-  $$;
-
-  create trigger friends_link_user_id
-    before insert on friends
-    for each row execute procedure link_friend_user_id();
 
   SQL-migratie – gedeeld_met_vrienden kolom toevoegen aan reis_stops:
 
@@ -1983,19 +1967,32 @@ async function loadVrienden(){
   if(!user)return;
   const {data,error}=await supabase
     .from('friends')
-    .select('id,friend_email,created_at')
+    .select('id,friend_user_id,created_at')
     .eq('user_id',user.id)
     .order('created_at',{ascending:false});
   if(error){box.innerHTML='<div class="status err">Fout bij laden vrienden: '+esc(error.message)+'</div>';return;}
   if(!data||data.length===0){box.innerHTML='<div class="muted">Nog geen vrienden toegevoegd.</div>';return;}
-  box.innerHTML=data.map(f=>`
-    <div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+  // Laad profielen voor alle vrienden
+  const friendIds=data.map(f=>f.friend_user_id).filter(Boolean);
+  let profileMap={};
+  if(friendIds.length>0){
+    const {data:profiles}=await supabase
+      .from('profiles')
+      .select('user_id,email,display_name')
+      .in('user_id',friendIds);
+    if(profiles)profiles.forEach(p=>{profileMap[p.user_id]=p;});
+  }
+  box.innerHTML=data.map(f=>{
+    const p=profileMap[f.friend_user_id]||{};
+    const label=p.display_name||p.email||'(onbekend)';
+    return `<div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div>
-        <b>${esc(f.friend_email)}</b>
+        <b>${esc(label)}</b>
         <div class="muted" style="font-size:12px">Toegevoegd: ${esc((f.created_at||'').slice(0,10))}</div>
       </div>
       <button class="secondary" onclick="removeVriend(${f.id})">🗑️ Verwijderen</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 window.addVriend=async function(){
@@ -2009,30 +2006,28 @@ window.addVriend=async function(){
     status.textContent='Je kunt jezelf niet toevoegen.';
     status.className='status err';return;
   }
+  // Zoek friend_user_id via profiles tabel
+  const {data:profileData,error:profileErr}=await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('email',friendEmail)
+    .maybeSingle();
+  if(profileErr){status.textContent='Fout bij zoeken: '+esc(profileErr.message);status.className='status err';return;}
+  if(!profileData){status.textContent='Geen gebruiker gevonden met dit e-mailadres.';status.className='status err';return;}
+  const friendUserId=profileData.user_id;
   // Controleer of al bevriend
   const {data:bestaand,error:bestaandErr}=await supabase
     .from('friends')
     .select('id')
     .eq('user_id',user.id)
-    .eq('friend_email',friendEmail)
+    .eq('friend_user_id',friendUserId)
     .maybeSingle();
   if(bestaandErr){status.textContent='Fout bij controleren: '+esc(bestaandErr.message);status.className='status err';return;}
   if(bestaand){status.textContent='Deze gebruiker staat reeds in je vriendenlijst.';status.className='status err';return;}
-  // Zoek user_id op basis van e-mailadres via RPC of insert (trigger koppelt friend_user_id)
-  // Valideer of het e-mailadres bestaat door een test-insert te doen; de DB trigger vult friend_user_id in.
-  // We controleren eerst of de gebruiker bestaat via een aparte query (profiles/users niet direct toegankelijk).
-  // Voeg in – de DB trigger koppelt friend_user_id automatisch. Als het e-mailadres niet bestaat blijft friend_user_id null.
-  const {data:insertData,error}=await supabase
+  const {error}=await supabase
     .from('friends')
-    .insert({user_id:user.id,friend_email:friendEmail})
-    .select('friend_user_id')
-    .single();
+    .insert({user_id:user.id,friend_user_id:friendUserId});
   if(error){status.textContent='Opslaan mislukt: '+esc(error.message);status.className='status err';return;}
-  if(!insertData||!insertData.friend_user_id){
-    // Verwijder de net-ingevoegde rij want gebruiker bestaat niet
-    await supabase.from('friends').delete().eq('user_id',user.id).eq('friend_email',friendEmail);
-    status.textContent='Geen gebruiker gevonden met dit e-mailadres.';status.className='status err';return;
-  }
   status.textContent='✓ Vriend toegevoegd.';status.className='status ok';
   document.getElementById('vriendenEmail').value='';
   await loadVrienden();
