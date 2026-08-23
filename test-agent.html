@@ -429,10 +429,10 @@ Nog geen onderhoud geregistreerd.
 <section id="vrienden">
 <div class="card">
 <h2>🤝 Vrienden</h2>
-<p class="muted">Voeg vrienden toe op basis van hun gebruikers-ID (UUID). Zij kunnen jouw gedeelde stops zien en jij de hunne.</p>
+<p class="muted">Voeg vrienden toe op basis van hun e-mailadres. Zij kunnen jouw gedeelde stops zien en jij de hunne.</p>
 <div id="vriendenStatus" class="status hidden"></div>
 <div class="grid">
-  <div><label>Gebruikers-ID (UUID)</label><input id="vriendenEmail" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+  <div><label>E-mailadres</label><input id="vriendenEmail" type="email" placeholder="marie@example.com"></div>
 </div>
 <br>
 <button class="primary" onclick="addVriend()">＋ Vriend toevoegen</button>
@@ -1983,7 +1983,7 @@ async function loadVrienden(){
   if(!user)return;
   const {data,error}=await supabase
     .from('friends')
-    .select('id,friend_user_id,created_at')
+    .select('id,friend_email,created_at')
     .eq('user_id',user.id)
     .order('created_at',{ascending:false});
   if(error){box.innerHTML='<div class="status err">Fout bij laden vrienden: '+esc(error.message)+'</div>';return;}
@@ -1991,7 +1991,7 @@ async function loadVrienden(){
   box.innerHTML=data.map(f=>`
     <div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div>
-        <b>${esc(f.friend_user_id)}</b>
+        <b>${esc(f.friend_email)}</b>
         <div class="muted" style="font-size:12px">Toegevoegd: ${esc((f.created_at||'').slice(0,10))}</div>
       </div>
       <button class="secondary" onclick="removeVriend(${f.id})">🗑️ Verwijderen</button>
@@ -2003,10 +2003,10 @@ window.addVriend=async function(){
   status.className='status hidden';
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)return;
-  const friendUserId=document.getElementById('vriendenEmail').value.trim();
-  if(!friendUserId){status.textContent='Vul een gebruikers-ID in.';status.className='status err';return;}
-  if(friendUserId===user.id){
-    status.textContent='Je kunt jezelf niet als vriend toevoegen.';
+  const friendEmail=document.getElementById('vriendenEmail').value.trim().toLowerCase();
+  if(!friendEmail){status.textContent='Vul een e-mailadres in.';status.className='status err';return;}
+  if(friendEmail===user.email){
+    status.textContent='Je kunt jezelf niet toevoegen.';
     status.className='status err';return;
   }
   // Controleer of al bevriend
@@ -2014,14 +2014,25 @@ window.addVriend=async function(){
     .from('friends')
     .select('id')
     .eq('user_id',user.id)
-    .eq('friend_user_id',friendUserId)
+    .eq('friend_email',friendEmail)
     .maybeSingle();
   if(bestaandErr){status.textContent='Fout bij controleren: '+esc(bestaandErr.message);status.className='status err';return;}
-  if(bestaand){status.textContent='Deze vriend is al toegevoegd.';status.className='status err';return;}
-  const {error}=await supabase
+  if(bestaand){status.textContent='Deze gebruiker staat reeds in je vriendenlijst.';status.className='status err';return;}
+  // Zoek user_id op basis van e-mailadres via RPC of insert (trigger koppelt friend_user_id)
+  // Valideer of het e-mailadres bestaat door een test-insert te doen; de DB trigger vult friend_user_id in.
+  // We controleren eerst of de gebruiker bestaat via een aparte query (profiles/users niet direct toegankelijk).
+  // Voeg in – de DB trigger koppelt friend_user_id automatisch. Als het e-mailadres niet bestaat blijft friend_user_id null.
+  const {data:insertData,error}=await supabase
     .from('friends')
-    .insert({user_id:user.id,friend_user_id:friendUserId});
+    .insert({user_id:user.id,friend_email:friendEmail})
+    .select('friend_user_id')
+    .single();
   if(error){status.textContent='Opslaan mislukt: '+esc(error.message);status.className='status err';return;}
+  if(!insertData||!insertData.friend_user_id){
+    // Verwijder de net-ingevoegde rij want gebruiker bestaat niet
+    await supabase.from('friends').delete().eq('user_id',user.id).eq('friend_email',friendEmail);
+    status.textContent='Geen gebruiker gevonden met dit e-mailadres.';status.className='status err';return;
+  }
   status.textContent='✓ Vriend toegevoegd.';status.className='status ok';
   document.getElementById('vriendenEmail').value='';
   await loadVrienden();
