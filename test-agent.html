@@ -754,7 +754,10 @@ function createEmptyRoleContext(){
     platformMemberships:[],
     camperMemberships:[],
     activeMembership:null,
-    platformAdminCandidateCount:0
+    platformAdminCandidateCount:0,
+    hasPlatformMembership:false,
+    hasCamperMembership:false,
+    hasPlatformOnlyAccess:false
   };
 }
 
@@ -790,6 +793,37 @@ function getCurrentUserRoleBadges(){
   return badges.join('');
 }
 
+function getMissingActiveCamperMessage(){
+  return currentRoleContext.hasPlatformOnlyAccess
+    ? 'Je account heeft alleen de platformkoppeling (camper_id = 1) en nog geen echte werkcamper.'
+    : 'Geen actieve camper gekoppeld aan dit account.';
+}
+
+function renderNoActiveCamperState(){
+  const message=getMissingActiveCamperMessage();
+  const html=`<div class="muted">${esc(message)}</div>`;
+  [
+    'tripList',
+    'maintenanceHistory',
+    'fuelList',
+    'costList',
+    'persoonList',
+    'camperMembersList',
+    'camperInvitesList'
+  ].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.innerHTML=html;
+  });
+  const activeTripInfo=document.getElementById('activeTripInfo');
+  if(activeTripInfo)activeTripInfo.textContent=message;
+  const costTrip=document.getElementById('costTrip');
+  if(costTrip)costTrip.innerHTML='<option value="">Geen actieve camper</option>';
+  const bestuurder=document.getElementById('tBestuurder');
+  if(bestuurder)bestuurder.innerHTML='';
+  const passagier=document.getElementById('tPassagier');
+  if(passagier)passagier.innerHTML='<option value="">— geen —</option>';
+}
+
 function renderCurrentRoleSummary(){
   const box=document.getElementById('currentRoleSummary');
   const status=document.getElementById('camperRoleStatus');
@@ -804,7 +838,10 @@ function renderCurrentRoleSummary(){
     <div>${getCurrentUserRoleBadges()}</div>
     <div class="muted">Eigen camperrelaties: ${esc(String(membershipCount))}. Beheer-tab: ${isHeadAdmin()?'toegestaan':'niet toegestaan'}.</div>
   `;
-  if(canManageActiveCamper()){
+  if(currentRoleContext.hasPlatformOnlyAccess){
+    status.textContent=getMissingActiveCamperMessage();
+    status.className='status err';
+  } else if(canManageActiveCamper()){
     status.textContent='Camper Admin: je kunt het camperprofiel aanpassen en camper invites beheren.';
     status.className='status ok';
   } else if(currentRoleContext.camperRole===CAMPER_ROLES.MEMBER){
@@ -1042,19 +1079,32 @@ function updateBeheerVisibility(){
   const memberships=data||[];
   const platformMemberships=memberships.filter(isPlatformMembership);
   const camperMemberships=memberships.filter(row=>!isPlatformMembership(row));
+  const hasPlatformMembership=platformMemberships.length>0;
+  const hasCamperMembership=camperMemberships.length>0;
+  const hasPlatformOnlyAccess=hasPlatformMembership&&!hasCamperMembership;
   const activeMembership=camperMemberships[0]||null;
   activeCamperId = activeMembership?.camper_id ?? null;
   currentRoleContext={
-    platformRole:platformMemberships.length?PLATFORM_ROLES.HEAD_ADMIN:PLATFORM_ROLES.USER,
+    platformRole:hasPlatformMembership?PLATFORM_ROLES.HEAD_ADMIN:PLATFORM_ROLES.USER,
     camperRole:normalizeCamperRole(activeMembership?.role),
     memberships,
     platformMemberships,
     camperMemberships,
     activeMembership,
-    platformAdminCandidateCount:platformMemberships.length
+    platformAdminCandidateCount:platformMemberships.length,
+    hasPlatformMembership,
+    hasCamperMembership,
+    hasPlatformOnlyAccess
   };
   isCamperAdmin = canManageActiveCamper();
   canAccessBeheer = isHeadAdmin();
+
+  if(hasPlatformOnlyAccess){
+    console.warn('Gebruiker heeft alleen platformmembership; geen actieve werkcamper beschikbaar.', {
+      userId:user.id,
+      memberships
+    });
+  }
 
   updateBeheerVisibility();
   updateCamperRoleUI();
@@ -1090,6 +1140,12 @@ populateCountrySelects();
 await loadCurrentCamper(sessionUser);
 
 console.log('ACTIVE CAMPER ID IN showApp:', activeCamperId);
+
+  if(!activeCamperId){
+    console.warn('Geen actieve werkcamper geselecteerd; campergebonden data wordt niet geladen.');
+    renderNoActiveCamperState();
+    return;
+  }
 
 await loadPersonOptions();
 
@@ -2179,6 +2235,7 @@ async function loadAdminUsers(){
     const platformRole=links.some(isPlatformMembership)?PLATFORM_ROLES.HEAD_ADMIN:PLATFORM_ROLES.USER;
     const camperAdminCount=links.filter(link=>!isPlatformMembership(link)&&normalizeCamperRole(link.role)===CAMPER_ROLES.ADMIN).length;
     const camperMemberCount=links.filter(link=>!isPlatformMembership(link)&&normalizeCamperRole(link.role)===CAMPER_ROLES.MEMBER).length;
+    const hasPlatformOnlyAccess=links.length>0&&links.every(isPlatformMembership);
     return `<div class="item">
       <div><b>${esc(profile.display_name||'—')}</b></div>
       <div class="muted">${esc(profile.email||'—')}</div>
@@ -2187,6 +2244,7 @@ async function loadAdminUsers(){
         <span class="badge">Camper admin: ${esc(String(camperAdminCount))}</span>
         <span class="badge">Camper lid: ${esc(String(camperMemberCount))}</span>
       </div>
+      ${hasPlatformOnlyAccess?'<div class="muted">Alleen platformkoppeling (camper_id = 1), geen echte werkcamper.</div>':''}
     </div>`;
   }).join('');
 }
