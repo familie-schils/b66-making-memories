@@ -1132,9 +1132,13 @@ function updateBeheerVisibility(){
 async function init(){
 const isInviteRoute=await handleInviteRoute();
 const {data:{session}}=await supabase.auth.getSession();
-if(isInviteRoute){loginView.classList.add('hidden');}
-else if(session)showApp(session.user);else showLogin();
 supabase.auth.onAuthStateChange((_e,s)=>{if(!pendingInviteData)s?showApp(s.user):showLogin();});
+if(isInviteRoute){
+  loginView.classList.add('hidden');
+  if(session?.user&&pendingInviteData){
+    await processInvite(session.user.id);
+  }
+}else if(session){showApp(session.user);}else{showLogin();}
 }
 function showLogin(){
   resetRoleContext();
@@ -1197,7 +1201,11 @@ async function processInvite(userId){
   const statusEl=document.getElementById('inviteRouteStatus');
   function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
   const {data:{user:authUser}}=await supabase.auth.getUser();
-  const currentEmail=(authUser?.email||'').trim().toLowerCase();
+  if(!authUser){
+    setStatus('Niet ingelogd. Log opnieuw in en probeer opnieuw.','err');
+    return;
+  }
+  const currentEmail=authUser.email.trim().toLowerCase();
   if(invite.email&&!validateInviteEmail(invite,currentEmail)){
     setStatus('Deze uitnodiging hoort bij een ander e-mailadres. Gebruik het uitgenodigde account.','err');
     return;
@@ -1294,8 +1302,7 @@ window.inviteRegister=async()=>{
     setStatus('Registratie mislukt: '+error.message,'err');
     return;
   }
-  const {data:sessionData}=await supabase.auth.getSession();
-  const sessionUser=sessionData?.session?.user||null;
+  const sessionUser=data?.session?.user||null;
   const signUpUser=data?.user||null;
   const user=sessionUser||signUpUser;
   if(!sessionUser||!user){
