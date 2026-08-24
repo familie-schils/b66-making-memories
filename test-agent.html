@@ -1243,13 +1243,18 @@ async function processInvite(userId){
           code:camperErr.code
         };
         console.error('CAMPER ERROR', camperErrDetails);
+        console.error('[signup-flow:first-error]', {line:1232, step:"supabase.from('campers').insert(camperPayload)", error:camperErrDetails});
         setStatus('Camper aanmaken mislukt: '+JSON.stringify(camperErrDetails,null,2),'err');
         return;
       }
       const {error:linkErr}=await supabase
         .from('camper_users')
         .insert({user_id:userId,camper_id:newCamper.id,role:'admin'});
-      if(linkErr){setStatus('Koppeling aan camper mislukt: '+linkErr.message,'err');return;}
+      if(linkErr){
+        console.error('[signup-flow:first-error]', {line:1251, step:"supabase.from('camper_users').insert(...)", error:linkErr});
+        setStatus('Koppeling aan camper mislukt: '+linkErr.message,'err');
+        return;
+      }
     }
     await supabase
       .from('invite_codes')
@@ -1275,9 +1280,19 @@ window.inviteRegister=async()=>{
   }
   setStatus('Bezig met registreren...','ok');
   const {data,error}=await supabase.auth.signUp({email,password:pw});
-  if(error){setStatus('Registratie mislukt: '+error.message,'err');return;}
-  const user=data?.user;
-  if(!user){setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in.','ok');return;}
+  if(error){
+    console.error('[signup-flow:first-error]', {step:'supabase.auth.signUp', error});
+    setStatus('Registratie mislukt: '+error.message,'err');
+    return;
+  }
+  const {data:sessionData}=await supabase.auth.getSession();
+  const sessionUser=sessionData?.session?.user||null;
+  const signUpUser=data?.user||null;
+  const user=sessionUser||signUpUser;
+  if(!sessionUser||!user){
+    setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in om de uitnodiging te activeren.','ok');
+    return;
+  }
   await processInvite(user.id);
 };
 
