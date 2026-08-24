@@ -1045,7 +1045,7 @@ function updateBeheerVisibility(){
     await supabase.auth.getSession();
 
   const user =
-    authUser ?? sessionUser ?? session?.user ?? null;
+    sessionUser ?? authUser ?? session?.user ?? null;
 
   currentUser = user;
 
