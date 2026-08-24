@@ -1243,13 +1243,18 @@ async function processInvite(userId){
           code:camperErr.code
         };
         console.error('CAMPER ERROR', camperErrDetails);
+        console.error('[signup-flow:first-error]', {line:1232, step:"supabase.from('campers').insert(camperPayload)", error:camperErrDetails});
         setStatus('Camper aanmaken mislukt: '+JSON.stringify(camperErrDetails,null,2),'err');
         return;
       }
       const {error:linkErr}=await supabase
         .from('camper_users')
         .insert({user_id:userId,camper_id:newCamper.id,role:'admin'});
-      if(linkErr){setStatus('Koppeling aan camper mislukt: '+linkErr.message,'err');return;}
+      if(linkErr){
+        console.error('[signup-flow:first-error]', {line:1251, step:"supabase.from('camper_users').insert(...)", error:linkErr});
+        setStatus('Koppeling aan camper mislukt: '+linkErr.message,'err');
+        return;
+      }
     }
     await supabase
       .from('invite_codes')
@@ -1266,6 +1271,9 @@ async function processInvite(userId){
 window.inviteRegister=async()=>{
   const statusEl=document.getElementById('inviteRouteStatus');
   function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
+  function formatDebug(obj){
+    try{return JSON.stringify(obj,null,2);}catch(_e){return String(obj);}
+  }
   const email=document.getElementById('inviteRegEmail')?.value.trim();
   const pw=document.getElementById('inviteRegPassword')?.value;
   if(!email||!pw){setStatus('Vul e-mailadres en wachtwoord in.','err');return;}
@@ -1274,8 +1282,29 @@ window.inviteRegister=async()=>{
     return;
   }
   setStatus('Bezig met registreren...','ok');
-  const {data,error}=await supabase.auth.signUp({email,password:pw});
-  if(error){setStatus('Registratie mislukt: '+error.message,'err');return;}
+  const signUpResult=await supabase.auth.signUp({email,password:pw});
+  const {data,error}=signUpResult;
+  const getUserResult=await supabase.auth.getUser();
+  const getSessionResult=await supabase.auth.getSession();
+  console.log('[signup-flow] 1) result supabase.auth.signUp()', signUpResult);
+  console.log('[signup-flow] 2) data.user', data?.user??null);
+  console.log('[signup-flow] 3) error', error??null);
+  console.log('[signup-flow] 4) result supabase.auth.getUser()', getUserResult);
+  console.log('[signup-flow] 5) result supabase.auth.getSession()', getSessionResult);
+  if(error){
+    console.error('[signup-flow:first-error]', {line:1285, step:'supabase.auth.signUp', error});
+    setStatus(
+      'Registratie mislukt: '+error.message+'\n\n'+
+      '[signup-flow]\n'+
+      '1) signUp: '+formatDebug(signUpResult)+'\n'+
+      '2) data.user: '+formatDebug(data?.user??null)+'\n'+
+      '3) error: '+formatDebug(error??null)+'\n'+
+      '4) getUser: '+formatDebug(getUserResult)+'\n'+
+      '5) getSession: '+formatDebug(getSessionResult),
+      'err'
+    );
+    return;
+  }
   const user=data?.user;
   if(!user){setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in.','ok');return;}
   await processInvite(user.id);
