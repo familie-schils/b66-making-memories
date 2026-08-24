@@ -1080,7 +1080,8 @@ function updateBeheerVisibility(){
     return;
   }
 
-  const memberships=data||[];
+  const rawMemberships=data||[];
+  const memberships=rawMemberships.filter(m=>m?.camper_id!=null);
   const hasPlatformMembership=isHeadAdminUser(user.id);
   const platformMemberships=hasPlatformMembership?[{user_id:user.id,source:'head_admin_user_id'}]:[];
   const camperMemberships=memberships;
@@ -1102,6 +1103,14 @@ function updateBeheerVisibility(){
   };
   isCamperAdmin = canManageActiveCamper();
   canAccessBeheer = isHeadAdmin();
+
+  if(rawMemberships.length!==memberships.length){
+    console.warn('Ongeldige camperrelaties zonder camper_id genegeerd bij actieve camperselectie.', {
+      userId:user.id,
+      rawMembershipCount:rawMemberships.length,
+      validMembershipCount:memberships.length
+    });
+  }
 
   if(hasPlatformOnlyAccess){
     console.warn('Gebruiker heeft alleen platformrechten; geen actieve werkcamper beschikbaar.', {
