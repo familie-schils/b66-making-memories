@@ -173,9 +173,6 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 Nog geen foto geselecteerd.
 </div>
   <div id="photoList"></div>
-  <button type="button" class="secondary" onclick="testUpload()">
-📤 Test foto-upload
-</button>
 <div id="activeTripInfo" class="muted"></div><br>
 <label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin-bottom:12px">
   <input id="shareWithFriends" type="checkbox"> ☑ Deel deze stop met vrienden
@@ -323,6 +320,7 @@ Reiskosten laden...
 
 <div class="card">
 <h2>🔧 Onderhoud</h2>
+<div id="maintenanceStatus" class="status hidden"></div>
 
 <div class="grid">
 
@@ -2572,12 +2570,38 @@ document.querySelectorAll('.maintenanceCheck')
   });
 document.getElementById('saveMaintenanceBtn')
   .addEventListener('click', async function(){
+  const status=document.getElementById('maintenanceStatus');
+  function setMaintenanceStatus(message,isOk){
+    if(!status)return;
+    if(!message){
+      status.className='status hidden';
+      status.textContent='';
+      return;
+    }
+    status.textContent=message;
+    status.className='status '+(isOk?'ok':'err');
+  }
+  function resetMaintenanceForm(){
+    document.getElementById('mCategory').value='';
+    document.getElementById('mDate').value='';
+    document.getElementById('mKm').value='';
+    document.getElementById('mCost').value='';
+    document.getElementById('mPerformer').value='';
+    document.getElementById('mNotes').value='';
+    const overig=document.getElementById('otherMaintenanceText');
+    if(overig)overig.value='';
+    document.querySelectorAll('.maintenanceCheck').forEach(cb=>{cb.checked=false;});
+    const overigBox=document.getElementById('otherMaintenanceBox');
+    if(overigBox)overigBox.style.display='none';
+    loadMaintenanceOptions();
+  }
+  setMaintenanceStatus('',false);
 
   const category =
     document.getElementById('mCategory').value;
 
   if(!category){
-    alert('Kies eerst een categorie.');
+    setMaintenanceStatus('Kies eerst een categorie.',false);
     return;
   }
 
@@ -2615,13 +2639,14 @@ document.getElementById('saveMaintenanceBtn')
     });
 
   if(error){
-    alert('Opslaan mislukt: ' + error.message);
+    setMaintenanceStatus('Opslaan mislukt: '+error.message,false);
     console.error(error);
     return;
   }
 
-  alert('✅ Onderhoud opgeslagen');
-    await loadMaintenance();
+  setMaintenanceStatus('✅ Onderhoud opgeslagen',true);
+  resetMaintenanceForm();
+  await loadMaintenance();
     });
 async function loadMaintenance(){
 
@@ -2799,6 +2824,12 @@ if(error){
 }
 
 await loadTravelCosts();
+  document.getElementById('costTrip').selectedIndex=0;
+  document.getElementById('costDate').value='';
+  document.getElementById('costType').selectedIndex=0;
+  document.getElementById('costCountry').selectedIndex=0;
+  document.getElementById('costAmount').value='';
+  document.getElementById('costNote').value='';
 
 alert('✅ Reiskosten opgeslagen');
 
@@ -3242,6 +3273,14 @@ window.loadOntdektePlaatsen=async function(){
 
   const stopIds=stops.map(s=>s.id);
   const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
+  const {data:profiles}=await supabase
+    .from('profiles')
+    .select('user_id,display_name,email')
+    .in('user_id',friendUserIds);
+  const profileMap={};
+  (profiles||[]).forEach(p=>{
+    profileMap[p.user_id]=p.display_name||p.email||null;
+  });
 
   const reisMap={};
   (reizen||[]).forEach(r=>reisMap[r.id]=r.camper_id);
@@ -3251,7 +3290,7 @@ window.loadOntdektePlaatsen=async function(){
   stops.forEach(s=>{
     const camperId=reisMap[s.reis_id];
     const userId=camperId?camperUserMap[camperId]:null;
-    eigenaarMap[s.reis_id]=userId?userId.slice(0,8)+'…':'Onbekend';
+    eigenaarMap[s.reis_id]=userId?(profileMap[userId]||userId.slice(0,8)+'…'):'Onbekend';
   });
 
   _ontdektePlaatsenData={stops,fotos:fotos||[],eigenaarMap};
