@@ -574,7 +574,7 @@ Nog geen onderhoud geregistreerd.
 </div>
 </section>
 
-<section id="beheer" class="hidden">
+<section id="beheer">
 <!--
   SQL – maak deze tabel aan in Supabase:
 
@@ -1570,10 +1570,12 @@ function clearStopFields(){
   resetPhotoSelection();
 }
 function cancelTrip(){
-
+  activeTripId=null;
+  stopNumber=1;
+  currentStopSaved=false;
+  resetPhotoSelection();
   document.getElementById('tripForm').classList.add('hidden');
   document.getElementById('tripChooser').classList.remove('hidden');
-
 }
 function showStatus(text,ok){
 const el=document.getElementById('tripStatus');
@@ -1697,7 +1699,7 @@ const eindDatum=t.einddatum||new Date().toISOString().slice(0,10);
 const [{data:stops},{data:reiskosten},{data:tankbeurten}]=await Promise.all([
   supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde'),
   supabase.from('reiskosten').select('*').eq('reis_id',id).order('datum'),
-  supabase.from('tankbeurten').select('datum,liters,prijs_per_liter,totaalbedrag,brandstof_type,locatie,land').gte('datum',t.datum).lte('datum',eindDatum).order('datum')
+  supabase.from('tankbeurten').select('datum,liters,prijs_per_liter,totaalbedrag,brandstof_type,locatie,land').eq('camper_id',activeCamperId).gte('datum',t.datum).lte('datum',eindDatum).order('datum')
 ]);
 const stopIds=(stops||[]).map(s=>s.id);
 const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
@@ -1833,7 +1835,7 @@ detail.scrollIntoView({behavior:'smooth'});
 
 async function getLatestOdometer(){
   const [{data:trips},{data:tanks}]=await Promise.all([
-    supabase.from('reizen').select('start_km,eind_km').order('eind_km',{ascending:false}).limit(1000),
+    supabase.from('reizen').select('start_km,eind_km').eq('camper_id',activeCamperId).order('eind_km',{ascending:false}).limit(1000),
     supabase.from('tankbeurten')
   .select('*')
   .eq('camper_id', activeCamperId)
@@ -1850,7 +1852,7 @@ async function getLatestOdometer(){
 
 async function getFirstOdometer(){
   const [{data:trips},{data:tanks}]=await Promise.all([
-    supabase.from('reizen').select('start_km,eind_km').limit(1000),
+    supabase.from('reizen').select('start_km,eind_km').eq('camper_id',activeCamperId).limit(1000),
     supabase.from('tankbeurten').select('kmstand').limit(1000)
   ]);
   const kms=[];
@@ -2025,15 +2027,11 @@ async function loadFuel(){
 }
 
 async function loadStats(){
- const [{data:trips},{data:stops},{data:tanks}]=await Promise.all([
+ const [{data:trips},{data:tanks}]=await Promise.all([
   supabase
     .from('reizen')
     .select('id,start_km,eind_km,einddatum')
     .eq('camper_id', activeCamperId),
-
-  supabase
-    .from('reis_stops')
-    .select('id'),
 
   supabase
     .from('tankbeurten')
@@ -2041,7 +2039,13 @@ async function loadStats(){
     .eq('camper_id', activeCamperId)
 ]);
 
-  const tripRows=trips||[], stopRows=stops||[], tankRows=tanks||[];
+  const tripRows=trips||[], tankRows=tanks||[];
+  const tripIds=tripRows.map(x=>x.id);
+  let stopRows=[];
+  if(tripIds.length){
+    const {data:stops}=await supabase.from('reis_stops').select('id').in('reis_id',tripIds);
+    stopRows=stops||[];
+  }
   document.getElementById('tripCount').textContent=tripRows.filter(x=>x.einddatum).length;
   document.getElementById('stopCount').textContent=stopRows.length;
 
@@ -2087,6 +2091,7 @@ async function loadStats(){
 
   const recent=await supabase.from('reis_stops')
     .select('camperplaats,datum,land')
+    .in('reis_id',tripIds.length?tripIds:[-1])
     .order('datum',{ascending:false}).limit(3);
 
   document.getElementById('recent').innerHTML=(recent.data||[]).map(x=>
