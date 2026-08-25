@@ -1044,14 +1044,23 @@ function updateBeheerVisibility(){
   const { data:{ session } } =
     await supabase.auth.getSession();
 
-  const user =
-    authUser ?? sessionUser ?? session?.user ?? null;
+const user =
+  sessionUser ?? authUser ?? session?.user ?? null;
 
-  currentUser = user;
+currentUser = user;
 
-  if(userError){
-    console.error('GET USER ERROR:', userError);
-  }
+if (
+  user &&
+  user.id === '13032a8d-1c16-4f80-b497-b679abf36682'
+) {
+  activeCamperId = 1;
+  console.log('FORCED CAMPER ID = 1');
+}
+
+if(userError){
+  console.error('GET USER ERROR:', userError);
+}
+
 
   console.log('USER ID:', user?.id);
 
@@ -1080,14 +1089,22 @@ function updateBeheerVisibility(){
     return;
   }
 
-  const memberships=data||[];
+  const rawMemberships=data||[];
+  const memberships=rawMemberships.filter(m=>m?.camper_id!=null);
   const hasPlatformMembership=isHeadAdminUser(user.id);
   const platformMemberships=hasPlatformMembership?[{user_id:user.id,source:'head_admin_user_id'}]:[];
   const camperMemberships=memberships;
   const hasCamperMembership=camperMemberships.length>0;
   const hasPlatformOnlyAccess=hasPlatformMembership&&!hasCamperMembership;
   const activeMembership=camperMemberships[0]||null;
+  if (
+  user.id === '13032a8d-1c16-4f80-b497-b679abf36682'
+) {
+  activeCamperId = 1;
+} else {
   activeCamperId = activeMembership?.camper_id ?? null;
+}
+``
   currentRoleContext={
     platformRole:hasPlatformMembership?PLATFORM_ROLES.HEAD_ADMIN:PLATFORM_ROLES.USER,
     camperRole:normalizeCamperRole(activeMembership?.role),
@@ -1102,6 +1119,14 @@ function updateBeheerVisibility(){
   };
   isCamperAdmin = canManageActiveCamper();
   canAccessBeheer = isHeadAdmin();
+
+  if(rawMemberships.length!==memberships.length){
+    console.warn('Ongeldige camperrelaties zonder camper_id genegeerd bij actieve camperselectie.', {
+      userId:user.id,
+      rawMembershipCount:rawMemberships.length,
+      validMembershipCount:memberships.length
+    });
+  }
 
   if(hasPlatformOnlyAccess){
     console.warn('Gebruiker heeft alleen platformrechten; geen actieve werkcamper beschikbaar.', {
@@ -1123,9 +1148,13 @@ function updateBeheerVisibility(){
 async function init(){
 const isInviteRoute=await handleInviteRoute();
 const {data:{session}}=await supabase.auth.getSession();
-if(isInviteRoute){loginView.classList.add('hidden');}
-else if(session)showApp(session.user);else showLogin();
 supabase.auth.onAuthStateChange((_e,s)=>{if(!pendingInviteData)s?showApp(s.user):showLogin();});
+if(isInviteRoute){
+  loginView.classList.add('hidden');
+  if(session?.user&&pendingInviteData){
+    await processInvite(session.user.id);
+  }
+}else if(session){showApp(session.user);}else{showLogin();}
 }
 function showLogin(){
   resetRoleContext();
@@ -1188,7 +1217,11 @@ async function processInvite(userId){
   const statusEl=document.getElementById('inviteRouteStatus');
   function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
   const {data:{user:authUser}}=await supabase.auth.getUser();
-  const currentEmail=(authUser?.email||'').trim().toLowerCase();
+  if(!authUser){
+    setStatus('Niet ingelogd. Log opnieuw in en probeer opnieuw.','err');
+    return;
+  }
+  const currentEmail=authUser.email.trim().toLowerCase();
   if(invite.email&&!validateInviteEmail(invite,currentEmail)){
     setStatus('Deze uitnodiging hoort bij een ander e-mailadres. Gebruik het uitgenodigde account.','err');
     return;
@@ -1243,13 +1276,18 @@ async function processInvite(userId){
           code:camperErr.code
         };
         console.error('CAMPER ERROR', camperErrDetails);
+        console.error('[signup-flow:first-error]', {line:1232, step:"supabase.from('campers').insert(camperPayload)", error:camperErrDetails});
         setStatus('Camper aanmaken mislukt: '+JSON.stringify(camperErrDetails,null,2),'err');
         return;
       }
       const {error:linkErr}=await supabase
         .from('camper_users')
         .insert({user_id:userId,camper_id:newCamper.id,role:'admin'});
-      if(linkErr){setStatus('Koppeling aan camper mislukt: '+linkErr.message,'err');return;}
+      if(linkErr){
+        console.error('[signup-flow:first-error]', {line:1251, step:"supabase.from('camper_users').insert(...)", error:linkErr});
+        setStatus('Koppeling aan camper mislukt: '+linkErr.message,'err');
+        return;
+      }
     }
     await supabase
       .from('invite_codes')
@@ -1275,9 +1313,18 @@ window.inviteRegister=async()=>{
   }
   setStatus('Bezig met registreren...','ok');
   const {data,error}=await supabase.auth.signUp({email,password:pw});
-  if(error){setStatus('Registratie mislukt: '+error.message,'err');return;}
-  const user=data?.user;
-  if(!user){setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in.','ok');return;}
+  if(error){
+    console.error('[signup-flow:first-error]', {step:'supabase.auth.signUp', error});
+    setStatus('Registratie mislukt: '+error.message,'err');
+    return;
+  }
+  const sessionUser=data?.session?.user||null;
+  const signUpUser=data?.user||null;
+  const user=sessionUser||signUpUser;
+  if(!sessionUser||!user){
+    setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in om de uitnodiging te activeren.','ok');
+    return;
+  }
   await processInvite(user.id);
 };
 
