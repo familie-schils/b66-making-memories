@@ -1044,14 +1044,23 @@ function updateBeheerVisibility(){
   const { data:{ session } } =
     await supabase.auth.getSession();
 
-  const user =
-    sessionUser ?? authUser ?? session?.user ?? null;
+const user =
+  sessionUser ?? authUser ?? session?.user ?? null;
 
-  currentUser = user;
+currentUser = user;
 
-  if(userError){
-    console.error('GET USER ERROR:', userError);
-  }
+if (
+  user &&
+  user.id === '13032a8d-1c16-4f80-b497-b679abf36682'
+) {
+  activeCamperId = 1;
+  console.log('FORCED CAMPER ID = 1');
+}
+
+if(userError){
+  console.error('GET USER ERROR:', userError);
+}
+
 
   console.log('USER ID:', user?.id);
 
