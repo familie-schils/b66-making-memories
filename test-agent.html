@@ -295,8 +295,8 @@ Reiskosten laden...
   
 <section id="home">
 <div class="card">
-<div class="muted">Camper</div><div class="big">Bürstner B66 TD 690 G</div>
-<div>Fiat Ducato · 140 pk · 8-traps automaat</div>
+<div class="muted">Camper</div><div class="big" id="dashboardCamperNaam">—</div>
+<div id="dashboardCamperSpecs" class="muted">—</div>
 </div>
 
 <div class="grid">
@@ -3008,6 +3008,18 @@ async function loadCamperTab(){
   if(isCamperAdmin)await loadCamperInvites();
 }
 
+function updateDashboardCamperInfo(camperData){
+  const naam=document.getElementById('dashboardCamperNaam');
+  const specs=document.getElementById('dashboardCamperSpecs');
+  if(!camperData){
+    if(naam)naam.textContent='—';
+    if(specs)specs.textContent='—';
+    return;
+  }
+  if(naam)naam.textContent=[camperData.merk,camperData.model].filter(Boolean).join(' ')||'—';
+  if(specs)specs.textContent=[camperData.basisvoertuig,camperData.motor,camperData.versnellingsbak].filter(Boolean).join(' · ')||'—';
+}
+
 async function loadCamperProfile(){
   if(!activeCamperId)return;
   const {data,error}=await supabase
@@ -3028,6 +3040,7 @@ async function loadCamperProfile(){
   setVal('camperBouwjaar',data.bouwjaar);
   setVal('camperReferenceDate',data.reference_date);
   setVal('camperReferenceKm',data.reference_km);
+  updateDashboardCamperInfo(data);
 }
 
 window.saveCamperProfile=async function(){
@@ -3058,6 +3071,7 @@ window.saveCamperProfile=async function(){
     .select();
   if(result.error){status.textContent='Opslaan mislukt: '+result.error.message;status.className='status err';return;}
   status.textContent='✓ Camperprofiel opgeslagen';status.className='status ok';
+  updateDashboardCamperInfo(payload);
 };
 
 // ── Vrienden ──────────────────────────────────────────────
