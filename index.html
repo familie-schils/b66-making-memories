@@ -44,7 +44,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </head>
 <body>
 <header>
-<h1>🚐 B66 – Making Memories</h1>
+<h1>🚐 Making Memories</h1>
 <p id="versionText">Versie laden...</p>
 </header>
 
@@ -78,13 +78,13 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <nav>
 <button data-tab="trips" class="active">Reizen</button>
 <button data-tab="fuel">⛽ Tanken</button>
-<button data-tab="reiskosten">🛣️ Reiskosten</button>
-<button data-tab="maintenance">Onderhoud</button>
 <button data-tab="home">Dashboard</button>
-<button data-tab="ontdekte-plaatsen">🗺️ Ontdekte plaatsen</button>
+<button data-tab="maintenance">Onderhoud</button>
+<button data-tab="camper">Mijn Camper</button>
+<button data-tab="reiskosten">🛣️ Reiskosten</button>
 <button data-tab="personen">👥 Personen</button>
 <button data-tab="vrienden">🤝 Vrienden</button>
-<button data-tab="camper">Mijn Camper</button>
+<button data-tab="ontdekte-plaatsen">🗺️ Ontdekte plaatsen</button>
 <button id="beheerTabButton" data-tab="beheer" class="hidden">👑 Beheer</button>
 <button onclick="logout()">Uitloggen</button>
 </nav>
@@ -164,18 +164,15 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </div>
 <br>
 <label>Voorzieningen / indruk</label><input id="sFacilities"><br><br>
-<label>Onze ervaring</label><textarea id="sNotes"></textarea><<br><br>
+<label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
 
 <label>📷 Foto's toevoegen</label>
-<input id="photoUpload" type="file" accept="image/*" multiple>
+<input id="photoUpload" type="file" accept="image/jpeg,image/png,image/webp" multiple>
 
 <div id="photoStatus" class="muted">
 Nog geen foto geselecteerd.
 </div>
   <div id="photoList"></div>
-  <button type="button" class="secondary" onclick="testUpload()">
-📤 Test foto-upload
-</button>
 <div id="activeTripInfo" class="muted"></div><br>
 <label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin-bottom:12px">
   <input id="shareWithFriends" type="checkbox"> ☑ Deel deze stop met vrienden
@@ -298,8 +295,8 @@ Reiskosten laden...
   
 <section id="home">
 <div class="card">
-<div class="muted">Camper</div><div class="big">Bürstner B66 TD 690 G</div>
-<div>Fiat Ducato · 140 pk · 8-traps automaat</div>
+<div class="muted">Camper</div><div class="big" id="dashboardCamperNaam">—</div>
+<div id="dashboardCamperSpecs" class="muted">—</div>
 </div>
 
 <div class="grid">
@@ -323,6 +320,7 @@ Reiskosten laden...
 
 <div class="card">
 <h2>🔧 Onderhoud</h2>
+<div id="maintenanceStatus" class="status hidden"></div>
 
 <div class="grid">
 
@@ -574,7 +572,7 @@ Nog geen onderhoud geregistreerd.
 </div>
 </section>
 
-<section id="beheer" class="hidden">
+<section id="beheer">
 <!--
   SQL – maak deze tabel aan in Supabase:
 
@@ -689,8 +687,9 @@ let stopNumber=1;
   const APP_VERSION =
   new Date(document.lastModified)
     .toLocaleString('nl-BE');
-
-console.log('🚐 Making Memories', APP_VERSION);
+  const PHOTO_UPLOAD_ALLOWED_TYPES=['image/jpeg','image/png','image/webp'];
+  const PHOTO_UPLOAD_MAX_FILE_SIZE_BYTES=10*1024*1024;
+  const PHOTO_UPLOAD_MAX_COUNT=10;
 
 const loginView=document.getElementById('loginView');
 const appView=document.getElementById('appView');
@@ -960,6 +959,102 @@ function getInviteCodeFromLocation(){
 }
 
 let pendingInviteData=null;
+let inviteProcessing=false;
+const PENDING_INVITE_STORAGE_KEY='b66.pendingInviteData';
+
+function storePendingInvite(invite){
+  pendingInviteData=invite||null;
+  if(!invite?.invite_code)return;
+  try{
+    localStorage.setItem(PENDING_INVITE_STORAGE_KEY,JSON.stringify({
+      invite_code:invite.invite_code,
+      type:invite.type||(invite.camper_id?'camper':'platform')
+    }));
+  }catch(error){
+    console.warn('Invite-context opslaan mislukt:', error);
+  }
+}
+
+function clearPendingInvite(){
+  pendingInviteData=null;
+  try{
+    localStorage.removeItem(PENDING_INVITE_STORAGE_KEY);
+  }catch(error){
+    console.warn('Invite-context verwijderen mislukt:', error);
+  }
+}
+
+function readStoredInvite(){
+  try{
+    const raw=localStorage.getItem(PENDING_INVITE_STORAGE_KEY);
+    if(!raw)return null;
+    const parsed=JSON.parse(raw);
+    if(!parsed||typeof parsed.invite_code!=='string'||!parsed.invite_code.trim()){
+      localStorage.removeItem(PENDING_INVITE_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  }catch(error){
+    console.warn('Invite-context lezen mislukt:', error);
+    return null;
+  }
+}
+
+async function fetchInviteByCode(inviteCode){
+  if(!inviteCode)return null;
+  const {data:camperInvite,error:camperInviteError}=await supabase
+    .from('camper_invites')
+    .select('id,camper_id,email,invite_code,used')
+    .eq('invite_code',inviteCode)
+    .maybeSingle();
+  if(!camperInviteError&&camperInvite){
+    return {type:'camper',...camperInvite};
+  }
+  const {data:platformInvite,error:platformInviteError}=await supabase
+    .from('invite_codes')
+    .select('id,email,invite_code,used')
+    .eq('invite_code',inviteCode)
+    .maybeSingle();
+  if(!platformInviteError&&platformInvite){
+    return {type:'platform',...platformInvite};
+  }
+  return null;
+}
+
+async function hydratePendingInvite(){
+  if(pendingInviteData?.invite_code)return pendingInviteData;
+  const storedInvite=readStoredInvite();
+  if(!storedInvite?.invite_code)return null;
+  const invite=await fetchInviteByCode(storedInvite.invite_code);
+  if(!invite||invite.used){
+    clearPendingInvite();
+    return null;
+  }
+  pendingInviteData=invite;
+  return invite;
+}
+
+async function maybeResumeInviteOnboarding(userId){
+  if(!userId)return false;
+  const invite=await hydratePendingInvite();
+  if(!invite)return false;
+  const {data:existingMembership,error:membershipError}=await supabase
+    .from('camper_users')
+    .select('id,camper_id')
+    .eq('user_id',userId)
+    .limit(1)
+    .maybeSingle();
+  if(membershipError){
+    console.error('Bestaande camperkoppeling controleren mislukt:', membershipError);
+    return false;
+  }
+  if(existingMembership?.camper_id!=null){
+    clearPendingInvite();
+    return false;
+  }
+  await processInvite(userId);
+  return true;
+}
 
 async function handleInviteRoute(){
   const box=document.getElementById('inviteRouteView');
@@ -968,7 +1063,6 @@ async function handleInviteRoute(){
   const formsEl=document.getElementById('inviteRouteForms');
   if(!box||!codeEl)return false;
   const inviteCode=getInviteCodeFromLocation();
-  console.log('[invite-debug] inviteCode uit URL:', inviteCode);
   if(!inviteCode){
     box.classList.add('hidden');
     codeEl.textContent='';
@@ -979,51 +1073,33 @@ async function handleInviteRoute(){
   if(statusEl)statusEl.className='status hidden';
   if(formsEl)formsEl.classList.add('hidden');
 
-  // 1. Controleer camper_invites
-  const {data:camperInvite,error:camperInviteError}=await supabase
-    .from('camper_invites')
-    .select('id,camper_id,email,invite_code,used')
-    .eq('invite_code',inviteCode)
-    .maybeSingle();
-  console.log('[invite-debug] camperInvite:', camperInvite);
-  console.log('[invite-debug] camperInviteError:', camperInviteError);
+  const inviteData=await fetchInviteByCode(inviteCode);
 
-  if(!camperInviteError&&camperInvite){
-    // 2. Gevonden in camper_invites
-    if(camperInvite.used){
+  if(inviteData?.type==='camper'){
+    if(inviteData.used){
+      clearPendingInvite();
       if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
-      console.log('[invite-debug] reden foutmelding:', 'camper_invites code is al gebruikt');
       return true;
     }
-    pendingInviteData={type:'camper',...camperInvite};
+    storePendingInvite(inviteData);
     if(formsEl)formsEl.classList.remove('hidden');
     return true;
   }
 
-  // 3. Controleer invite_codes
-  const {data:platformInvite,error:platformInviteError}=await supabase
-    .from('invite_codes')
-    .select('id,email,invite_code,used')
-    .eq('invite_code',inviteCode)
-    .maybeSingle();
-  console.log('[invite-debug] platformInvite:', platformInvite);
-  console.log('[invite-debug] platformInviteError:', platformInviteError);
-
-  if(!platformInviteError&&platformInvite){
-    // 4. Gevonden in invite_codes
-    if(platformInvite.used){
+  if(inviteData?.type==='platform'){
+    if(inviteData.used){
+      clearPendingInvite();
       if(statusEl){statusEl.textContent='Deze uitnodiging is al gebruikt.';statusEl.className='status err';}
-      console.log('[invite-debug] reden foutmelding:', 'invite_codes code is al gebruikt');
       return true;
     }
-    pendingInviteData={type:'platform',...platformInvite};
+    storePendingInvite(inviteData);
     if(formsEl)formsEl.classList.remove('hidden');
     return true;
   }
 
   // 5. Nergens gevonden
+  clearPendingInvite();
   if(statusEl){statusEl.textContent='Uitnodigingscode bestaat niet.';statusEl.className='status err';}
-  console.log('[invite-debug] reden foutmelding:', 'geen match in camper_invites en invite_codes');
   return true;
 }
 
@@ -1035,8 +1111,6 @@ function updateBeheerVisibility(){
 }
 
  async function loadCurrentCamper(sessionUser = null){
-
-  console.log('LOADCURRENTCAMPER START');
 
   const { data:{ user:authUser }, error:userError } =
     await supabase.auth.getUser();
@@ -1054,15 +1128,11 @@ if (
   user.id === '13032a8d-1c16-4f80-b497-b679abf36682'
 ) {
   activeCamperId = 1;
-  console.log('FORCED CAMPER ID = 1');
 }
 
 if(userError){
   console.error('GET USER ERROR:', userError);
 }
-
-
-  console.log('USER ID:', user?.id);
 
   if(!user){
     console.warn('Geen ingelogde gebruiker gevonden tijdens loadCurrentCamper().');
@@ -1077,9 +1147,6 @@ if(userError){
     .select('camper_id,role,user_id')
     .eq('user_id', user.id)
     .order('camper_id', { ascending:true });
-
-  console.log('CAMPER QUERY RESULT:', data);
-  console.log('CAMPER QUERY ERROR:', error);
 
   if(error){
     console.error('Camper ophalen mislukt:', error);
@@ -1104,7 +1171,6 @@ if(userError){
 } else {
   activeCamperId = activeMembership?.camper_id ?? null;
 }
-``
   currentRoleContext={
     platformRole:hasPlatformMembership?PLATFORM_ROLES.HEAD_ADMIN:PLATFORM_ROLES.USER,
     camperRole:normalizeCamperRole(activeMembership?.role),
@@ -1139,22 +1205,34 @@ if(userError){
   updateCamperRoleUI();
   renderRoleModelReport();
 
-  console.log('ACTIVE CAMPER ID:', activeCamperId);
-  console.log('LOADCURRENTCAMPER EINDE');
 }
 
  
 
 async function init(){
 const isInviteRoute=await handleInviteRoute();
+if(!isInviteRoute){
+  await hydratePendingInvite();
+}
 const {data:{session}}=await supabase.auth.getSession();
-supabase.auth.onAuthStateChange((_e,s)=>{if(!pendingInviteData)s?showApp(s.user):showLogin();});
+supabase.auth.onAuthStateChange(async(_e,s)=>{
+  if(s?.user){
+    const inviteHandled=await maybeResumeInviteOnboarding(s.user.id);
+    if(!inviteHandled)showApp(s.user);
+  }else{
+    showLogin();
+  }
+});
 if(isInviteRoute){
   loginView.classList.add('hidden');
-  if(session?.user&&pendingInviteData){
-    await processInvite(session.user.id);
+  if(session?.user){
+    const inviteHandled=await maybeResumeInviteOnboarding(session.user.id);
+    if(!inviteHandled)showApp(session.user);
   }
-}else if(session){showApp(session.user);}else{showLogin();}
+}else if(session){
+  const inviteHandled=await maybeResumeInviteOnboarding(session.user.id);
+  if(!inviteHandled)showApp(session.user);
+}else{showLogin();}
 }
 function showLogin(){
   resetRoleContext();
@@ -1172,8 +1250,6 @@ populateCountrySelects();
 
 await loadCurrentCamper(sessionUser);
 
-console.log('ACTIVE CAMPER ID IN showApp:', activeCamperId);
-
   if(!activeCamperId){
     console.warn('Geen actieve werkcamper geselecteerd; campergebonden data wordt niet geladen.');
     renderNoActiveCamperState();
@@ -1187,11 +1263,7 @@ await loadActiveTrip();
 await loadTrips();
 await loadMaintenance();
 await loadStats();
-  console.log('VOOR loadTravelCostTrips');
-
 await loadTravelCostTrips();
-
-console.log('NA loadTravelCostTrips');
 
 try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
@@ -1211,6 +1283,12 @@ if(error){box.textContent=error.message;box.classList.remove('hidden')}
 window.logout=()=>supabase.auth.signOut();
 
 async function processInvite(userId){
+  if(inviteProcessing)return;
+  inviteProcessing=true;
+  try{
+  if(!pendingInviteData){
+    await hydratePendingInvite();
+  }
   if(!pendingInviteData)return;
   const invite=pendingInviteData;
   const inviteType=invite.type||(invite.camper_id?'camper':'platform');
@@ -1243,7 +1321,7 @@ async function processInvite(userId){
       .from('camper_invites')
       .update({used:true,used_at:new Date().toISOString()})
       .eq('id',invite.id);
-    pendingInviteData=null;
+    clearPendingInvite();
     setStatus(existing?'Je had al toegang tot deze camper.':'Welkom! Je bent als camper lid gekoppeld aan deze camper.','ok');
   } else if(inviteType==='platform'){
     const {data:existing}=await supabase
@@ -1253,12 +1331,11 @@ async function processInvite(userId){
       .limit(1)
       .maybeSingle();
     if(existing?.camper_id!=null){
+      clearPendingInvite();
       setStatus('Deze platformuitnodiging is alleen bedoeld voor nieuwe gebruikers zonder bestaande camperrelatie.','err');
       return;
     }
     if(!existing){
-      console.log('SESSION', await supabase.auth.getSession());
-      console.log('USER', await supabase.auth.getUser());
       const sessionData=await supabase.auth.getUser();
       const userEmail=sessionData?.data?.user?.email||invite.email||'onbekend';
       const camperPayload={naam:'Camper van '+userEmail};
@@ -1293,12 +1370,15 @@ async function processInvite(userId){
       .from('invite_codes')
       .update({used:true,used_at:new Date().toISOString()})
       .eq('id',invite.id);
-    pendingInviteData=null;
+    clearPendingInvite();
     setStatus('Welkom! Je bent gewone gebruiker en camper admin van je eigen camper.','ok');
   }
   const formsEl=document.getElementById('inviteRouteForms');
   if(formsEl)formsEl.classList.add('hidden');
   setTimeout(()=>showApp(null),1500);
+  }finally{
+    inviteProcessing=false;
+  }
 }
 
 window.inviteRegister=async()=>{
@@ -1312,6 +1392,7 @@ window.inviteRegister=async()=>{
     return;
   }
   setStatus('Bezig met registreren...','ok');
+  if(pendingInviteData?.invite_code)storePendingInvite(pendingInviteData);
   const {data,error}=await supabase.auth.signUp({email,password:pw});
   if(error){
     console.error('[signup-flow:first-error]', {step:'supabase.auth.signUp', error});
@@ -1372,9 +1453,14 @@ showStatus('',true);
 const latest=await getLatestOdometer();
 if(latest!=null){
   document.getElementById('tStartKm').value=latest;
+  document.getElementById('tStartKm').readOnly=true;
   document.getElementById('activeTripInfo').textContent=
     'Start KM automatisch overgenomen van de hoogste bekende B66-kilometerstand: '+
     Number(latest).toLocaleString('nl-BE')+' km';
+}else{
+  document.getElementById('tStartKm').readOnly=false;
+  document.getElementById('activeTripInfo').textContent=
+    'Geen eerdere kilometerstand gevonden. Voer de huidige kilometerstand in.';
 }
 };
 
@@ -1401,9 +1487,7 @@ const startDate=v('tStartDate'),startKmText=v('tStartKm');
 if(!v('tBestuurder')||!startDate||startKmText===''){
 showStatus('Vul eerst bestuurder, startdatum en Start KM in.',false);return false}
 const startKm=Number(startKmText);
-  console.log('Actieve camper bij opslaan:', activeCamperId);
 if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige Start KM in.',false);return false}
-  console.log('Actieve camper bij opslaan:', activeCamperId);
 
 const bestuurder=v('tBestuurder');
 const passagier=v('tPassagier')||null;
@@ -1460,8 +1544,6 @@ if(error){
   showStatus('Stop opslaan mislukt: '+error.message,false);
   return;
   }
-  console.log('Nieuwe stop:', data);
-console.log('TEST SAVE STOP');
   const uploads = await uploadPhotos();
 
 for(const foto of uploads){
@@ -1500,8 +1582,6 @@ if(!currentStopSaved){
   return;
 }
 const lastKm = document.getElementById('sKm').value;
-
-console.log('LAATSTE KM:', lastKm);
 
 stopNumber++;
 
@@ -1600,12 +1680,15 @@ function clearStopFields(){
   document.getElementById('sType').value='Camperplaats';
   document.getElementById('sDate').value=today();
   document.getElementById('shareWithFriends').checked=false;
+  resetPhotoSelection();
 }
 function cancelTrip(){
-
+  activeTripId=null;
+  stopNumber=1;
+  currentStopSaved=false;
+  resetPhotoSelection();
   document.getElementById('tripForm').classList.add('hidden');
   document.getElementById('tripChooser').classList.remove('hidden');
-
 }
 function showStatus(text,ok){
 const el=document.getElementById('tripStatus');
@@ -1627,11 +1710,6 @@ async function loadPersonOptions(){
 }
  async function loadActiveTrip(){
 
-  console.log('LOAD ACTIVE TRIP GESTART');
-   console.log('Zoeken naar actieve reis voor camper:', activeCamperId);
-
-
-
   const { data, error } = await supabase
   .from('reizen')
   .select('*')
@@ -1641,12 +1719,8 @@ async function loadPersonOptions(){
   .limit(1)
   .maybeSingle();
 
-  console.log('Actieve reis data:', data);
-  console.log('Actieve reis error:', error);
-
  if(error){
   if(error.code === 'PGRST116'){
-    console.log('Geen actieve reis gevonden');
     return;
   }
 
@@ -1701,9 +1775,6 @@ document.getElementById('activeTripInfo').textContent =
 }
 async function loadTrips(){
 const list=document.getElementById('tripList');list.textContent='Reizen laden...';
-  console.log('Filter op camper:', activeCamperId);
-console.log('Filter op camper:', activeCamperId);
-
 if (!activeCamperId) {
   console.warn('Geen actieve camper beschikbaar');
   return;
@@ -1714,7 +1785,6 @@ const {data:trips,error}=await supabase
   .eq('camper_id', activeCamperId)
   .order('datum',{ascending:false});
 
-console.log('Gevonden reizen:', trips);
 if(error){list.textContent='Laden mislukt: '+error.message;list.className='status err';return}
 if(!trips.length){list.innerHTML='<div class="muted">Nog geen reizen. Start jullie eerste reis!</div>';return}
 
@@ -1742,7 +1812,7 @@ const eindDatum=t.einddatum||new Date().toISOString().slice(0,10);
 const [{data:stops},{data:reiskosten},{data:tankbeurten}]=await Promise.all([
   supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde'),
   supabase.from('reiskosten').select('*').eq('reis_id',id).order('datum'),
-  supabase.from('tankbeurten').select('datum,liters,prijs_per_liter,totaalbedrag,brandstof_type,locatie,land').gte('datum',t.datum).lte('datum',eindDatum).order('datum')
+  supabase.from('tankbeurten').select('datum,liters,prijs_per_liter,totaalbedrag,brandstof_type,locatie,land').eq('camper_id',activeCamperId).gte('datum',t.datum).lte('datum',eindDatum).order('datum')
 ]);
 const stopIds=(stops||[]).map(s=>s.id);
 const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
@@ -1878,7 +1948,7 @@ detail.scrollIntoView({behavior:'smooth'});
 
 async function getLatestOdometer(){
   const [{data:trips},{data:tanks}]=await Promise.all([
-    supabase.from('reizen').select('start_km,eind_km').order('eind_km',{ascending:false}).limit(1000),
+    supabase.from('reizen').select('start_km,eind_km').eq('camper_id',activeCamperId).order('eind_km',{ascending:false}).limit(1000),
     supabase.from('tankbeurten')
   .select('*')
   .eq('camper_id', activeCamperId)
@@ -1895,7 +1965,7 @@ async function getLatestOdometer(){
 
 async function getFirstOdometer(){
   const [{data:trips},{data:tanks}]=await Promise.all([
-    supabase.from('reizen').select('start_km,eind_km').limit(1000),
+    supabase.from('reizen').select('start_km,eind_km').eq('camper_id',activeCamperId).limit(1000),
     supabase.from('tankbeurten').select('kmstand').limit(1000)
   ]);
   const kms=[];
@@ -1970,8 +2040,6 @@ window.addFuel=async()=>{
     status.textContent='De KM-stand moet hoger zijn dan de vorige tankbeurt.';
     status.className='status err';return;
   }
-console.log('Camper bij tanken:', activeCamperId);
-  
   const {error}=await supabase.from('tankbeurten').insert({
   datum,
   kmstand:km,
@@ -2072,15 +2140,11 @@ async function loadFuel(){
 }
 
 async function loadStats(){
- const [{data:trips},{data:stops},{data:tanks}]=await Promise.all([
+ const [{data:trips},{data:tanks}]=await Promise.all([
   supabase
     .from('reizen')
     .select('id,start_km,eind_km,einddatum')
     .eq('camper_id', activeCamperId),
-
-  supabase
-    .from('reis_stops')
-    .select('id'),
 
   supabase
     .from('tankbeurten')
@@ -2088,7 +2152,13 @@ async function loadStats(){
     .eq('camper_id', activeCamperId)
 ]);
 
-  const tripRows=trips||[], stopRows=stops||[], tankRows=tanks||[];
+  const tripRows=trips||[], tankRows=tanks||[];
+  const tripIds=tripRows.map(x=>x.id);
+  let stopRows=[];
+  if(tripIds.length){
+    const {data:stops}=await supabase.from('reis_stops').select('id').in('reis_id',tripIds);
+    stopRows=stops||[];
+  }
   document.getElementById('tripCount').textContent=tripRows.filter(x=>x.einddatum).length;
   document.getElementById('stopCount').textContent=stopRows.length;
 
@@ -2134,6 +2204,7 @@ async function loadStats(){
 
   const recent=await supabase.from('reis_stops')
     .select('camperplaats,datum,land')
+    .in('reis_id',tripIds.length?tripIds:[-1])
     .order('datum',{ascending:false}).limit(3);
 
   document.getElementById('recent').innerHTML=(recent.data||[]).map(x=>
@@ -2412,43 +2483,99 @@ if(b.dataset.tab==='camper'){
 });
 const photoUpload = document.getElementById('photoUpload');
 
+function setPhotoStatus(message,isError=false){
+  const photoStatus=document.getElementById('photoStatus');
+  if(!photoStatus)return;
+  photoStatus.textContent=message;
+  photoStatus.className=isError?'status err':'muted';
+}
+
+function renderPhotoList(photos){
+  const photoList=document.getElementById('photoList');
+  if(!photoList)return;
+  if(!photos?.length){
+    photoList.innerHTML='';
+    return;
+  }
+  photoList.innerHTML=photos
+    .map(photo=>`<div>📸 ${esc(photo.name)}</div>`)
+    .join('');
+}
+
+function resetPhotoSelection(){
+  selectedPhotos=[];
+  if(photoUpload){
+    photoUpload.value='';
+  }
+  setPhotoStatus('Nog geen foto geselecteerd.');
+  renderPhotoList([]);
+}
+
+function validateSelectedPhotos(files){
+  if(!files?.length){
+    return {valid:true,files:[]};
+  }
+  const errors=[];
+  if(files.length>PHOTO_UPLOAD_MAX_COUNT){
+    errors.push(`Je kan maximaal ${PHOTO_UPLOAD_MAX_COUNT} foto's per stop uploaden.`);
+  }
+  for(const file of files){
+    if(!PHOTO_UPLOAD_ALLOWED_TYPES.includes(file.type)){
+      errors.push(`Bestand "${file.name}" is geen toegelaten afbeelding (JPEG, PNG of WEBP).`);
+      continue;
+    }
+    if(file.size>PHOTO_UPLOAD_MAX_FILE_SIZE_BYTES){
+      errors.push(`Bestand "${file.name}" is groter dan 10 MB.`);
+    }
+  }
+  if(errors.length){
+    return {valid:false,errors};
+  }
+  return {valid:true,files};
+}
+
 if (photoUpload) {
 
   photoUpload.addEventListener('change', function () {
-
-    selectedPhotos = [...this.files];
-
-    const photoStatus = document.getElementById('photoStatus');
-
-    if(selectedPhotos.length === 0){
-      photoStatus.textContent = 'Nog geen foto geselecteerd.';
+    const files=Array.from(this?.files||[]);
+    if(files.length===0){
+      selectedPhotos=[];
+      setPhotoStatus('Nog geen foto geselecteerd.');
+      renderPhotoList([]);
       return;
     }
 
-    photoStatus.textContent =
-  selectedPhotos.length + ' foto(s) geselecteerd';
+    const validation=validateSelectedPhotos(files);
+    if(!validation.valid){
+      selectedPhotos=[];
+      setPhotoStatus(validation.errors.join(' '),true);
+      renderPhotoList([]);
+      this.value='';
+      return;
+    }
 
-const photoList = document.getElementById('photoList');
-
-photoList.innerHTML = selectedPhotos
-  .map(photo => `<div>📸 ${photo.name}</div>`)
-  .join('');
-
+    selectedPhotos=validation.files;
+    setPhotoStatus(selectedPhotos.length+' foto(s) geselecteerd');
+    renderPhotoList(selectedPhotos);
   });
 
 }
 async function uploadPhotos() {
 
-  if(selectedPhotos.length === 0){
+  if(!selectedPhotos?.length){
     return [];
   }
-
+  const validation=validateSelectedPhotos(selectedPhotos);
+  if(!validation.valid){
+    setPhotoStatus(validation.errors.join(' '),true);
+    return [];
+  }
   const uploadedUrls = [];
 
-  for(const photo of selectedPhotos){
+  for(const photo of validation.files){
 
-    const filename =
-      Date.now() + '_' + photo.name.replaceAll(' ','_');
+    const extension=photo.name.includes('.')?'.'+photo.name.split('.').pop():'';
+    const filename = crypto.randomUUID()+extension;
 
     const { error } = await supabase.storage
       .from('fotos')
@@ -2456,17 +2583,22 @@ async function uploadPhotos() {
 
     if(error){
   console.error('Upload mislukt:', error);
-  alert('Upload mislukt: ' + error.message);
+  setPhotoStatus('Upload mislukt: ' + error.message,true);
   continue;
 }
 
     const { data } = supabase.storage
   .from('fotos')
   .getPublicUrl(filename);
+    const publicUrl=data?.publicUrl;
+    if(!publicUrl){
+      console.error('Public URL ophalen mislukt voor:', filename);
+      continue;
+    }
 
 uploadedUrls.push({
   naam: photo.name,
-  url: data.publicUrl
+  url: publicUrl
 });
 }
 
@@ -2476,11 +2608,7 @@ window.testUpload = async function(){
 
   const uploads = await uploadPhotos();
 
-  console.log('Uploads:', uploads);
-
-  document.getElementById('photoStatus').textContent =
-    uploads.length + ' foto(s) geüpload';
-
+  setPhotoStatus(uploads.length + ' foto(s) geüpload');
 };
 
 const maintenanceOptions = {
@@ -2557,12 +2685,38 @@ document.querySelectorAll('.maintenanceCheck')
   });
 document.getElementById('saveMaintenanceBtn')
   .addEventListener('click', async function(){
+  const status=document.getElementById('maintenanceStatus');
+  function setMaintenanceStatus(message,isOk){
+    if(!status)return;
+    if(!message){
+      status.className='status hidden';
+      status.textContent='';
+      return;
+    }
+    status.textContent=message;
+    status.className='status '+(isOk?'ok':'err');
+  }
+  function resetMaintenanceForm(){
+    document.getElementById('mCategory').value='';
+    document.getElementById('mDate').value='';
+    document.getElementById('mKm').value='';
+    document.getElementById('mCost').value='';
+    document.getElementById('mPerformer').value='';
+    document.getElementById('mNotes').value='';
+    const overig=document.getElementById('otherMaintenanceText');
+    if(overig)overig.value='';
+    document.querySelectorAll('.maintenanceCheck').forEach(cb=>{cb.checked=false;});
+    const overigBox=document.getElementById('otherMaintenanceBox');
+    if(overigBox)overigBox.style.display='none';
+    loadMaintenanceOptions();
+  }
+  setMaintenanceStatus('',false);
 
   const category =
     document.getElementById('mCategory').value;
 
   if(!category){
-    alert('Kies eerst een categorie.');
+    setMaintenanceStatus('Kies eerst een categorie.',false);
     return;
   }
 
@@ -2600,13 +2754,14 @@ document.getElementById('saveMaintenanceBtn')
     });
 
   if(error){
-    alert('Opslaan mislukt: ' + error.message);
+    setMaintenanceStatus('Opslaan mislukt: '+error.message,false);
     console.error(error);
     return;
   }
 
-  alert('✅ Onderhoud opgeslagen');
-    await loadMaintenance();
+  setMaintenanceStatus('✅ Onderhoud opgeslagen',true);
+  resetMaintenanceForm();
+  await loadMaintenance();
     });
 async function loadMaintenance(){
 
@@ -2669,9 +2824,6 @@ async function loadTravelCosts(){
   .order('datum', { ascending:false });
    
 
-  console.log('REISKOSTEN:', data);
-  console.log('ERROR:', error);
-
   if(error){
     box.innerHTML = error.message;
     return;
@@ -2710,12 +2862,8 @@ box.innerHTML = data.map(x => `
 
 async function loadTravelCostTrips(){
 
-  console.log('loadTravelCostTrips gestart');
-
   const select =
     document.getElementById('costTrip');
-
-  console.log('SELECT:', select);
 
   if(!select) return;
 
@@ -2735,8 +2883,6 @@ async function loadTravelCostTrips(){
     return;
   }
 
-  console.log('REISKOSTEN DROPDOWN:', data);
-
   select.innerHTML = (data || [])
     .map(x => `
       <option value="${x.id}">
@@ -2744,10 +2890,8 @@ async function loadTravelCostTrips(){
       </option>
     `)
     .join('');
-  console.log('REISKOSTEN DROPDOWN:', data);
-console.log('Aantal opties:', select.options.length);
 }
-window.saveTravelCost = async function(){console.log('SAVE GESTART');
+window.saveTravelCost = async function(){
 
   const reisId = Number(
     document.getElementById('costTrip').value
@@ -2766,16 +2910,6 @@ window.saveTravelCost = async function(){console.log('SAVE GESTART');
     alert('Vul een geldig bedrag in.');
     return;
   }
-console.log({
-  reis_id: reisId,
-  camper_id: activeCamperId,
-  datum: document.getElementById('costDate').value,
-  type_kost: document.getElementById('costType').value,
-  land: document.getElementById('costCountry').value,
-  bedrag: bedrag,
-  opmerking: document.getElementById('costNote').value
-});
-
   const { error } = await supabase
     .from('reiskosten')
     .insert({
@@ -2799,14 +2933,18 @@ console.log({
         document.getElementById('costNote').value
 
     });
-console.log('SUPABASE ERROR:', error);
-
 if(error){
   alert(error.message);
   return;
 }
 
 await loadTravelCosts();
+  document.getElementById('costTrip').selectedIndex=0;
+  document.getElementById('costDate').value='';
+  document.getElementById('costType').selectedIndex=0;
+  document.getElementById('costCountry').selectedIndex=0;
+  document.getElementById('costAmount').value='';
+  document.getElementById('costNote').value='';
 
 alert('✅ Reiskosten opgeslagen');
 
@@ -2985,6 +3123,18 @@ async function loadCamperTab(){
   if(isCamperAdmin)await loadCamperInvites();
 }
 
+function updateDashboardCamperInfo(camperData){
+  const naam=document.getElementById('dashboardCamperNaam');
+  const specs=document.getElementById('dashboardCamperSpecs');
+  if(!camperData){
+    if(naam)naam.textContent='—';
+    if(specs)specs.textContent='—';
+    return;
+  }
+  if(naam)naam.textContent=[camperData.merk,camperData.model].filter(Boolean).join(' ')||'—';
+  if(specs)specs.textContent=[camperData.basisvoertuig,camperData.motor,camperData.versnellingsbak].filter(Boolean).join(' · ')||'—';
+}
+
 async function loadCamperProfile(){
   if(!activeCamperId)return;
   const {data,error}=await supabase
@@ -3005,6 +3155,7 @@ async function loadCamperProfile(){
   setVal('camperBouwjaar',data.bouwjaar);
   setVal('camperReferenceDate',data.reference_date);
   setVal('camperReferenceKm',data.reference_km);
+  updateDashboardCamperInfo(data);
 }
 
 window.saveCamperProfile=async function(){
@@ -3035,6 +3186,7 @@ window.saveCamperProfile=async function(){
     .select();
   if(result.error){status.textContent='Opslaan mislukt: '+result.error.message;status.className='status err';return;}
   status.textContent='✓ Camperprofiel opgeslagen';status.className='status ok';
+  updateDashboardCamperInfo(payload);
 };
 
 // ── Vrienden ──────────────────────────────────────────────
@@ -3250,6 +3402,14 @@ window.loadOntdektePlaatsen=async function(){
 
   const stopIds=stops.map(s=>s.id);
   const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
+  const {data:profiles}=await supabase
+    .from('profiles')
+    .select('user_id,display_name,email')
+    .in('user_id',friendUserIds);
+  const profileMap={};
+  (profiles||[]).forEach(p=>{
+    profileMap[p.user_id]=p.display_name||p.email||null;
+  });
 
   const reisMap={};
   (reizen||[]).forEach(r=>reisMap[r.id]=r.camper_id);
@@ -3259,7 +3419,7 @@ window.loadOntdektePlaatsen=async function(){
   stops.forEach(s=>{
     const camperId=reisMap[s.reis_id];
     const userId=camperId?camperUserMap[camperId]:null;
-    eigenaarMap[s.reis_id]=userId?userId.slice(0,8)+'…':'Onbekend';
+    eigenaarMap[s.reis_id]=userId?(profileMap[userId]||userId.slice(0,8)+'…'):'Onbekend';
   });
 
   _ontdektePlaatsenData={stops,fotos:fotos||[],eigenaarMap};
