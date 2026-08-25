@@ -1453,9 +1453,14 @@ showStatus('',true);
 const latest=await getLatestOdometer();
 if(latest!=null){
   document.getElementById('tStartKm').value=latest;
+  document.getElementById('tStartKm').readOnly=true;
   document.getElementById('activeTripInfo').textContent=
     'Start KM automatisch overgenomen van de hoogste bekende B66-kilometerstand: '+
     Number(latest).toLocaleString('nl-BE')+' km';
+}else{
+  document.getElementById('tStartKm').readOnly=false;
+  document.getElementById('activeTripInfo').textContent=
+    'Geen eerdere kilometerstand gevonden. Voer de huidige kilometerstand in.';
 }
 };
 
