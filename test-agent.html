@@ -1567,6 +1567,7 @@ function clearStopFields(){
   document.getElementById('sType').value='Camperplaats';
   document.getElementById('sDate').value=today();
   document.getElementById('shareWithFriends').checked=false;
+  resetPhotoSelection();
 }
 function cancelTrip(){
 
@@ -2383,6 +2384,15 @@ function renderPhotoList(photos){
     .join('');
 }
 
+function resetPhotoSelection(){
+  selectedPhotos=[];
+  if(photoUpload){
+    photoUpload.value='';
+  }
+  setPhotoStatus('Nog geen foto geselecteerd.');
+  renderPhotoList([]);
+}
+
 function validateSelectedPhotos(files){
   if(!files?.length){
     return {valid:true,files:[]};
@@ -2446,8 +2456,8 @@ async function uploadPhotos() {
 
   for(const photo of validation.files){
 
-    const filename =
-      Date.now() + '_' + photo.name.replaceAll(' ','_');
+    const extension=photo.name.includes('.')?'.'+photo.name.split('.').pop():'';
+    const filename = crypto.randomUUID()+extension;
 
     const { error } = await supabase.storage
       .from('fotos')
@@ -2455,7 +2465,7 @@ async function uploadPhotos() {
 
     if(error){
   console.error('Upload mislukt:', error);
-  alert('Upload mislukt: ' + error.message);
+  setPhotoStatus('Upload mislukt: ' + error.message,true);
   continue;
 }
 
