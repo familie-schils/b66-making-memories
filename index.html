@@ -72,19 +72,32 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <label>E-mailadres</label><input id="email" type="email"><br><br>
 <label>Wachtwoord</label><input id="password" type="password"><br><br>
 <button class="primary" onclick="login()">Inloggen</button>
+<br><a href="#" onclick="toggleForgot(event)" style="font-size:13px;color:#66717d;margin-top:10px;display:inline-block;">Wachtwoord vergeten?</a>
+<div id="forgotSection" class="hidden" style="margin-top:12px;">
+  <div id="forgotMsg" class="status hidden"></div>
+  <label>E-mailadres</label><input id="forgotEmail" type="email"><br><br>
+  <button class="primary" onclick="forgotPassword()">Verstuur resetlink</button>
+</div>
+</div>
+
+<div id="resetPasswordView" class="card login hidden">
+<h2>Nieuw wachtwoord instellen</h2>
+<div id="resetMsg" class="status hidden"></div>
+<label>Nieuw wachtwoord</label><input id="newPassword" type="password"><br><br>
+<button class="primary" onclick="updatePassword()">Wachtwoord opslaan</button>
 </div>
 
 <div id="appView" class="hidden">
 <nav>
 <button data-tab="trips" class="active">Reizen</button>
 <button data-tab="fuel">⛽ Tanken</button>
-<button data-tab="reiskosten">🛣️ Reiskosten</button>
-<button data-tab="maintenance">Onderhoud</button>
 <button data-tab="home">Dashboard</button>
-<button data-tab="ontdekte-plaatsen">🗺️ Ontdekte plaatsen</button>
+<button data-tab="maintenance">Onderhoud</button>
 <button data-tab="camper">Mijn Camper</button>
+<button data-tab="reiskosten">🛣️ Reiskosten</button>
 <button data-tab="personen">👥 Personen</button>
 <button data-tab="vrienden">🤝 Vrienden</button>
+<button data-tab="ontdekte-plaatsen">🗺️ Ontdekte plaatsen</button>
 <button id="beheerTabButton" data-tab="beheer" class="hidden">👑 Beheer</button>
 <button onclick="logout()">Uitloggen</button>
 </nav>
@@ -164,6 +177,10 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </div>
 <br>
 <label>Voorzieningen / indruk</label><input id="sFacilities"><br><br>
+<div class="grid">
+<div><label>Regio <span class="muted" style="font-weight:normal">(optioneel)</span></label><input id="sRegio" list="regioSuggesties" placeholder="Bijv. Ardennen, Moezel, Eifel" autocomplete="off" oninput="filterRegioSuggesties(this)"><datalist id="regioSuggesties"></datalist></div>
+<div><label>Referentie <span class="muted" style="font-weight:normal">(optioneel)</span></label><input id="sReferentie" placeholder="Bijv. NKC 12345, ACSI 67890"></div>
+</div><br>
 <label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
 
 <label>📷 Foto's toevoegen</label>
@@ -175,7 +192,7 @@ Nog geen foto geselecteerd.
   <div id="photoList"></div>
 <div id="activeTripInfo" class="muted"></div><br>
 <label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin-bottom:12px">
-  <input id="shareWithFriends" type="checkbox"> ☑ Deel deze stop met vrienden
+  <input id="shareWithFriends" type="checkbox"> ☑ Deze stop niet delen met vrienden
 </label>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
@@ -451,12 +468,15 @@ Nog geen onderhoud geregistreerd.
 <section id="ontdekte-plaatsen">
 <div class="card">
 <h2>🗺️ Ontdekte plaatsen</h2>
-<p class="muted">Stops die jouw vrienden met je hebben gedeeld.</p>
+<p class="muted">Jouw eigen stops en stops die vrienden met je hebben gedeeld.</p>
 
 <div class="grid">
   <div><label>Filter op land</label><select id="opLand" onchange="filterOntdektePlaatsen()"><option value="">— Alle landen —</option></select></div>
+  <div><label>Filter op regio</label><input id="opRegio" list="opRegioSuggesties" placeholder="Bijv. Ardennen, Moezel" autocomplete="off" oninput="filterOpRegioSuggesties(this);filterOntdektePlaatsen()"><datalist id="opRegioSuggesties"></datalist></div>
   <div><label>Filter op plaats</label><input id="opPlaats" placeholder="Bijv. Gent" oninput="filterOntdektePlaatsen()"></div>
   <div><label>Filter op camperplaats</label><input id="opCamperplaats" placeholder="Bijv. Camping Les Pins" oninput="filterOntdektePlaatsen()"></div>
+  <div><label>Filter op opmerking</label><input id="opOpmerking" placeholder="Zoek in ervaring / opmerkingen" oninput="filterOntdektePlaatsen()"></div>
+  <div><label>Filter op referentie</label><input id="opReferentie" placeholder="Bijv. NKC 12345" oninput="filterOntdektePlaatsen()"></div>
 </div>
 <br>
 <hr>
@@ -725,6 +745,40 @@ const CAMPER_COUNTRIES=[
   'Turkije'
 ];
 
+const CAMPER_REGIO=[
+  'Ardennen','Moezel','Eifel','Elzas','Lotharingen','Sauerland','Hunsrück',
+  'Taunus','Harz','Zwarte Woud','Beieren','Allgäu','Berchtesgaden',
+  'Beierse Alpen','Dolomiten','Toscane','Umbrië','Ligurië','Riviera',
+  'Côte d\'Azur','Provence','Languedoc','Bretagne','Normandië','Loire',
+  'Dordogne','Lot','Auvergne','Cevennen','Pyreneeën','Camargue','Corsica',
+  'Venetie','Trentino','Zuid-Tirol','Slovenië','Dolomieten','Istrie',
+  'Dalmatische kust','Kroatische eilanden','Plitvice','Triglav',
+  'Eifelkreis','Moselvallei','Rijnvallei','Rijnland','Palts','Westerwald',
+  'Teutoburger Woud','Mecklenburg','Rügen','Usedom','Borkum','Sylt',
+  'Denemarken Noord','Denemarken Zuid','Jutland','Funen','Seeland',
+  'Noorwegen Fjorden','Noorwegen Noord','Hardangerfjord','Geirangerfjord',
+  'Lofoten','Vesterålen','Zweden Midden','Zweden Noord','Zweden Zuid',
+  'Dalarna','Lapland','Gotland','Öland','Schotland Hooglanden','Schotland Eilanden',
+  'Engeland Cotswolds','Engeland Lake District','Wales','Cornwall',
+  'Ierland Westkust','Ring of Kerry','Cliffs of Moher',
+  'Oostenrijkse Alpen','Karinthië','Stiermarken','Tirol','Salzburgerland',
+  'Salzkammergut','Wachau','Burgenland',
+  'Zwitserland Centraal','Jura','Wallis','Graubünden','Ticino','Berner Oberland',
+  'Spanje Noord','Asturië','Galicië','Baskenland','Catalonië','Aragon',
+  'Navarra','La Rioja','Castilië','Extramadura','Andalusië','Costa Brava',
+  'Costa Dorada','Costa Blanca','Costa del Sol','Costa de la Luz',
+  'Portugal Algarve','Portugal Alentejo','Portugal Midden','Portugal Noord',
+  'Griekenland Peloponnesos','Griekenland Noord','Thessalië','Epirus',
+  'Ionische eilanden','Kreta','Lesbos','Rhodes','Corfu',
+  'Tsjechië Bohemen','Tsjechië Moravië','Slowakije Tatra','Polen Mazurië',
+  'Polen Tatra','Hongarije Balaton','Roemenië Transsylvanië',
+  'Bulgarije Zwarte Zeekust','Turkije Egeïsche kust','Turkije Middellandse Zeekust',
+  'Vlaamse Kust','Zeeland','West-Vlaanderen','Oost-Vlaanderen','Antwerpen',
+  'Limburg BE','Zuid-Limburg NL','Noord-Limburg NL','Veluwe','Achterhoek',
+  'Utrechtse Heuvelrug','Friesland','Groningen','Drenthe','Overijssel',
+  'Noord-Holland','Zuid-Holland','Zeeuws-Vlaanderen','Brabant','Luxemburg Ardennen'
+];
+
 function populateCountrySelects(){
   const options=
     '<option value="">— kies land —</option>'+
@@ -744,6 +798,26 @@ function populateCountrySelects(){
       CAMPER_COUNTRIES.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
   }
 }
+
+window.filterRegioSuggesties=function(input){
+  const val=(input.value||'').trim();
+  const dl=document.getElementById('regioSuggesties');
+  if(!dl)return;
+  if(val.length<3){dl.innerHTML='';return;}
+  const lc=val.toLowerCase();
+  const matches=CAMPER_REGIO.filter(r=>r.toLowerCase().includes(lc)).slice(0,10);
+  dl.innerHTML=matches.map(r=>`<option value="${esc(r)}">`).join('');
+};
+
+window.filterOpRegioSuggesties=function(input){
+  const val=(input.value||'').trim();
+  const dl=document.getElementById('opRegioSuggesties');
+  if(!dl)return;
+  if(val.length<3){dl.innerHTML='';return;}
+  const lc=val.toLowerCase();
+  const matches=CAMPER_REGIO.filter(r=>r.toLowerCase().includes(lc)).slice(0,10);
+  dl.innerHTML=matches.map(r=>`<option value="${esc(r)}">`).join('');
+};
 
 function createEmptyRoleContext(){
   return {
@@ -1216,7 +1290,13 @@ if(!isInviteRoute){
 }
 const {data:{session}}=await supabase.auth.getSession();
 supabase.auth.onAuthStateChange(async(_e,s)=>{
+  if(_e==='PASSWORD_RECOVERY'){
+    loginView.classList.add('hidden');
+    document.getElementById('resetPasswordView').classList.remove('hidden');
+    return;
+  }
   if(s?.user){
+    document.getElementById('resetPasswordView').classList.add('hidden');
     const inviteHandled=await maybeResumeInviteOnboarding(s.user.id);
     if(!inviteHandled)showApp(s.user);
   }else{
@@ -1273,6 +1353,24 @@ await loadFuel();
   await loadCamperMembers();
 }
 
+window.toggleForgot=function(e){e.preventDefault();document.getElementById('forgotSection').classList.toggle('hidden');};
+window.forgotPassword=async function(){
+  const box=document.getElementById('forgotMsg');
+  box.classList.remove('ok','err');
+  const email=document.getElementById('forgotEmail').value.trim();
+  if(!email){box.textContent='Vul een e-mailadres in.';box.className='status err';return;}
+  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  if(error&&error.status!==429){box.textContent='Er is een fout opgetreden. Probeer het later opnieuw.';box.className='status err';}
+  else{box.textContent='Als dit e-mailadres bestaat, is een resetlink verzonden.';box.className='status ok';}
+};
+window.updatePassword=async function(){
+  const box=document.getElementById('resetMsg');
+  const pw=document.getElementById('newPassword').value;
+  if(!pw||pw.length<6){box.textContent='Wachtwoord moet minimaal 6 tekens bevatten.';box.className='status err';return;}
+  const {error}=await supabase.auth.updateUser({password:pw});
+  if(error){box.textContent='Opslaan mislukt: '+error.message;box.className='status err';}
+  else{box.textContent='Wachtwoord opgeslagen! Je wordt ingelogd...';box.className='status ok';}
+};
 window.login=async()=>{
 const box=document.getElementById('loginError');box.classList.add('hidden');
 const {error}=await supabase.auth.signInWithPassword({
@@ -1527,7 +1625,9 @@ prijs_per_nacht:v('sPrice')?Number(v('sPrice')):null,
 beoordeling:Number(v('sRating')),
 voorzieningen:v('sFacilities'),
 ervaring:v('sNotes'),
-gedeeld_met_vrienden:document.getElementById('shareWithFriends').checked
+regio:v('sRegio')||null,
+referentie:v('sReferentie')||null,
+gedeeld_met_vrienden:!document.getElementById('shareWithFriends').checked
 };
 
 if(!stop.camperplaats){
@@ -1671,6 +1771,8 @@ function clearStopFields(){
     'sKm',
     'sPrice',
     'sFacilities',
+    'sRegio',
+    'sReferentie',
     'sNotes'
   ].forEach(id =>
     document.getElementById(id).value=''
@@ -3232,7 +3334,7 @@ window.addVriend=async function(){
   if(!user)return;
   const friendEmail=document.getElementById('vriendenEmail').value.trim().toLowerCase();
   if(!friendEmail){status.textContent='Vul een e-mailadres in.';status.className='status err';return;}
-  if(friendEmail===user.email){
+  if(friendEmail===String(user.email||'').trim().toLowerCase()){
     status.textContent='Je kunt jezelf niet toevoegen.';
     status.className='status err';return;
   }
@@ -3245,20 +3347,43 @@ window.addVriend=async function(){
   if(profileErr){status.textContent='Fout bij zoeken: '+esc(profileErr.message);status.className='status err';return;}
   if(!profileData){status.textContent='Geen gebruiker gevonden met dit e-mailadres.';status.className='status err';return;}
   const friendUserId=profileData.user_id;
-  // Controleer of al bevriend
-  const {data:bestaand,error:bestaandErr}=await supabase
-    .from('friends')
-    .select('id')
-    .eq('user_id',user.id)
-    .eq('friend_user_id',friendUserId)
-    .maybeSingle();
-  if(bestaandErr){status.textContent='Fout bij controleren: '+esc(bestaandErr.message);status.className='status err';return;}
-  if(bestaand){status.textContent='Deze gebruiker staat reeds in je vriendenlijst.';status.className='status err';return;}
-  const {error}=await supabase
-    .from('friends')
-    .insert({user_id:user.id,friend_user_id:friendUserId});
-  if(error){status.textContent='Opslaan mislukt: '+esc(error.message);status.className='status err';return;}
-  status.textContent='✓ Vriend toegevoegd.';status.className='status ok';
+  // Controleer beide richtingen (A->B en B->A)
+  const [
+    {data:relatieAB,error:abErr},
+    {data:relatieBA,error:baErr}
+  ]=await Promise.all([
+    supabase
+      .from('friends')
+      .select('id')
+      .eq('user_id',user.id)
+      .eq('friend_user_id',friendUserId)
+      .maybeSingle(),
+    supabase
+      .from('friends')
+      .select('id')
+      .eq('user_id',friendUserId)
+      .eq('friend_user_id',user.id)
+      .maybeSingle()
+  ]);
+  if(abErr||baErr){
+    status.textContent='Fout bij controleren: '+esc(abErr?.message||baErr?.message||'Onbekende fout');
+    status.className='status err';
+    return;
+  }
+  const ontbrekendeRelaties=[];
+  if(!relatieAB)ontbrekendeRelaties.push({user_id:user.id,friend_user_id:friendUserId});
+  if(!relatieBA)ontbrekendeRelaties.push({user_id:friendUserId,friend_user_id:user.id});
+  if(ontbrekendeRelaties.length===0){
+    status.textContent='Deze gebruiker staat reeds wederzijds in jullie vriendenlijst.';
+    status.className='status err';
+    return;
+  }
+  for(const relatie of ontbrekendeRelaties){
+    const {error:insErr}=await supabase.from('friends').insert(relatie);
+    if(insErr){status.textContent='Opslaan mislukt: '+esc(insErr.message);status.className='status err';return;}
+  }
+  status.textContent=ontbrekendeRelaties.length===2?'✓ Vriendschap wederzijds toegevoegd.':'✓ Vriendschap wederzijds bijgewerkt.';
+  status.className='status ok';
   document.getElementById('vriendenEmail').value='';
   await loadVrienden();
 };
@@ -3274,13 +3399,19 @@ window.removeVriend=async function(id){
 function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
   const box=document.getElementById('ontdektePlaatsenList');
   const filterLand=document.getElementById('opLand').value;
+  const filterRegio=(document.getElementById('opRegio').value||'').trim().toLowerCase();
   const filterPlaats=document.getElementById('opPlaats').value.trim().toLowerCase();
   const filterCamper=document.getElementById('opCamperplaats').value.trim().toLowerCase();
+  const filterOpmerking=(document.getElementById('opOpmerking').value||'').trim().toLowerCase();
+  const filterRef=(document.getElementById('opReferentie').value||'').trim().toLowerCase();
   let filtered=stops;
   if(filterLand)filtered=filtered.filter(s=>s.land===filterLand);
+  if(filterRegio)filtered=filtered.filter(s=>(s.regio||'').toLowerCase().includes(filterRegio));
   if(filterPlaats)filtered=filtered.filter(s=>(s.camperplaats||'').toLowerCase().includes(filterPlaats));
   if(filterCamper)filtered=filtered.filter(s=>(s.camperplaats||'').toLowerCase().includes(filterCamper));
-  if(!filtered.length){box.innerHTML='<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';return;}
+  if(filterOpmerking)filtered=filtered.filter(s=>(s.ervaring||'').toLowerCase().includes(filterOpmerking));
+  if(filterRef)filtered=filtered.filter(s=>(s.referentie||'').toLowerCase().includes(filterRef));
+  if(!filtered.length){box.innerHTML='<div class="muted">Nog geen camperplaatsen beschikbaar.</div>';return;}
   const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
   box.innerHTML=filtered.map(s=>{
     const stopFotos=(fotosAll||[]).filter(f=>f.stop_id===s.id);
@@ -3289,10 +3420,11 @@ function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
     return `<div class="card" style="cursor:pointer;margin-bottom:14px" onclick="showStopDetail(${s.id})">
       <div><b>📍 ${esc(s.camperplaats||'Onbenoemde stop')}</b></div>
       <div>🏙️ ${esc(s.camperplaats||'—')}</div>
-      <div>🏳️ ${esc(s.land||'—')}</div>
+      <div>🏳️ ${esc(s.land||'—')}${s.regio?' · 📌 '+esc(s.regio):''}</div>
       <div>${'⭐'.repeat(Number(s.beoordeling||0))}</div>
       <div>🏕️ ${esc(s.type_stop||'—')}</div>
       ${s.prijs_per_nacht!=null?`<div>💶 ${fmt(s.prijs_per_nacht)}/nacht</div>`:''}
+      ${s.referentie?`<div class="muted">🔖 ${esc(s.referentie)}</div>`:''}
       ${s.ervaring?`<div>📝 ${esc(s.ervaring)}</div>`:''}
       <div class="muted">📸 ${stopFotos.length} foto(s)</div>
       ${fotoHtml}
@@ -3326,10 +3458,12 @@ window.showStopDetail=function(stopId){
     <h2>📍 ${esc(s.camperplaats||'Onbenoemde stop')}</h2>
     <div><b>🏙️ Plaats:</b> ${esc(s.camperplaats||'—')}</div>
     <div><b>🏳️ Land:</b> ${esc(s.land||'—')}</div>
+    ${s.regio?`<div><b>📌 Regio:</b> ${esc(s.regio)}</div>`:''}
     <div><b>🏕️ Type stop:</b> ${esc(s.type_stop||'—')}</div>
     ${s.voorzieningen?`<div><b>Voorzieningen:</b> ${esc(s.voorzieningen)}</div>`:''}
     <div><b>⭐ Beoordeling:</b> ${'★'.repeat(Number(s.beoordeling||0))}</div>
     ${s.prijs_per_nacht!=null?`<div><b>💶 Prijs per nacht:</b> ${fmt(s.prijs_per_nacht)}</div>`:''}
+    ${s.referentie?`<div><b>🔖 Referentie:</b> ${esc(s.referentie)}</div>`:''}
     ${s.ervaring?`<div style="margin-top:10px"><b>📝 Ervaring:</b><p>${esc(s.ervaring)}</p></div>`:''}
     ${fotos.length?'<div><b>📸 Foto\'s:</b></div>'+fotos.map(f=>`<img src="${esc(f.url)}" style="max-width:150px;max-height:150px;border-radius:8px;margin:4px;cursor:pointer" onclick="openFotoLightbox('${esc(f.url)}')">`).join(''):''}
     <div class="muted" style="margin-top:12px">👤 Gedeeld door: ${esc(eigenaar)}</div>`;
@@ -3349,77 +3483,133 @@ window.loadOntdektePlaatsen=async function(){
   const {data:{user}}=await supabase.auth.getUser();
   if(!user){box.innerHTML='<div class="muted">Niet ingelogd.</div>';return;}
 
+  // ── Eigen camper_ids ophalen ──────────────────────────────
+  const {data:eigenCamperUsers,error:ecErr}=await supabase
+    .from('camper_users')
+    .select('camper_id')
+    .eq('user_id',user.id);
+  if(ecErr){box.innerHTML='<div class="status err">'+esc(ecErr.message)+'</div>';return;}
+  const eigenCamperIds=(eigenCamperUsers||[]).map(x=>x.camper_id);
+
+  // ── Eigen reizen ──────────────────────────────────────────
+  let eigenReisIds=[];
+  if(eigenCamperIds.length>0){
+    const {data:eigenReizen,error:erErr}=await supabase
+      .from('reizen')
+      .select('id')
+      .in('camper_id',eigenCamperIds);
+    if(!erErr) eigenReisIds=(eigenReizen||[]).map(x=>x.id);
+  }
+
+  // ── Eigen stops (altijd tonen, ongeacht gedeeld_met_vrienden) ──
+  let eigenStops=[];
+  if(eigenReisIds.length>0){
+    const {data:es,error:esErr}=await supabase
+      .from('reis_stops')
+      .select('*')
+      .in('reis_id',eigenReisIds)
+      .order('datum',{ascending:false})
+      .limit(200);
+    if(!esErr) eigenStops=es||[];
+  }
+
+  // ── Vrienden ophalen ──────────────────────────────────────
   const {data:friends,error:fErr}=await supabase
     .from('friends')
     .select('friend_user_id')
     .eq('user_id',user.id);
   if(fErr){box.innerHTML='<div class="status err">Fout bij laden vrienden: '+esc(fErr.message)+'</div>';return;}
-  if(!friends||friends.length===0){
-    box.innerHTML='<div class="muted">Je hebt nog geen vrienden toegevoegd. Ga naar het tabblad 🤝 Vrienden.</div>';
-    return;
+
+  const friendUserIds=(friends||[]).map(f=>f.friend_user_id).filter(Boolean);
+
+  // ── Stops van vrienden ophalen (alleen gedeeld) ──────────
+  let vriendenStops=[];
+  let reisMap={};
+  let camperUserMap={};
+  let friendCamperIds=[];
+  let reizen=[];
+  let camperUsers=[];
+
+  if(friendUserIds.length>0){
+    const {data:cu,error:cuErr}=await supabase
+      .from('camper_users')
+      .select('camper_id,user_id')
+      .in('user_id',friendUserIds);
+    if(cuErr){box.innerHTML='<div class="status err">'+esc(cuErr.message)+'</div>';return;}
+    camperUsers=cu||[];
+    friendCamperIds=camperUsers.map(x=>x.camper_id);
+
+    if(friendCamperIds.length>0){
+      const {data:rz,error:rErr}=await supabase
+        .from('reizen')
+        .select('id,camper_id')
+        .in('camper_id',friendCamperIds);
+      if(rErr){box.innerHTML='<div class="status err">'+esc(rErr.message)+'</div>';return;}
+      reizen=rz||[];
+      const vriendenReisIds=reizen.map(x=>x.id);
+
+      if(vriendenReisIds.length>0){
+        const {data:vs,error:vsErr}=await supabase
+          .from('reis_stops')
+          .select('*')
+          .in('reis_id',vriendenReisIds)
+          .eq('gedeeld_met_vrienden',true)
+          .order('datum',{ascending:false})
+          .limit(200);
+        if(!vsErr) vriendenStops=vs||[];
+      }
+    }
   }
 
-  const friendUserIds=friends.map(f=>f.friend_user_id).filter(Boolean);
-  if(friendUserIds.length===0){
-    box.innerHTML='<div class="muted">Jouw vrienden zijn nog niet aan het systeem gekoppeld. Controleer of ze zijn ingelogd en hun profiel hebben aangemaakt.</div>';
-    return;
-  }
+  // ── Deduplicatie: vriendstops die ook eigen stops zijn uitsluiten ──
+  const eigenStopIds=new Set(eigenStops.map(s=>s.id));
+  const gefilterdeVriendenStops=vriendenStops.filter(s=>!eigenStopIds.has(s.id));
 
-  const {data:camperUsers,error:cuErr}=await supabase
-    .from('camper_users')
-    .select('camper_id,user_id')
-    .in('user_id',friendUserIds);
-  if(cuErr){box.innerHTML='<div class="status err">'+esc(cuErr.message)+'</div>';return;}
-  const friendCamperIds=(camperUsers||[]).map(x=>x.camper_id);
-  if(friendCamperIds.length===0){
-    box.innerHTML='<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';
-    return;
-  }
+  // ── Samenvoegen ───────────────────────────────────────────
+  const stops=[...eigenStops,...gefilterdeVriendenStops];
+  stops.sort((a,b)=>(b.datum||'').localeCompare(a.datum||''));
 
-  const {data:reizen,error:rErr}=await supabase
-    .from('reizen')
-    .select('id,camper_id')
-    .in('camper_id',friendCamperIds);
-  if(rErr){box.innerHTML='<div class="status err">'+esc(rErr.message)+'</div>';return;}
-  const reisIds=(reizen||[]).map(x=>x.id);
-  if(reisIds.length===0){
-    box.innerHTML='<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';
-    return;
-  }
-
-  const {data:stops,error:sErr}=await supabase
-    .from('reis_stops')
-    .select('*')
-    .in('reis_id',reisIds)
-    .eq('gedeeld_met_vrienden',true)
-    .order('datum',{ascending:false})
-    .limit(200);
-  if(sErr){box.innerHTML='<div class="status err">'+esc(sErr.message)+'</div>';return;}
-  if(!stops||stops.length===0){
-    box.innerHTML='<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';
+  if(!stops.length){
+    box.innerHTML='<div class="muted">Nog geen camperplaatsen beschikbaar.</div>';
     return;
   }
 
   const stopIds=stops.map(s=>s.id);
   const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
-  const {data:profiles}=await supabase
-    .from('profiles')
-    .select('user_id,display_name,email')
-    .in('user_id',friendUserIds);
-  const profileMap={};
-  (profiles||[]).forEach(p=>{
-    profileMap[p.user_id]=p.display_name||p.email||null;
-  });
 
-  const reisMap={};
-  (reizen||[]).forEach(r=>reisMap[r.id]=r.camper_id);
-  const camperUserMap={};
-  (camperUsers||[]).forEach(cu=>camperUserMap[cu.camper_id]=cu.user_id);
+  // ── Profielen voor vrienden ───────────────────────────────
+  const profileMap={};
+  if(friendUserIds.length>0){
+    const {data:profiles}=await supabase
+      .from('profiles')
+      .select('user_id,display_name,email')
+      .in('user_id',friendUserIds);
+    (profiles||[]).forEach(p=>{profileMap[p.user_id]=p.display_name||p.email||null;});
+  }
+
+  // ── eigenaarMap opbouwen ──────────────────────────────────
+  reizen.forEach(r=>reisMap[r.id]=r.camper_id);
+  camperUsers.forEach(cu=>camperUserMap[cu.camper_id]=cu.user_id);
+
+  // Eigen reizen ook in reisMap zetten (voor eigen stops)
+  const eigenReisMapEntries={};
+  if(eigenCamperIds.length>0){
+    const {data:erAll}=await supabase
+      .from('reizen')
+      .select('id,camper_id')
+      .in('camper_id',eigenCamperIds);
+    (erAll||[]).forEach(r=>eigenReisMapEntries[r.id]=r.camper_id);
+  }
+
   const eigenaarMap={};
   stops.forEach(s=>{
-    const camperId=reisMap[s.reis_id];
-    const userId=camperId?camperUserMap[camperId]:null;
-    eigenaarMap[s.reis_id]=userId?(profileMap[userId]||userId.slice(0,8)+'…'):'Onbekend';
+    if(eigenStopIds.has(s.id)){
+      eigenaarMap[s.reis_id]='Jij';
+    } else {
+      const camperId=reisMap[s.reis_id];
+      const userId=camperId?camperUserMap[camperId]:null;
+      eigenaarMap[s.reis_id]=userId?(profileMap[userId]||userId.slice(0,8)+'…'):'Onbekend';
+    }
   });
 
   _ontdektePlaatsenData={stops,fotos:fotos||[],eigenaarMap};
