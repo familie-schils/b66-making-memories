@@ -72,6 +72,19 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <label>E-mailadres</label><input id="email" type="email"><br><br>
 <label>Wachtwoord</label><input id="password" type="password"><br><br>
 <button class="primary" onclick="login()">Inloggen</button>
+<br><a href="#" onclick="toggleForgot(event)" style="font-size:13px;color:#66717d;margin-top:10px;display:inline-block;">Wachtwoord vergeten?</a>
+<div id="forgotSection" class="hidden" style="margin-top:12px;">
+  <div id="forgotMsg" class="status hidden"></div>
+  <label>E-mailadres</label><input id="forgotEmail" type="email"><br><br>
+  <button class="primary" onclick="forgotPassword()">Verstuur resetlink</button>
+</div>
+</div>
+
+<div id="resetPasswordView" class="card login hidden">
+<h2>Nieuw wachtwoord instellen</h2>
+<div id="resetMsg" class="status hidden"></div>
+<label>Nieuw wachtwoord</label><input id="newPassword" type="password"><br><br>
+<button class="primary" onclick="updatePassword()">Wachtwoord opslaan</button>
 </div>
 
 <div id="appView" class="hidden">
@@ -1277,7 +1290,13 @@ if(!isInviteRoute){
 }
 const {data:{session}}=await supabase.auth.getSession();
 supabase.auth.onAuthStateChange(async(_e,s)=>{
+  if(_e==='PASSWORD_RECOVERY'){
+    loginView.classList.add('hidden');
+    document.getElementById('resetPasswordView').classList.remove('hidden');
+    return;
+  }
   if(s?.user){
+    document.getElementById('resetPasswordView').classList.add('hidden');
     const inviteHandled=await maybeResumeInviteOnboarding(s.user.id);
     if(!inviteHandled)showApp(s.user);
   }else{
@@ -1334,6 +1353,24 @@ await loadFuel();
   await loadCamperMembers();
 }
 
+window.toggleForgot=function(e){e.preventDefault();document.getElementById('forgotSection').classList.toggle('hidden');};
+window.forgotPassword=async function(){
+  const box=document.getElementById('forgotMsg');
+  box.classList.remove('ok','err');
+  const email=document.getElementById('forgotEmail').value.trim();
+  if(!email){box.textContent='Vul een e-mailadres in.';box.className='status err';return;}
+  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  if(error&&error.status!==429){box.textContent='Er is een fout opgetreden. Probeer het later opnieuw.';box.className='status err';}
+  else{box.textContent='Als dit e-mailadres bestaat, is een resetlink verzonden.';box.className='status ok';}
+};
+window.updatePassword=async function(){
+  const box=document.getElementById('resetMsg');
+  const pw=document.getElementById('newPassword').value;
+  if(!pw||pw.length<6){box.textContent='Wachtwoord moet minimaal 6 tekens bevatten.';box.className='status err';return;}
+  const {error}=await supabase.auth.updateUser({password:pw});
+  if(error){box.textContent='Opslaan mislukt: '+error.message;box.className='status err';}
+  else{box.textContent='Wachtwoord opgeslagen! Je wordt ingelogd...';box.className='status ok';}
+};
 window.login=async()=>{
 const box=document.getElementById('loginError');box.classList.add('hidden');
 const {error}=await supabase.auth.signInWithPassword({
