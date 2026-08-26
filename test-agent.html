@@ -3341,10 +3341,10 @@ window.addVriend=async function(){
     status.className='status err';
     return;
   }
-  const {error}=await supabase
-    .from('friends')
-    .upsert(ontbrekendeRelaties,{onConflict:'user_id,friend_user_id',ignoreDuplicates:true});
-  if(error){status.textContent='Opslaan mislukt: '+esc(error.message);status.className='status err';return;}
+  for(const relatie of ontbrekendeRelaties){
+    const {error:insErr}=await supabase.from('friends').insert(relatie);
+    if(insErr){status.textContent='Opslaan mislukt: '+esc(insErr.message);status.className='status err';return;}
+  }
   status.textContent=ontbrekendeRelaties.length===2?'✓ Vriendschap wederzijds toegevoegd.':'✓ Vriendschap wederzijds bijgewerkt.';
   status.className='status ok';
   document.getElementById('vriendenEmail').value='';
