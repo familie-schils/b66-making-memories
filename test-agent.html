@@ -3297,7 +3297,7 @@ window.addVriend=async function(){
   if(!user)return;
   const friendEmail=document.getElementById('vriendenEmail').value.trim().toLowerCase();
   if(!friendEmail){status.textContent='Vul een e-mailadres in.';status.className='status err';return;}
-  if(friendEmail===user.email){
+  if(friendEmail===String(user.email||'').trim().toLowerCase()){
     status.textContent='Je kunt jezelf niet toevoegen.';
     status.className='status err';return;
   }
@@ -3310,20 +3310,43 @@ window.addVriend=async function(){
   if(profileErr){status.textContent='Fout bij zoeken: '+esc(profileErr.message);status.className='status err';return;}
   if(!profileData){status.textContent='Geen gebruiker gevonden met dit e-mailadres.';status.className='status err';return;}
   const friendUserId=profileData.user_id;
-  // Controleer of al bevriend
-  const {data:bestaand,error:bestaandErr}=await supabase
-    .from('friends')
-    .select('id')
-    .eq('user_id',user.id)
-    .eq('friend_user_id',friendUserId)
-    .maybeSingle();
-  if(bestaandErr){status.textContent='Fout bij controleren: '+esc(bestaandErr.message);status.className='status err';return;}
-  if(bestaand){status.textContent='Deze gebruiker staat reeds in je vriendenlijst.';status.className='status err';return;}
+  // Controleer beide richtingen (A->B en B->A)
+  const [
+    {data:relatieAB,error:abErr},
+    {data:relatieBA,error:baErr}
+  ]=await Promise.all([
+    supabase
+      .from('friends')
+      .select('id')
+      .eq('user_id',user.id)
+      .eq('friend_user_id',friendUserId)
+      .maybeSingle(),
+    supabase
+      .from('friends')
+      .select('id')
+      .eq('user_id',friendUserId)
+      .eq('friend_user_id',user.id)
+      .maybeSingle()
+  ]);
+  if(abErr||baErr){
+    status.textContent='Fout bij controleren: '+esc(abErr?.message||baErr?.message||'Onbekende fout');
+    status.className='status err';
+    return;
+  }
+  const ontbrekendeRelaties=[];
+  if(!relatieAB)ontbrekendeRelaties.push({user_id:user.id,friend_user_id:friendUserId});
+  if(!relatieBA)ontbrekendeRelaties.push({user_id:friendUserId,friend_user_id:user.id});
+  if(ontbrekendeRelaties.length===0){
+    status.textContent='Deze gebruiker staat reeds wederzijds in jullie vriendenlijst.';
+    status.className='status err';
+    return;
+  }
   const {error}=await supabase
     .from('friends')
-    .insert({user_id:user.id,friend_user_id:friendUserId});
+    .upsert(ontbrekendeRelaties,{onConflict:'user_id,friend_user_id',ignoreDuplicates:true});
   if(error){status.textContent='Opslaan mislukt: '+esc(error.message);status.className='status err';return;}
-  status.textContent='✓ Vriend toegevoegd.';status.className='status ok';
+  status.textContent=ontbrekendeRelaties.length===2?'✓ Vriendschap wederzijds toegevoegd.':'✓ Vriendschap wederzijds bijgewerkt.';
+  status.className='status ok';
   document.getElementById('vriendenEmail').value='';
   await loadVrienden();
 };
