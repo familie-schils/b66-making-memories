@@ -164,6 +164,10 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </div>
 <br>
 <label>Voorzieningen / indruk</label><input id="sFacilities"><br><br>
+<div class="grid">
+<div><label>Regio <span class="muted" style="font-weight:normal">(optioneel)</span></label><input id="sRegio" list="regioSuggesties" placeholder="Bijv. Ardennen, Moezel, Eifel" autocomplete="off" oninput="filterRegioSuggesties(this)"><datalist id="regioSuggesties"></datalist></div>
+<div><label>Referentie <span class="muted" style="font-weight:normal">(optioneel)</span></label><input id="sReferentie" placeholder="Bijv. NKC 12345, ACSI 67890"></div>
+</div><br>
 <label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
 
 <label>📷 Foto's toevoegen</label>
@@ -455,8 +459,11 @@ Nog geen onderhoud geregistreerd.
 
 <div class="grid">
   <div><label>Filter op land</label><select id="opLand" onchange="filterOntdektePlaatsen()"><option value="">— Alle landen —</option></select></div>
+  <div><label>Filter op regio</label><input id="opRegio" placeholder="Bijv. Ardennen, Moezel" oninput="filterOntdektePlaatsen()"></div>
   <div><label>Filter op plaats</label><input id="opPlaats" placeholder="Bijv. Gent" oninput="filterOntdektePlaatsen()"></div>
   <div><label>Filter op camperplaats</label><input id="opCamperplaats" placeholder="Bijv. Camping Les Pins" oninput="filterOntdektePlaatsen()"></div>
+  <div><label>Filter op opmerking</label><input id="opOpmerking" placeholder="Zoek in ervaring / opmerkingen" oninput="filterOntdektePlaatsen()"></div>
+  <div><label>Filter op referentie</label><input id="opReferentie" placeholder="Bijv. NKC 12345" oninput="filterOntdektePlaatsen()"></div>
 </div>
 <br>
 <hr>
@@ -725,6 +732,40 @@ const CAMPER_COUNTRIES=[
   'Turkije'
 ];
 
+const CAMPER_REGIO=[
+  'Ardennen','Moezel','Eifel','Elzas','Lotharingen','Sauerland','Hunsrück',
+  'Taunus','Harz','Zwarte Woud','Beieren','Allgäu','Berchtesgaden',
+  'Beierse Alpen','Dolomiten','Toscane','Umbrië','Ligurië','Riviera',
+  'Côte d\'Azur','Provence','Languedoc','Bretagne','Normandië','Loire',
+  'Dordogne','Lot','Auvergne','Cevennen','Pyreneeën','Camargue','Corsica',
+  'Venetie','Trentino','Zuid-Tirol','Slovenië','Dolomieten','Istrie',
+  'Dalmatische kust','Kroatische eilanden','Plitvice','Triglav',
+  'Eifelkreis','Moselvallei','Rijnvallei','Rijnland','Palts','Westerwald',
+  'Teutoburger Woud','Mecklenburg','Rügen','Usedom','Borkum','Sylt',
+  'Denemarken Noord','Denemarken Zuid','Jutland','Funen','Seeland',
+  'Noorwegen Fjorden','Noorwegen Noord','Hardangerfjord','Geirangerfjord',
+  'Lofoten','Vesterålen','Zweden Midden','Zweden Noord','Zweden Zuid',
+  'Dalarna','Lapland','Gotland','Öland','Schotland Hooglanden','Schotland Eilanden',
+  'Engeland Cotswolds','Engeland Lake District','Wales','Cornwall',
+  'Ierland Westkust','Ring of Kerry','Cliffs of Moher',
+  'Oostenrijkse Alpen','Karinthië','Stiermarken','Tirol','Salzburgerland',
+  'Salzkammergut','Wachau','Burgenland',
+  'Zwitserland Centraal','Jura','Wallis','Graubünden','Ticino','Berner Oberland',
+  'Spanje Noord','Asturië','Galicië','Baskenland','Catalonië','Aragon',
+  'Navarra','La Rioja','Castilië','Extramadura','Andalusië','Costa Brava',
+  'Costa Dorada','Costa Blanca','Costa del Sol','Costa de la Luz',
+  'Portugal Algarve','Portugal Alentejo','Portugal Midden','Portugal Noord',
+  'Griekenland Peloponnesos','Griekenland Noord','Thessalië','Epirus',
+  'Ionische eilanden','Kreta','Lesbos','Rhodes','Corfu',
+  'Tsjechië Bohemen','Tsjechië Moravië','Slowakije Tatra','Polen Mazurië',
+  'Polen Tatra','Hongarije Balaton','Roemenië Transsylvanië',
+  'Bulgarije Zwarte Zeekust','Turkije Egeïsche kust','Turkije Middellandse Zeekust',
+  'Vlaamse Kust','Zeeland','West-Vlaanderen','Oost-Vlaanderen','Antwerpen',
+  'Limburg BE','Zuid-Limburg NL','Noord-Limburg NL','Veluwe','Achterhoek',
+  'Utrechtse Heuvelrug','Friesland','Groningen','Drenthe','Overijssel',
+  'Noord-Holland','Zuid-Holland','Zeeuws-Vlaanderen','Brabant','Luxemburg Ardennen'
+];
+
 function populateCountrySelects(){
   const options=
     '<option value="">— kies land —</option>'+
@@ -744,6 +785,16 @@ function populateCountrySelects(){
       CAMPER_COUNTRIES.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
   }
 }
+
+window.filterRegioSuggesties=function(input){
+  const val=(input.value||'').trim();
+  const dl=document.getElementById('regioSuggesties');
+  if(!dl)return;
+  if(val.length<3){dl.innerHTML='';return;}
+  const lc=val.toLowerCase();
+  const matches=CAMPER_REGIO.filter(r=>r.toLowerCase().includes(lc)).slice(0,10);
+  dl.innerHTML=matches.map(r=>`<option value="${esc(r)}">`).join('');
+};
 
 function createEmptyRoleContext(){
   return {
@@ -1527,6 +1578,8 @@ prijs_per_nacht:v('sPrice')?Number(v('sPrice')):null,
 beoordeling:Number(v('sRating')),
 voorzieningen:v('sFacilities'),
 ervaring:v('sNotes'),
+regio:v('sRegio')||null,
+referentie:v('sReferentie')||null,
 gedeeld_met_vrienden:document.getElementById('shareWithFriends').checked
 };
 
@@ -1671,6 +1724,8 @@ function clearStopFields(){
     'sKm',
     'sPrice',
     'sFacilities',
+    'sRegio',
+    'sReferentie',
     'sNotes'
   ].forEach(id =>
     document.getElementById(id).value=''
@@ -3274,12 +3329,18 @@ window.removeVriend=async function(id){
 function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
   const box=document.getElementById('ontdektePlaatsenList');
   const filterLand=document.getElementById('opLand').value;
+  const filterRegio=(document.getElementById('opRegio').value||'').trim().toLowerCase();
   const filterPlaats=document.getElementById('opPlaats').value.trim().toLowerCase();
   const filterCamper=document.getElementById('opCamperplaats').value.trim().toLowerCase();
+  const filterOpmerking=(document.getElementById('opOpmerking').value||'').trim().toLowerCase();
+  const filterRef=(document.getElementById('opReferentie').value||'').trim().toLowerCase();
   let filtered=stops;
   if(filterLand)filtered=filtered.filter(s=>s.land===filterLand);
+  if(filterRegio)filtered=filtered.filter(s=>(s.regio||'').toLowerCase().includes(filterRegio));
   if(filterPlaats)filtered=filtered.filter(s=>(s.camperplaats||'').toLowerCase().includes(filterPlaats));
   if(filterCamper)filtered=filtered.filter(s=>(s.camperplaats||'').toLowerCase().includes(filterCamper));
+  if(filterOpmerking)filtered=filtered.filter(s=>(s.ervaring||'').toLowerCase().includes(filterOpmerking));
+  if(filterRef)filtered=filtered.filter(s=>(s.referentie||'').toLowerCase().includes(filterRef));
   if(!filtered.length){box.innerHTML='<div class="muted">Nog geen gedeelde camperplaatsen van vrienden beschikbaar.</div>';return;}
   const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
   box.innerHTML=filtered.map(s=>{
@@ -3289,10 +3350,11 @@ function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
     return `<div class="card" style="cursor:pointer;margin-bottom:14px" onclick="showStopDetail(${s.id})">
       <div><b>📍 ${esc(s.camperplaats||'Onbenoemde stop')}</b></div>
       <div>🏙️ ${esc(s.camperplaats||'—')}</div>
-      <div>🏳️ ${esc(s.land||'—')}</div>
+      <div>🏳️ ${esc(s.land||'—')}${s.regio?' · 📌 '+esc(s.regio):''}</div>
       <div>${'⭐'.repeat(Number(s.beoordeling||0))}</div>
       <div>🏕️ ${esc(s.type_stop||'—')}</div>
       ${s.prijs_per_nacht!=null?`<div>💶 ${fmt(s.prijs_per_nacht)}/nacht</div>`:''}
+      ${s.referentie?`<div class="muted">🔖 ${esc(s.referentie)}</div>`:''}
       ${s.ervaring?`<div>📝 ${esc(s.ervaring)}</div>`:''}
       <div class="muted">📸 ${stopFotos.length} foto(s)</div>
       ${fotoHtml}
@@ -3326,10 +3388,12 @@ window.showStopDetail=function(stopId){
     <h2>📍 ${esc(s.camperplaats||'Onbenoemde stop')}</h2>
     <div><b>🏙️ Plaats:</b> ${esc(s.camperplaats||'—')}</div>
     <div><b>🏳️ Land:</b> ${esc(s.land||'—')}</div>
+    ${s.regio?`<div><b>📌 Regio:</b> ${esc(s.regio)}</div>`:''}
     <div><b>🏕️ Type stop:</b> ${esc(s.type_stop||'—')}</div>
     ${s.voorzieningen?`<div><b>Voorzieningen:</b> ${esc(s.voorzieningen)}</div>`:''}
     <div><b>⭐ Beoordeling:</b> ${'★'.repeat(Number(s.beoordeling||0))}</div>
     ${s.prijs_per_nacht!=null?`<div><b>💶 Prijs per nacht:</b> ${fmt(s.prijs_per_nacht)}</div>`:''}
+    ${s.referentie?`<div><b>🔖 Referentie:</b> ${esc(s.referentie)}</div>`:''}
     ${s.ervaring?`<div style="margin-top:10px"><b>📝 Ervaring:</b><p>${esc(s.ervaring)}</p></div>`:''}
     ${fotos.length?'<div><b>📸 Foto\'s:</b></div>'+fotos.map(f=>`<img src="${esc(f.url)}" style="max-width:150px;max-height:150px;border-radius:8px;margin:4px;cursor:pointer" onclick="openFotoLightbox('${esc(f.url)}')">`).join(''):''}
     <div class="muted" style="margin-top:12px">👤 Gedeeld door: ${esc(eigenaar)}</div>`;
