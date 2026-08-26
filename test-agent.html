@@ -459,7 +459,7 @@ Nog geen onderhoud geregistreerd.
 
 <div class="grid">
   <div><label>Filter op land</label><select id="opLand" onchange="filterOntdektePlaatsen()"><option value="">— Alle landen —</option></select></div>
-  <div><label>Filter op regio</label><input id="opRegio" placeholder="Bijv. Ardennen, Moezel" oninput="filterOntdektePlaatsen()"></div>
+  <div><label>Filter op regio</label><input id="opRegio" list="opRegioSuggesties" placeholder="Bijv. Ardennen, Moezel" autocomplete="off" oninput="filterOpRegioSuggesties(this);filterOntdektePlaatsen()"><datalist id="opRegioSuggesties"></datalist></div>
   <div><label>Filter op plaats</label><input id="opPlaats" placeholder="Bijv. Gent" oninput="filterOntdektePlaatsen()"></div>
   <div><label>Filter op camperplaats</label><input id="opCamperplaats" placeholder="Bijv. Camping Les Pins" oninput="filterOntdektePlaatsen()"></div>
   <div><label>Filter op opmerking</label><input id="opOpmerking" placeholder="Zoek in ervaring / opmerkingen" oninput="filterOntdektePlaatsen()"></div>
@@ -789,6 +789,16 @@ function populateCountrySelects(){
 window.filterRegioSuggesties=function(input){
   const val=(input.value||'').trim();
   const dl=document.getElementById('regioSuggesties');
+  if(!dl)return;
+  if(val.length<3){dl.innerHTML='';return;}
+  const lc=val.toLowerCase();
+  const matches=CAMPER_REGIO.filter(r=>r.toLowerCase().includes(lc)).slice(0,10);
+  dl.innerHTML=matches.map(r=>`<option value="${esc(r)}">`).join('');
+};
+
+window.filterOpRegioSuggesties=function(input){
+  const val=(input.value||'').trim();
+  const dl=document.getElementById('opRegioSuggesties');
   if(!dl)return;
   if(val.length<3){dl.innerHTML='';return;}
   const lc=val.toLowerCase();
