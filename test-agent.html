@@ -1289,13 +1289,16 @@ if(!isInviteRoute){
   await hydratePendingInvite();
 }
 const {data:{session}}=await supabase.auth.getSession();
+let inPasswordRecovery=false;
 supabase.auth.onAuthStateChange(async(_e,s)=>{
   if(_e==='PASSWORD_RECOVERY'){
+    inPasswordRecovery=true;
     loginView.classList.add('hidden');
     document.getElementById('resetPasswordView').classList.remove('hidden');
     return;
   }
   if(s?.user){
+    if(inPasswordRecovery)return;
     document.getElementById('resetPasswordView').classList.add('hidden');
     const inviteHandled=await maybeResumeInviteOnboarding(s.user.id);
     if(!inviteHandled)showApp(s.user);
@@ -1309,10 +1312,10 @@ if(isInviteRoute){
     const inviteHandled=await maybeResumeInviteOnboarding(session.user.id);
     if(!inviteHandled)showApp(session.user);
   }
-}else if(session){
+}else if(session&&!inPasswordRecovery){
   const inviteHandled=await maybeResumeInviteOnboarding(session.user.id);
   if(!inviteHandled)showApp(session.user);
-}else{showLogin();}
+}else if(!session){showLogin();}
 }
 function showLogin(){
   resetRoleContext();
@@ -1369,7 +1372,13 @@ window.updatePassword=async function(){
   if(!pw||pw.length<6){box.textContent='Wachtwoord moet minimaal 6 tekens bevatten.';box.className='status err';return;}
   const {error}=await supabase.auth.updateUser({password:pw});
   if(error){box.textContent='Opslaan mislukt: '+error.message;box.className='status err';}
-  else{box.textContent='Wachtwoord opgeslagen! Je wordt ingelogd...';box.className='status ok';}
+  else{
+    box.textContent='Wachtwoord opgeslagen! Je wordt ingelogd...';box.className='status ok';
+    inPasswordRecovery=false;
+    document.getElementById('resetPasswordView').classList.add('hidden');
+    const {data:{session:s}}=await supabase.auth.getSession();
+    showApp(s?.user??null);
+  }
 };
 window.login=async()=>{
 const box=document.getElementById('loginError');box.classList.add('hidden');
