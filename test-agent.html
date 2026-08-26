@@ -678,6 +678,7 @@ let stopNumber=1;
   let currentUser = null;
   let canAccessBeheer = false;
   let isCamperAdmin = false;
+  const profileEnsureAttemptedUserIds = new Set();
   const HEAD_ADMIN_USER_ID = '13032a8d-1c16-4f80-b497-b679abf36682';
   const PLATFORM_ROLES = Object.freeze({
     NONE:'geen',
@@ -1012,6 +1013,54 @@ function validateInviteEmail(invite,email){
   return expected===received;
 }
 
+async function ensureProfileForAuthenticatedUser(authUser=null){
+  const user=authUser||null;
+  if(!user?.id)return;
+  if(profileEnsureAttemptedUserIds.has(user.id))return;
+
+  const email=String(user.email||'').trim().toLowerCase();
+  if(!email){
+    console.warn('Profiles-record kan niet automatisch aangemaakt worden zonder auth e-mail.', {userId:user.id});
+    return;
+  }
+
+  const {data:existingProfile,error:existingProfileError}=await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('user_id',user.id)
+    .maybeSingle();
+
+  if(existingProfileError){
+    console.error('Profiles-record controleren mislukt:', existingProfileError);
+    return;
+  }
+
+  if(existingProfile?.user_id){
+    profileEnsureAttemptedUserIds.add(user.id);
+    return;
+  }
+
+  const fallbackDisplayName=email.split('@')[0]||email;
+  const {error:insertError}=await supabase
+    .from('profiles')
+    .insert({
+      user_id:user.id,
+      email,
+      display_name:fallbackDisplayName
+    });
+
+  if(insertError){
+    if(insertError.code==='23505'){
+      profileEnsureAttemptedUserIds.add(user.id);
+      return;
+    }
+    console.error('Profiles-record automatisch aanmaken mislukt:', insertError);
+    return;
+  }
+
+  profileEnsureAttemptedUserIds.add(user.id);
+}
+
 function getInviteCodeFromLocation(){
   const pathMatch=window.location.pathname.match(/\/(?:invite|join-camper)\/([^/?#]+)/i);
   if(pathMatch)return decodeURIComponent(pathMatch[1]);
@@ -1278,6 +1327,7 @@ if(!isInviteRoute){
 const {data:{session}}=await supabase.auth.getSession();
 supabase.auth.onAuthStateChange(async(_e,s)=>{
   if(s?.user){
+    await ensureProfileForAuthenticatedUser(s.user);
     const inviteHandled=await maybeResumeInviteOnboarding(s.user.id);
     if(!inviteHandled)showApp(s.user);
   }else{
@@ -1287,10 +1337,12 @@ supabase.auth.onAuthStateChange(async(_e,s)=>{
 if(isInviteRoute){
   loginView.classList.add('hidden');
   if(session?.user){
+    await ensureProfileForAuthenticatedUser(session.user);
     const inviteHandled=await maybeResumeInviteOnboarding(session.user.id);
     if(!inviteHandled)showApp(session.user);
   }
 }else if(session){
+  await ensureProfileForAuthenticatedUser(session.user);
   const inviteHandled=await maybeResumeInviteOnboarding(session.user.id);
   if(!inviteHandled)showApp(session.user);
 }else{showLogin();}
@@ -1336,9 +1388,12 @@ await loadFuel();
 
 window.login=async()=>{
 const box=document.getElementById('loginError');box.classList.add('hidden');
-const {error}=await supabase.auth.signInWithPassword({
+const {data,error}=await supabase.auth.signInWithPassword({
 email:document.getElementById('email').value.trim(),
 password:document.getElementById('password').value});
+if(!error&&data?.user){
+  await ensureProfileForAuthenticatedUser(data.user);
+}
 if(error){box.textContent=error.message;box.classList.remove('hidden')}
 };
 window.logout=()=>supabase.auth.signOut();
@@ -1485,6 +1540,7 @@ window.inviteLogin=async()=>{
   if(error){setStatus('Inloggen mislukt: '+error.message,'err');return;}
   const user=data?.user;
   if(!user){setStatus('Inloggen mislukt.','err');return;}
+  await ensureProfileForAuthenticatedUser(user);
   await processInvite(user.id);
 };
 
