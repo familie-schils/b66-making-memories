@@ -694,8 +694,11 @@ Nog geen onderhoud geregistreerd.
   -- CREATE POLICY invitations_insert ON invitations FOR INSERT WITH CHECK (
   --   camper_id IN (SELECT camper_id FROM camper_users WHERE user_id = auth.uid() AND role = 'admin')
   -- );
+  -- Aangepaste UPDATE-policy: admin beheert uitnodigingen; uitgenodigde accepteert eigen uitnodiging.
+  -- DROP POLICY IF EXISTS invitations_update ON invitations;
   -- CREATE POLICY invitations_update ON invitations FOR UPDATE USING (
   --   camper_id IN (SELECT camper_id FROM camper_users WHERE user_id = auth.uid() AND role = 'admin')
+  --   OR email = (SELECT email FROM auth.users WHERE id = auth.uid())
   -- );
   -- CREATE POLICY invitations_read_by_token ON invitations FOR SELECT USING (true);
 -->
@@ -1546,10 +1549,13 @@ async function processInvite(userId){
         .insert({user_id:userId,camper_id:invite.camper_id,role:memberRole});
       if(insertErr){setStatus('Koppeling aan camper mislukt: '+insertErr.message,'err');return;}
     }
-    await supabase
+    const {error:invUpdateErr}=await supabase
       .from('invitations')
       .update({status:'accepted'})
       .eq('id',invite.id);
+    if(invUpdateErr){
+      console.error('[processInvite] status update naar accepted mislukt:',invUpdateErr);
+    }
     clearPendingInvite();
     setStatus(existing?'Je had al toegang tot deze camper.':'Welkom! Je bent als lid gekoppeld aan deze camper.','ok');
   } else if(inviteType==='platform'){
