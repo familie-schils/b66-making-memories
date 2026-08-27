@@ -40,6 +40,16 @@ button{font:inherit}
 .note-list{margin:8px 0 0 18px;padding:0}
 .note-list li{margin:6px 0}
 hr{border:0;border-top:1px solid #ddd;margin:18px 0}
+.role-cards{display:flex;gap:12px;margin:8px 0 14px;flex-wrap:wrap}
+.role-card{flex:1 1 140px;border:2px solid #ddd;border-radius:12px;padding:14px 16px;cursor:pointer;background:#fff;transition:border-color .15s,background .15s;user-select:none}
+.role-card:hover{border-color:#a3d9a5}
+.role-card.selected{border-color:#28a745;background:#f0faf1}
+.role-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.role-card-title{font-weight:700;font-size:15px}
+.role-card-check{color:#28a745;font-size:18px;font-weight:900;opacity:0;transition:opacity .15s}
+.role-card.selected .role-card-check{opacity:1}
+.role-card-desc{margin:0;padding:0 0 0 16px;font-size:13px;color:#444;font-weight:400}
+.role-card-desc li{margin:3px 0}
 </style>
 </head>
 <body>
@@ -724,13 +734,18 @@ Nog geen onderhoud geregistreerd.
   </div>
 </div>
 <br>
-<label>Rol</label><br>
-<label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin:6px 0">
-  <input type="radio" name="ledenBeheerRole" id="ledenBeheerRoleViewer" value="viewer" checked> Viewer
-</label>
-<label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin:6px 0">
-  <input type="radio" name="ledenBeheerRole" id="ledenBeheerRoleEditor" value="editor"> Editor
-</label>
+<label>Rol</label>
+<div class="role-cards" id="ledenBeheerRoleCards">
+  <div class="role-card selected" data-role="viewer" onclick="selectLedenBeheerRole('viewer')">
+    <div class="role-card-header"><span class="role-card-title">Viewer</span><span class="role-card-check">✓</span></div>
+    <ul class="role-card-desc"><li>Kan camper bekijken</li><li>Kan logboeken lezen</li></ul>
+  </div>
+  <div class="role-card" data-role="editor" onclick="selectLedenBeheerRole('editor')">
+    <div class="role-card-header"><span class="role-card-title">Editor</span><span class="role-card-check">✓</span></div>
+    <ul class="role-card-desc"><li>Kan logboeken aanpassen</li><li>Kan gegevens toevoegen</li></ul>
+  </div>
+</div>
+<input type="hidden" id="ledenBeheerRoleValue" value="viewer">
 <br>
 <button class="primary" onclick="sendLedenBeheerInvitation()">📨 Uitnodiging verzenden</button>
 </div>
@@ -3838,12 +3853,19 @@ async function loadInvitationsForLedenBeheren(){
   list.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead>${headerRow}</thead><tbody>${rows}</tbody></table>`;
 }
 
+window.selectLedenBeheerRole=function(role){
+  document.querySelectorAll('#ledenBeheerRoleCards .role-card').forEach(c=>{
+    c.classList.toggle('selected',c.dataset.role===role);
+  });
+  const h=document.getElementById('ledenBeheerRoleValue');
+  if(h)h.value=role;
+};
 window.sendLedenBeheerInvitation=async function(){
   const emailField=document.getElementById('ledenBeheerEmail');
   const status=document.getElementById('ledenBeheerInviteStatus');
   if(!emailField||!status)return;
   const email=emailField.value.trim().toLowerCase();
-  const roleRadio=document.querySelector('input[name="ledenBeheerRole"]:checked');
+  const roleRadio=document.getElementById('ledenBeheerRoleValue');
   const role=roleRadio?roleRadio.value:'viewer';
   status.className='status hidden';
   if(!isCamperAdmin){status.textContent='Geen toegang: alleen Camper Admins kunnen uitnodigingen sturen.';status.className='status err';return;}
