@@ -3280,8 +3280,8 @@ async function loadCamperInvites(){
 }
 
 function getCamperInviteLink(inviteCode){
-  const base=window.location.origin+window.location.pathname;
-  return base.replace(/\/[^/]*$/,'/')+`join-camper/${encodeURIComponent(inviteCode)}`;
+  const base=window.location.origin+window.location.pathname.replace(/\/[^/]*$/,'/').replace(/\/$/,'');
+  return base+'/?invite='+encodeURIComponent(inviteCode);
 }
 
 function renderCamperInviteGenerated(invite){
