@@ -1,0 +1,23 @@
+{
+  "name": "Making Memories",
+  "short_name": "Making Memories",
+  "description": "B66 – Making Memories camper reisapp",
+  "start_url": "./test-agent.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2E7D32",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
