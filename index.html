@@ -1259,6 +1259,18 @@ async function handleInviteRoute(){
     return true;
   }
 
+  if(inviteData?.type==='member-invite'){
+    if(inviteData.expires_at&&new Date(inviteData.expires_at)<new Date()){
+      clearPendingInvite();
+      if(statusEl){statusEl.textContent='Deze uitnodiging is verlopen.';statusEl.className='status err';}
+      return true;
+    }
+    // invitation_token dient als invite_code voor storePendingInvite en processInvite
+    storePendingInvite({...inviteData,invite_code:inviteData.invitation_token});
+    if(formsEl)formsEl.classList.remove('hidden');
+    return true;
+  }
+
   // 5. Nergens gevonden
   clearPendingInvite();
   if(statusEl){statusEl.textContent='Uitnodigingscode bestaat niet.';statusEl.className='status err';}
