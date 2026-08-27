@@ -43,6 +43,19 @@ Laatst bijgewerkt:
 - Laatste admin beschermen
 - Dubbele uitnodigingen voorkomen
 
+- ### 2026-08-27
+
+✅ invitations tabel aangemaakt
+✅ Leden beheren werkt zonder databasefout
+✅ GitHub Pages invite routing opgelost
+✅ Uitnodigingslinks gebruiken nu ?invite=TOKEN
+✅ Acceptatieflow compatibel gemaakt met GitHub Pages
+
+Open:
+- RESEND_API_KEY configureren
+- send-member-invitation deployen
+- eerste end-to-end e-mailtest
+
 ### Lage Prioriteit
 
 - Dashboard Leden Beheren
