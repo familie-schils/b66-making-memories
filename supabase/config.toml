@@ -1,0 +1,4 @@
+project_id = "hktczewqpevvgxqcswov"
+
+[functions.send-member-invitation]
+verify_jwt = true

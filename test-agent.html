@@ -3284,6 +3284,34 @@ function getCamperInviteLink(inviteCode){
   return base.replace(/\/[^/]*$/,'/')+`join-camper/${encodeURIComponent(inviteCode)}`;
 }
 
+function getMemberInvitationLink(invitationToken){
+  return getCamperInviteLink(invitationToken);
+}
+
+async function sendMemberInvitationEmail(invitation,{statusEl,successMessage,errorPrefix}={}){
+  const link=getMemberInvitationLink(invitation.invitation_token);
+  const {data,error}=await supabase.functions.invoke('send-member-invitation',{
+    body:{
+      invitationToken:invitation.invitation_token,
+      appUrl:window.location.origin+window.location.pathname,
+      camperName:document.getElementById('dashboardCamperNaam')?.textContent?.trim()||'Making Memories',
+      inviterName:currentUser?.email||''
+    }
+  });
+  if(error){
+    if(statusEl){
+      statusEl.innerHTML=`${esc(errorPrefix||'E-mail verzenden mislukt:')} ${esc(error.message||'Onbekende fout')}. Deel voorlopig deze link handmatig:<br><div class="code" style="margin-top:6px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>`;
+      statusEl.className='status err';
+    }
+    return {ok:false,link,error};
+  }
+  if(statusEl){
+    statusEl.innerHTML=`${esc(successMessage||'✓ Uitnodiging opgeslagen en e-mail verstuurd.')}<br><div class="muted" style="margin-top:6px">Fallback-link: <a href="${esc(data?.acceptUrl||link)}" target="_blank" rel="noopener noreferrer">${esc(data?.acceptUrl||link)}</a></div>`;
+    statusEl.className='status ok';
+  }
+  return {ok:true,link,data};
+}
+
 function renderCamperInviteGenerated(invite){
   const box=document.getElementById('camperInviteGeneratedBox');
   if(!box)return;
@@ -3854,9 +3882,11 @@ window.sendLedenBeheerInvitation=async function(){
   }
   if(result?.error){status.textContent='Uitnodiging maken mislukt: '+result.error.message;status.className='status err';return;}
   emailField.value='';
-  const link=getCamperInviteLink(result.data.invitation_token);
-  status.innerHTML='✓ Uitnodiging opgeslagen. Stuur deze link naar de ontvanger:<br><div class="code" style="margin-top:6px"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link)+'</a></div>';
-  status.className='status ok';
+  await sendMemberInvitationEmail(result.data,{
+    statusEl:status,
+    successMessage:'✓ Uitnodiging opgeslagen en e-mail verstuurd.',
+    errorPrefix:'Uitnodiging opgeslagen, maar e-mail verzenden mislukt:'
+  });
   await loadInvitationsForLedenBeheren();
 };
 
@@ -3890,11 +3920,11 @@ window.resendInvitationLedenBeheren=async function(invId,email,role){
     if(result.error.code!=='23505')break;
   }
   if(result?.error){if(status){status.textContent='Opnieuw versturen mislukt: '+result.error.message;status.className='status err';}return;}
-  const link=getCamperInviteLink(result.data.invitation_token);
-  if(status){
-    status.innerHTML='✓ Uitnodiging opnieuw verstuurd. Deel de nieuwe link:<br><div class="code" style="margin-top:6px"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link)+'</a></div>';
-    status.className='status ok';
-  }
+  await sendMemberInvitationEmail(result.data,{
+    statusEl:status,
+    successMessage:'✓ Uitnodiging opnieuw verstuurd per e-mail.',
+    errorPrefix:'Nieuwe uitnodiging opgeslagen, maar e-mail verzenden mislukt:'
+  });
   await loadInvitationsForLedenBeheren();
 };
 
