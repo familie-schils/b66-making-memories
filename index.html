@@ -461,6 +461,20 @@ Nog geen onderhoud geregistreerd.
     unique(user_id, friend_user_id)
   );
 
+  SQL-migratie – friend_requests tabel aanmaken in Supabase:
+
+  create table friend_requests (
+    id                bigint generated always as identity primary key,
+    requester_user_id uuid references auth.users(id) on delete cascade,
+    recipient_user_id uuid references auth.users(id) on delete cascade,
+    status            text not null default 'pending',
+    responded_at      timestamptz,
+    created_at        timestamptz not null default now(),
+    unique(requester_user_id, recipient_user_id)
+  );
+
+  -- Geldige statussen: pending, accepted, rejected, cancelled
+
   SQL-migratie – gedeeld_met_vrienden kolom toevoegen aan reis_stops:
 
   alter table reis_stops
@@ -470,13 +484,19 @@ Nog geen onderhoud geregistreerd.
 <section id="vrienden">
 <div class="card">
 <h2>🤝 Vrienden</h2>
-<p class="muted">Voeg vrienden toe op basis van hun e-mailadres. Zij kunnen jouw gedeelde stops zien en jij de hunne.</p>
+<p class="muted">Voeg vrienden toe op basis van hun e-mailadres. De ontvanger moet jouw verzoek eerst accepteren voordat jullie elkaars gedeelde stops zien.</p>
 <div id="vriendenStatus" class="status hidden"></div>
 <div class="grid">
   <div><label>E-mailadres</label><input id="vriendenEmail" type="email" placeholder="marie@example.com"></div>
 </div>
 <br>
 <button class="primary" onclick="addVriend()">＋ Vriend toevoegen</button>
+<hr>
+<h3>Ontvangen verzoeken</h3>
+<div id="vriendenIncomingList">Verzoeken laden...</div>
+<hr>
+<h3>Verstuurde verzoeken</h3>
+<div id="vriendenOutgoingList">Verzoeken laden...</div>
 <hr>
 <h3>Mijn vrienden</h3>
 <div id="vriendenList">Vrienden laden...</div>
@@ -2730,6 +2750,7 @@ if(b.dataset.tab==='personen'){
   await loadPersonen();
 }
 if(b.dataset.tab==='vrienden'){
+  await loadVriendVerzoeken();
   await loadVrienden();
 }
 if(b.dataset.tab==='ontdekte-plaatsen'){
@@ -3454,27 +3475,164 @@ window.saveCamperProfile=async function(){
 };
 
 // ── Vrienden ──────────────────────────────────────────────
+async function fetchProfileMapByUserIds(userIds){
+  const ids=[...new Set((userIds||[]).filter(Boolean))];
+  if(ids.length===0)return {};
+  const {data:profiles,error}=await supabase
+    .from('profiles')
+    .select('user_id,email,display_name')
+    .in('user_id',ids);
+  if(error)throw error;
+  const profileMap={};
+  (profiles||[]).forEach(p=>{profileMap[p.user_id]=p;});
+  return profileMap;
+}
+
+async function getMutualFriends(userId){
+  const {data:errorFreeFriends,error}=await supabase
+    .from('friends')
+    .select('id,friend_user_id,created_at')
+    .eq('user_id',userId)
+    .order('created_at',{ascending:false});
+  if(error)return {error};
+  const ownFriends=errorFreeFriends||[];
+  const friendIds=ownFriends.map(f=>f.friend_user_id).filter(Boolean);
+  if(friendIds.length===0)return {data:[]};
+  const {data:reverseFriends,error:reverseError}=await supabase
+    .from('friends')
+    .select('user_id')
+    .in('user_id',friendIds)
+    .eq('friend_user_id',userId);
+  if(reverseError)return {error:reverseError};
+  const reverseIds=new Set((reverseFriends||[]).map(f=>f.user_id));
+  return {data:ownFriends.filter(f=>reverseIds.has(f.friend_user_id))};
+}
+
+async function loadVriendVerzoeken(){
+  const incomingBox=document.getElementById('vriendenIncomingList');
+  const outgoingBox=document.getElementById('vriendenOutgoingList');
+  if(!incomingBox||!outgoingBox)return;
+  incomingBox.textContent='Verzoeken laden...';
+  outgoingBox.textContent='Verzoeken laden...';
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user){
+    incomingBox.innerHTML='<div class="muted">Log in om verzoeken te bekijken.</div>';
+    outgoingBox.innerHTML='<div class="muted">Log in om verzoeken te bekijken.</div>';
+    return;
+  }
+  const [
+    {data:incoming,error:incomingError},
+    {data:outgoing,error:outgoingError}
+  ]=await Promise.all([
+    supabase
+      .from('friend_requests')
+      .select('id,requester_user_id,created_at')
+      .eq('recipient_user_id',user.id)
+      .eq('status','pending')
+      .order('created_at',{ascending:false}),
+    supabase
+      .from('friend_requests')
+      .select('id,recipient_user_id,created_at')
+      .eq('requester_user_id',user.id)
+      .eq('status','pending')
+      .order('created_at',{ascending:false})
+  ]);
+  if(incomingError){
+    incomingBox.innerHTML='<div class="status err">Fout bij laden verzoeken: '+esc(incomingError.message)+'</div>';
+    outgoingBox.innerHTML='<div class="status err">Fout bij laden verzoeken: '+esc(incomingError.message)+'</div>';
+    return;
+  }
+  if(outgoingError){
+    outgoingBox.innerHTML='<div class="status err">Fout bij laden verzoeken: '+esc(outgoingError.message)+'</div>';
+    return;
+  }
+  let profileMap={};
+  try{
+    profileMap=await fetchProfileMapByUserIds([
+      ...(incoming||[]).map(r=>r.requester_user_id),
+      ...(outgoing||[]).map(r=>r.recipient_user_id)
+    ]);
+  }catch(profileError){
+    const msg='Fout bij laden profielen: '+esc(profileError.message);
+    incomingBox.innerHTML='<div class="status err">'+msg+'</div>';
+    outgoingBox.innerHTML='<div class="status err">'+msg+'</div>';
+    return;
+  }
+  if(!incoming||incoming.length===0){
+    incomingBox.innerHTML='<div class="muted">Geen ontvangen verzoeken.</div>';
+  }else{
+    incomingBox.innerHTML=incoming.map(req=>{
+      const p=profileMap[req.requester_user_id]||{};
+      const label=p.display_name||p.email||'(onbekend)';
+      return `<div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div>
+          <b>${esc(label)}</b>
+          <div class="muted" style="font-size:12px">Ontvangen: ${esc(formatDate(req.created_at))}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="primary" onclick="approveVriendVerzoek(${req.id})">✓ Accepteren</button>
+          <button class="secondary" onclick="rejectVriendVerzoek(${req.id})">✕ Afwijzen</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  if(!outgoing||outgoing.length===0){
+    outgoingBox.innerHTML='<div class="muted">Geen openstaande verzoeken.</div>';
+  }else{
+    outgoingBox.innerHTML=outgoing.map(req=>{
+      const p=profileMap[req.recipient_user_id]||{};
+      const label=p.display_name||p.email||'(onbekend)';
+      return `<div class="item">
+        <b>${esc(label)}</b>
+        <div class="muted" style="font-size:12px">Verstuurd: ${esc(formatDate(req.created_at))} · Wacht op goedkeuring</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+async function ensureMutualFriendship(userId,friendUserId){
+  const [
+    {data:relatieAB,error:abErr},
+    {data:relatieBA,error:baErr}
+  ]=await Promise.all([
+    supabase
+      .from('friends')
+      .select('id')
+      .eq('user_id',userId)
+      .eq('friend_user_id',friendUserId)
+      .maybeSingle(),
+    supabase
+      .from('friends')
+      .select('id')
+      .eq('user_id',friendUserId)
+      .eq('friend_user_id',userId)
+      .maybeSingle()
+  ]);
+  if(abErr||baErr)return {error:abErr||baErr};
+  const ontbrekendeRelaties=[];
+  if(!relatieAB)ontbrekendeRelaties.push({user_id:userId,friend_user_id:friendUserId});
+  if(!relatieBA)ontbrekendeRelaties.push({user_id:friendUserId,friend_user_id:userId});
+  for(const relatie of ontbrekendeRelaties){
+    const {error:insertError}=await supabase.from('friends').insert(relatie);
+    if(insertError)return {error:insertError};
+  }
+  return {created:ontbrekendeRelaties.length};
+}
+
 async function loadVrienden(){
   const box=document.getElementById('vriendenList');
   if(!box)return;
   const {data:{user}}=await supabase.auth.getUser();
   if(!user)return;
-  const {data,error}=await supabase
-    .from('friends')
-    .select('id,friend_user_id,created_at')
-    .eq('user_id',user.id)
-    .order('created_at',{ascending:false});
+  const {data,error}=await getMutualFriends(user.id);
   if(error){box.innerHTML='<div class="status err">Fout bij laden vrienden: '+esc(error.message)+'</div>';return;}
   if(!data||data.length===0){box.innerHTML='<div class="muted">Nog geen vrienden toegevoegd.</div>';return;}
-  // Laad profielen voor alle vrienden
-  const friendIds=data.map(f=>f.friend_user_id).filter(Boolean);
   let profileMap={};
-  if(friendIds.length>0){
-    const {data:profiles}=await supabase
-      .from('profiles')
-      .select('user_id,email,display_name')
-      .in('user_id',friendIds);
-    if(profiles)profiles.forEach(p=>{profileMap[p.user_id]=p;});
+  try{
+    profileMap=await fetchProfileMapByUserIds(data.map(f=>f.friend_user_id));
+  }catch(profileError){
+    box.innerHTML='<div class="status err">Fout bij laden profielen: '+esc(profileError.message)+'</div>';
+    return;
   }
   box.innerHTML=data.map(f=>{
     const p=profileMap[f.friend_user_id]||{};
@@ -3509,10 +3667,11 @@ window.addVriend=async function(){
   if(profileErr){status.textContent='Fout bij zoeken: '+esc(profileErr.message);status.className='status err';return;}
   if(!profileData){status.textContent='Geen gebruiker gevonden met dit e-mailadres.';status.className='status err';return;}
   const friendUserId=profileData.user_id;
-  // Controleer beide richtingen (A->B en B->A)
   const [
     {data:relatieAB,error:abErr},
-    {data:relatieBA,error:baErr}
+    {data:relatieBA,error:baErr},
+    {data:uitgaandVerzoek,error:uitgaandErr},
+    {data:inkomendVerzoek,error:inkomendErr}
   ]=await Promise.all([
     supabase
       .from('friends')
@@ -3525,28 +3684,159 @@ window.addVriend=async function(){
       .select('id')
       .eq('user_id',friendUserId)
       .eq('friend_user_id',user.id)
+      .maybeSingle(),
+    supabase
+      .from('friend_requests')
+      .select('id,status')
+      .eq('requester_user_id',user.id)
+      .eq('recipient_user_id',friendUserId)
+      .order('created_at',{ascending:false})
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('friend_requests')
+      .select('id,status')
+      .eq('requester_user_id',friendUserId)
+      .eq('recipient_user_id',user.id)
+      .order('created_at',{ascending:false})
+      .limit(1)
       .maybeSingle()
   ]);
-  if(abErr||baErr){
-    status.textContent='Fout bij controleren: '+esc(abErr?.message||baErr?.message||'Onbekende fout');
+  if(abErr||baErr||uitgaandErr||inkomendErr){
+    status.textContent='Fout bij controleren: '+esc(abErr?.message||baErr?.message||uitgaandErr?.message||inkomendErr?.message||'Onbekende fout');
     status.className='status err';
     return;
   }
-  const ontbrekendeRelaties=[];
-  if(!relatieAB)ontbrekendeRelaties.push({user_id:user.id,friend_user_id:friendUserId});
-  if(!relatieBA)ontbrekendeRelaties.push({user_id:friendUserId,friend_user_id:user.id});
-  if(ontbrekendeRelaties.length===0){
+  if(relatieAB&&relatieBA){
     status.textContent='Deze gebruiker staat reeds wederzijds in jullie vriendenlijst.';
     status.className='status err';
     return;
   }
-  for(const relatie of ontbrekendeRelaties){
-    const {error:insErr}=await supabase.from('friends').insert(relatie);
-    if(insErr){status.textContent='Opslaan mislukt: '+esc(insErr.message);status.className='status err';return;}
+  if(relatieBA&&!relatieAB&&!inkomendVerzoek&&!uitgaandVerzoek){
+    const {error:legacySyncError}=await ensureMutualFriendship(user.id,friendUserId);
+    if(legacySyncError){
+      status.textContent='Bestaande vriendschap bijwerken mislukt: '+esc(legacySyncError.message);
+      status.className='status err';
+      return;
+    }
+    status.textContent='✓ Bestaande vriendschap wederzijds bevestigd.';
+    status.className='status ok';
+    document.getElementById('vriendenEmail').value='';
+    await loadVriendVerzoeken();
+    await loadVrienden();
+    return;
   }
-  status.textContent=ontbrekendeRelaties.length===2?'✓ Vriendschap wederzijds toegevoegd.':'✓ Vriendschap wederzijds bijgewerkt.';
+  if(uitgaandVerzoek?.status==='accepted'||inkomendVerzoek?.status==='accepted'){
+    const {error:syncError}=await ensureMutualFriendship(user.id,friendUserId);
+    if(syncError){
+      status.textContent='Geaccepteerde aanvraag herstellen mislukt: '+esc(syncError.message);
+      status.className='status err';
+      return;
+    }
+    status.textContent='✓ Geaccepteerde aanvraag gesynchroniseerd.';
+    status.className='status ok';
+    document.getElementById('vriendenEmail').value='';
+    await loadVriendVerzoeken();
+    await loadVrienden();
+    return;
+  }
+  if(inkomendVerzoek?.status==='pending'){
+    status.textContent='Deze gebruiker heeft jou al een verzoek gestuurd. Keur het eerst goed bij "Ontvangen verzoeken".';
+    status.className='status err';
+    return;
+  }
+  if(uitgaandVerzoek?.status==='pending'){
+    status.textContent='Er staat al een openstaand vriendenverzoek naar deze gebruiker.';
+    status.className='status err';
+    return;
+  }
+  let reqErr=null;
+  if(uitgaandVerzoek?.id){
+    const {error:updateRequestError}=await supabase
+      .from('friend_requests')
+      .update({status:'pending',responded_at:null})
+      .eq('id',uitgaandVerzoek.id)
+      .eq('requester_user_id',user.id);
+    reqErr=updateRequestError||null;
+  }else{
+    const {error:insertRequestError}=await supabase.from('friend_requests').insert({
+      requester_user_id:user.id,
+      recipient_user_id:friendUserId,
+      status:'pending'
+    });
+    reqErr=insertRequestError||null;
+  }
+  if(reqErr){status.textContent='Verzoek versturen mislukt: '+esc(reqErr.message);status.className='status err';return;}
+  status.textContent='✓ Vriendenverzoek verstuurd. De ontvanger moet dit eerst accepteren.';
   status.className='status ok';
   document.getElementById('vriendenEmail').value='';
+  await loadVriendVerzoeken();
+  await loadVrienden();
+};
+
+window.approveVriendVerzoek=async function(requestId){
+  const status=document.getElementById('vriendenStatus');
+  status.className='status hidden';
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user)return;
+  const {data:request,error:requestError}=await supabase
+    .from('friend_requests')
+    .select('id,requester_user_id,recipient_user_id,status')
+    .eq('id',requestId)
+    .eq('recipient_user_id',user.id)
+    .maybeSingle();
+  if(requestError||!request){
+    status.textContent='Vriendenverzoek laden mislukt.';
+    status.className='status err';
+    return;
+  }
+  if(request.status!=='pending'){
+    status.textContent='Dit vriendenverzoek is niet meer openstaand.';
+    status.className='status err';
+    await loadVriendVerzoeken();
+    return;
+  }
+  const {error:friendError}=await ensureMutualFriendship(request.requester_user_id,request.recipient_user_id);
+  if(friendError){
+    status.textContent='Vriendschap opslaan mislukt: '+esc(friendError.message);
+    status.className='status err';
+    return;
+  }
+  const {error:updateError}=await supabase
+    .from('friend_requests')
+    .update({status:'accepted',responded_at:new Date().toISOString()})
+    .eq('id',requestId)
+    .eq('recipient_user_id',user.id);
+  if(updateError){
+    status.textContent='Vriendschap aangemaakt, maar verzoekstatus bijwerken mislukt: '+esc(updateError.message);
+    status.className='status err';
+  }else{
+    status.textContent='✓ Vriendenverzoek geaccepteerd.';
+    status.className='status ok';
+  }
+  await loadVriendVerzoeken();
+  await loadVrienden();
+};
+
+window.rejectVriendVerzoek=async function(requestId){
+  const status=document.getElementById('vriendenStatus');
+  status.className='status hidden';
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user)return;
+  const {error}=await supabase
+    .from('friend_requests')
+    .update({status:'rejected',responded_at:new Date().toISOString()})
+    .eq('id',requestId)
+    .eq('recipient_user_id',user.id)
+    .eq('status','pending');
+  if(error){
+    status.textContent='Vriendenverzoek afwijzen mislukt: '+esc(error.message);
+    status.className='status err';
+    return;
+  }
+  status.textContent='✓ Vriendenverzoek afgewezen.';
+  status.className='status ok';
+  await loadVriendVerzoeken();
   await loadVrienden();
 };
 
@@ -3676,12 +3966,8 @@ window.loadOntdektePlaatsen=async function(){
   }
 
   // ── Vrienden ophalen ──────────────────────────────────────
-  const {data:friends,error:fErr}=await supabase
-    .from('friends')
-    .select('friend_user_id')
-    .eq('user_id',user.id);
+  const {data:friends,error:fErr}=await getMutualFriends(user.id);
   if(fErr){box.innerHTML='<div class="status err">Fout bij laden vrienden: '+esc(fErr.message)+'</div>';return;}
-
   const friendUserIds=(friends||[]).map(f=>f.friend_user_id).filter(Boolean);
 
   // ── Stops van vrienden ophalen (alleen gedeeld) ──────────
