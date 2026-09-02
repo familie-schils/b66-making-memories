@@ -3,7 +3,7 @@
 
 const CACHE_NAME = 'making-memories-v1';
 const PRECACHE = [
-  './test-agent.html',
+  './index.html',
   './manifest.json',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
@@ -30,7 +30,7 @@ self.addEventListener('fetch', event => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() =>
-        caches.match('./test-agent.html')
+        caches.match('./index.html')
       )
     );
   } else {
