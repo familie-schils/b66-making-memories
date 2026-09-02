@@ -1148,6 +1148,47 @@ function validateInviteEmail(invite,email){
   return expected===received;
 }
 
+function getProfileProvisionErrorMessage(error){
+  return 'Profielrecord aanmaken mislukt: '+(error?.message||'Onbekende fout')+'. Probeer opnieuw.';
+}
+
+async function ensureProfileRecordForUser(user){
+  const userId=user?.id||null;
+  const email=(user?.email||'').trim().toLowerCase();
+  if(!userId||!email){
+    return {ok:false,error:new Error('Geen geldige gebruiker of e-mailadres beschikbaar.')};
+  }
+  const {data:existingProfile,error:lookupError}=await supabase
+    .from('profiles')
+    .select('user_id,email')
+    .eq('user_id',userId)
+    .maybeSingle();
+  if(lookupError){
+    return {ok:false,error:lookupError};
+  }
+  if(existingProfile){
+    const existingEmail=(existingProfile.email||'').trim().toLowerCase();
+    if(existingEmail===email){
+      return {ok:true,action:'existing'};
+    }
+    const {error:updateError}=await supabase
+      .from('profiles')
+      .update({email})
+      .eq('user_id',userId);
+    if(updateError){
+      return {ok:false,error:updateError};
+    }
+    return {ok:true,action:'updated'};
+  }
+  const {error:insertError}=await supabase
+    .from('profiles')
+    .insert({user_id:userId,email,display_name:email});
+  if(insertError){
+    return {ok:false,error:insertError};
+  }
+  return {ok:true,action:'created'};
+}
+
 function getInviteCodeFromLocation(){
   const pathMatch=window.location.pathname.match(/\/(?:invite|join-camper)\/([^/?#]+)/i);
   if(pathMatch)return decodeURIComponent(pathMatch[1]);
@@ -1474,6 +1515,22 @@ function showLogin(){
 async function showApp(sessionUser=null){
   document.getElementById('versionText').textContent =
   'Build: ' + APP_VERSION;
+const fallbackUserData=await supabase.auth.getUser();
+const authUser=fallbackUserData?.data?.user||null;
+const profileUser=sessionUser||authUser;
+if(profileUser){
+  const profileProvisionResult=await ensureProfileRecordForUser(profileUser);
+  if(!profileProvisionResult.ok){
+    console.error('[profile-provisioning] mislukt tijdens showApp:',profileProvisionResult.error);
+    const loginError=document.getElementById('loginError');
+    if(loginError){
+      loginError.textContent=getProfileProvisionErrorMessage(profileProvisionResult.error);
+      loginError.className='status err';
+    }
+    showLogin();
+    return;
+  }
+}
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
 populateCountrySelects();
@@ -1679,6 +1736,14 @@ window.inviteRegister=async()=>{
   const sessionUser=data?.session?.user||null;
   const signUpUser=data?.user||null;
   const user=sessionUser||signUpUser;
+  if(user&&sessionUser){
+    const profileProvisionResult=await ensureProfileRecordForUser(user);
+    if(!profileProvisionResult.ok){
+      console.error('[profile-provisioning] mislukt tijdens inviteRegister:',profileProvisionResult.error);
+      setStatus(getProfileProvisionErrorMessage(profileProvisionResult.error),'err');
+      return;
+    }
+  }
   if(!sessionUser||!user){
     setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in om de uitnodiging te activeren.','ok');
     return;
@@ -1701,6 +1766,12 @@ window.inviteLogin=async()=>{
   if(error){setStatus('Inloggen mislukt: '+error.message,'err');return;}
   const user=data?.user;
   if(!user){setStatus('Inloggen mislukt.','err');return;}
+  const profileProvisionResult=await ensureProfileRecordForUser(user);
+  if(!profileProvisionResult.ok){
+    console.error('[profile-provisioning] mislukt tijdens inviteLogin:',profileProvisionResult.error);
+    setStatus(getProfileProvisionErrorMessage(profileProvisionResult.error),'err');
+    return;
+  }
   await processInvite(user.id);
 };
 
