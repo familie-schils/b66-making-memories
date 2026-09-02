@@ -3489,23 +3489,27 @@ async function fetchProfileMapByUserIds(userIds){
 }
 
 async function getMutualFriends(userId){
-  const {data:errorFreeFriends,error}=await supabase
+  const {data:friendRows,error}=await supabase
     .from('friends')
-    .select('id,friend_user_id,created_at')
-    .eq('user_id',userId)
+    .select('id,user_id,friend_user_id,created_at')
+    .or(`user_id.eq.${userId},friend_user_id.eq.${userId}`)
     .order('created_at',{ascending:false});
   if(error)return {error};
-  const ownFriends=errorFreeFriends||[];
-  const friendIds=ownFriends.map(f=>f.friend_user_id).filter(Boolean);
-  if(friendIds.length===0)return {data:[]};
-  const {data:reverseFriends,error:reverseError}=await supabase
-    .from('friends')
-    .select('user_id')
-    .in('user_id',friendIds)
-    .eq('friend_user_id',userId);
-  if(reverseError)return {error:reverseError};
-  const reverseIds=new Set((reverseFriends||[]).map(f=>f.user_id));
-  return {data:ownFriends.filter(f=>reverseIds.has(f.friend_user_id))};
+  const normalizedFriends=[];
+  const seenFriendIds=new Set();
+  (friendRows||[]).forEach(friend=>{
+    const friendUserId=friend.user_id===userId
+      ? friend.friend_user_id
+      : (friend.friend_user_id===userId ? friend.user_id : null);
+    if(!friendUserId||friendUserId===userId||seenFriendIds.has(friendUserId))return;
+    seenFriendIds.add(friendUserId);
+    normalizedFriends.push({
+      id:friend.id,
+      friend_user_id:friendUserId,
+      created_at:friend.created_at
+    });
+  });
+  return {data:normalizedFriends};
 }
 
 async function loadVriendVerzoeken(){
