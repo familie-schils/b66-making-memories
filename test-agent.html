@@ -65,8 +65,14 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .travel-cost-category-card .emoji{font-size:20px;line-height:1}
 .travel-cost-category-card .check{margin-left:auto;color:#2e7d32;font-weight:900;opacity:0}
 .travel-cost-category-card.selected .check{opacity:1}
+.edit-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.edit-actions .secondary,.edit-actions .primary{flex:1 1 180px}
+.existing-photo-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:10px}
+.existing-photo-item{background:#f7f7f7;border:1px solid #ddd;border-radius:10px;padding:8px}
+.existing-photo-item img{width:100%;max-height:100px;object-fit:cover;border-radius:8px;display:block;margin-bottom:6px}
 @media (max-width:560px){
   .travel-cost-category-grid{grid-template-columns:1fr}
+  .edit-actions .secondary,.edit-actions .primary{flex:1 1 100%}
 }
 </style>
 </head>
@@ -175,6 +181,10 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div><label>Startdatum</label><input id="tStartDate" type="date"></div>
 </div>
 </div>
+<div id="tripEditActions" class="edit-actions hidden">
+  <button id="saveTripEditBtn" class="primary" onclick="saveTripEdit()">💾 Reiswijziging opslaan</button>
+  <button class="secondary" onclick="cancelTripEdit()">Annuleren bewerken</button>
+</div>
 
 <hr>
 
@@ -218,6 +228,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="photoStatus" class="muted">
 Nog geen foto geselecteerd.
 </div>
+  <div id="existingPhotoList" class="existing-photo-list"></div>
   <div id="photoList"></div>
 <div id="activeTripInfo" class="muted"></div><br>
 <label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin-bottom:12px">
@@ -269,7 +280,8 @@ Nog geen foto geselecteerd.
 <br>
 <div id="fuelCalc" class="muted">Totaalbedrag: € 0,00 · KM sinds vorige tankbeurt: — · Verbruik: —</div>
 <br>
-<button class="primary" onclick="addFuel()">⛽ Tankbeurt opslaan</button>
+<button id="saveFuelBtn" class="primary" onclick="addFuel()">⛽ Tankbeurt opslaan</button>
+<button id="cancelFuelEditBtn" class="secondary hidden" onclick="cancelFuelEdit()">Annuleren bewerken</button>
 </div>
 <div class="card"><h2>Tankhistorie</h2><div id="fuelList">Tankbeurten laden...</div></div>
 </section>
@@ -324,8 +336,11 @@ Registreer snel dagelijkse uitgaven en verplaatsingskosten.
 
 <br><br>
 
-<button class="primary" onclick="saveTravelCost()">
+<button id="saveTravelCostBtn" class="primary" onclick="saveTravelCost()">
 💾 Reiskosten opslaan
+</button>
+<button id="cancelTravelCostEditBtn" class="secondary hidden" onclick="cancelTravelCostEdit()">
+Annuleren bewerken
 </button>
 <hr>
 <div id="costList">
@@ -416,6 +431,9 @@ Reiskosten laden...
 
 <button id="saveMaintenanceBtn" class="primary">
 💾 Onderhoud opslaan
+</button>
+<button id="cancelMaintenanceEditBtn" class="secondary hidden" onclick="cancelMaintenanceEdit()">
+Annuleren bewerken
 </button>
   <hr>
 
@@ -817,6 +835,13 @@ const supabase=createClient(
 let activeTripId=null;
 let _ontdektePlaatsenData={};
 let stopNumber=1;
+let editingTripId=null;
+let editingStopId=null;
+let editingFuelId=null;
+let editingTravelCostId=null;
+let editingMaintenanceId=null;
+let currentEditingStopPhotos=[];
+let stopPhotosToDelete=[];
   let selectedPhotos = [];
   let activeCamperId = null;
   let currentUser = null;
@@ -841,6 +866,11 @@ let stopNumber=1;
   const PHOTO_UPLOAD_ALLOWED_TYPES=['image/jpeg','image/png','image/webp'];
   const PHOTO_UPLOAD_MAX_FILE_SIZE_BYTES=10*1024*1024;
   const PHOTO_UPLOAD_MAX_COUNT=10;
+
+  function asDateInputValue(value){
+    if(!value)return '';
+    return String(value).slice(0,10);
+  }
 
 const loginView=document.getElementById('loginView');
 const appView=document.getElementById('appView');
@@ -1827,8 +1857,33 @@ window.inviteLogin=async()=>{
 
 let currentStopSaved=false;
 
+function updateTripFormMode(){
+  const saveStopBtn=document.getElementById('saveStopBtn');
+  const nextStopBtn=document.getElementById('nextStopBtn');
+  const tripEditActions=document.getElementById('tripEditActions');
+  if(saveStopBtn){
+    saveStopBtn.textContent=editingStopId?'💾 Stopwijziging opslaan':'💾 Stop opslaan';
+  }
+  if(nextStopBtn&&editingStopId){
+    nextStopBtn.classList.add('hidden');
+  }
+  if(tripEditActions){
+    tripEditActions.classList.toggle('hidden',!editingTripId);
+  }
+}
+
+function resetStopEditState(){
+  editingStopId=null;
+  currentEditingStopPhotos=[];
+  stopPhotosToDelete=[];
+  renderExistingStopPhotos();
+  updateTripFormMode();
+}
+
 window.startNewTrip=async()=>{
 activeTripId=null;stopNumber=1;currentStopSaved=false;
+editingTripId=null;
+resetStopEditState();
 document.getElementById('tripChooser').classList.add('hidden');
 document.getElementById('tripDetail').classList.add('hidden');
 document.getElementById('tripForm').classList.remove('hidden');
@@ -1847,6 +1902,7 @@ document.getElementById('saveStopBtn').classList.remove('hidden');
 document.getElementById('nextStopBtn').classList.add('hidden');
 clearStopFields();
 showStatus('',true);
+updateTripFormMode();
 
 const latest=await getLatestOdometer();
 if(latest!=null){
@@ -1860,6 +1916,79 @@ if(latest!=null){
   document.getElementById('activeTripInfo').textContent=
     'Geen eerdere kilometerstand gevonden. Voer de huidige kilometerstand in.';
 }
+};
+
+window.startTripEdit=async function(tripId){
+  const {data:trip,error}=await supabase.from('reizen').select('*').eq('id',tripId).single();
+  if(error){
+    alert('Reis laden mislukt: '+error.message);
+    return;
+  }
+  activeTripId=trip.id;
+  editingTripId=trip.id;
+  resetStopEditState();
+  currentStopSaved=false;
+  stopNumber=1;
+  document.getElementById('tripChooser').classList.add('hidden');
+  document.getElementById('tripDetail').classList.add('hidden');
+  document.getElementById('tripForm').classList.remove('hidden');
+  document.getElementById('tripTitle').textContent='🚐 Reis bewerken';
+  document.getElementById('tripStartFields').classList.remove('hidden');
+  document.getElementById('stopHeading').textContent='📍 Stop toevoegen of bewerken';
+  document.getElementById('endBox').classList.add('hidden');
+  document.getElementById('saveStopBtn').classList.remove('hidden');
+  document.getElementById('nextStopBtn').classList.add('hidden');
+  document.getElementById('tStartDate').value=asDateInputValue(trip.datum);
+  document.getElementById('tStartKm').value=trip.start_km??'';
+  document.getElementById('tStartKm').readOnly=false;
+  document.getElementById('tBestuurder').value=trip.bestuurder||'';
+  document.getElementById('tPassagier').value=trip.passagier||'';
+  document.getElementById('activeTripInfo').textContent='Bewerk de reisgegevens of kies een stop via "Bekijk reis".';
+  clearStopFields();
+  showStatus('',true);
+  updateTripFormMode();
+};
+
+window.saveTripEdit=async function(){
+  if(!editingTripId){
+    return;
+  }
+  const startDate=v('tStartDate');
+  const startKmText=v('tStartKm');
+  const bestuurder=v('tBestuurder');
+  if(!bestuurder||!startDate||startKmText===''){
+    showStatus('Vul bestuurder, startdatum en Start KM in.',false);
+    return;
+  }
+  const startKm=Number(startKmText);
+  if(!Number.isInteger(startKm)||startKm<0){
+    showStatus('Vul een geldige Start KM in.',false);
+    return;
+  }
+  const passagier=v('tPassagier')||null;
+  const crew=passagier?bestuurder+' & '+passagier:bestuurder;
+  const {error}=await supabase
+    .from('reizen')
+    .update({datum:startDate,start_km:startKm,bestuurder,passagier,crew})
+    .eq('id',editingTripId);
+  if(error){
+    showStatus('Reis bijwerken mislukt: '+error.message,false);
+    return;
+  }
+  showStatus('✓ Reis bijgewerkt.',true);
+  editingTripId=null;
+  updateTripFormMode();
+  await loadTrips();
+  await loadTravelCostTrips();
+  await loadStats();
+};
+
+window.cancelTripEdit=function(){
+  editingTripId=null;
+  resetStopEditState();
+  document.getElementById('tripForm').classList.add('hidden');
+  document.getElementById('tripChooser').classList.remove('hidden');
+  showStatus('',true);
 };
 
 function updateKm(){
@@ -1907,7 +2036,7 @@ async function saveCurrentStop(){
 showStatus('',true);
 if(!(await ensureTripCreated()))return;
 
-if(currentStopSaved){
+if(currentStopSaved && !editingStopId){
   showStatus('Deze stop is al opgeslagen. Kies "Naar stop '+(stopNumber+1)+'".',false);
   return;
 }
@@ -1935,48 +2064,150 @@ if(!stop.camperplaats){
   return;
 }
 
-const {data,error}=await supabase
-  .from('reis_stops')
-  .insert(stop)
-  .select()
-  .single();
-if(error){
-  showStatus('Stop opslaan mislukt: '+error.message,false);
-  return;
+let stopId=editingStopId;
+if(editingStopId){
+  const {error}=await supabase
+    .from('reis_stops')
+    .update(stop)
+    .eq('id',editingStopId);
+  if(error){
+    showStatus('Stop bijwerken mislukt: '+error.message,false);
+    return;
   }
-  const uploads = await uploadPhotos();
+}else{
+  const {data,error}=await supabase
+    .from('reis_stops')
+    .insert(stop)
+    .select()
+    .single();
+  if(error){
+    showStatus('Stop opslaan mislukt: '+error.message,false);
+    return;
+  }
+  stopId=data.id;
+}
 
+if(stopPhotosToDelete.length){
+  for(const photoId of stopPhotosToDelete){
+    const photo=currentEditingStopPhotos.find(x=>x.id===photoId);
+    const { error: deletePhotoError } = await supabase
+      .from('fotos')
+      .delete()
+      .eq('id',photoId);
+    if(deletePhotoError){
+      console.error('Foto verwijderen mislukt:', deletePhotoError);
+      continue;
+    }
+    let storageName=photo?.bestandsnaam||'';
+    if(!storageName&&photo?.url){
+      try{
+        storageName=decodeURIComponent(new URL(photo.url).pathname.split('/').pop()||'');
+      }catch(error){
+        console.warn('Foto bestandsnaam uit URL halen mislukt:',error);
+      }
+    }
+    if(storageName){
+      const {error:storageError}=await supabase.storage.from('fotos').remove([storageName]);
+      if(storageError){
+        console.warn('Foto storage cleanup mislukt:',storageError);
+      }
+    }
+  }
+}
+
+const uploads = await uploadPhotos();
 for(const foto of uploads){
-
   const { error: fotoError } = await supabase
     .from('fotos')
     .insert({
-      stop_id: data.id,
+      stop_id: stopId,
       bestandsnaam: foto.naam,
       url: foto.url
     });
-
   if(fotoError){
     console.error('Foto opslaan mislukt:', fotoError);
   }
 }
 
-
-
 currentStopSaved=true;
-showStatus('✓ Stop '+stopNumber+' opgeslagen.',true);
-document.getElementById('saveStopBtn').classList.add('hidden');
-const nextBtn=document.getElementById('nextStopBtn');
-nextBtn.textContent='➡️ Naar stop '+(stopNumber+1);
-nextBtn.classList.remove('hidden');
-document.getElementById('activeTripInfo').textContent=
-  'Reis actief · '+stopNumber+' stop'+(stopNumber===1?'':'s')+' opgeslagen';
+if(editingStopId){
+  showStatus('✓ Stop bijgewerkt.',true);
+  document.getElementById('activeTripInfo').textContent='Stop bijgewerkt.';
+  resetStopEditState();
+}else{
+  showStatus('✓ Stop '+stopNumber+' opgeslagen.',true);
+  document.getElementById('saveStopBtn').classList.add('hidden');
+  const nextBtn=document.getElementById('nextStopBtn');
+  nextBtn.textContent='➡️ Naar stop '+(stopNumber+1);
+  nextBtn.classList.remove('hidden');
+  document.getElementById('activeTripInfo').textContent=
+    'Reis actief · '+stopNumber+' stop'+(stopNumber===1?'':'s')+' opgeslagen';
+}
 await loadTrips();
 await loadStats();
+if(editingTripId){
+  await showTripDetail(editingTripId);
 }
+}
+
+window.startStopEdit=async function(stopId,tripId){
+  const [{data:trip,error:tripError},{data:stop,error:stopError},{data:fotos,error:fotosError}] = await Promise.all([
+    supabase.from('reizen').select('*').eq('id',tripId).single(),
+    supabase.from('reis_stops').select('*').eq('id',stopId).single(),
+    supabase.from('fotos').select('*').eq('stop_id',stopId)
+  ]);
+  if(tripError||stopError){
+    alert('Stop laden mislukt: '+(tripError?.message||stopError?.message||'onbekende fout'));
+    return;
+  }
+  if(fotosError){
+    console.warn('Foto\'s laden bij stop-bewerken mislukt:',fotosError);
+  }
+  activeTripId=trip.id;
+  editingTripId=trip.id;
+  editingStopId=stop.id;
+  currentStopSaved=false;
+  stopNumber=Number(stop.volgorde||1);
+  document.getElementById('tripChooser').classList.add('hidden');
+  document.getElementById('tripDetail').classList.add('hidden');
+  document.getElementById('tripForm').classList.remove('hidden');
+  document.getElementById('tripTitle').textContent='🚐 Reis bewerken';
+  document.getElementById('tripStartFields').classList.remove('hidden');
+  document.getElementById('stopHeading').textContent='📍 Stop '+stopNumber+' bewerken';
+  document.getElementById('saveStopBtn').classList.remove('hidden');
+  document.getElementById('nextStopBtn').classList.add('hidden');
+  document.getElementById('tStartDate').value=asDateInputValue(trip.datum);
+  document.getElementById('tStartKm').value=trip.start_km??'';
+  document.getElementById('tStartKm').readOnly=false;
+  document.getElementById('tBestuurder').value=trip.bestuurder||'';
+  document.getElementById('tPassagier').value=trip.passagier||'';
+  document.getElementById('sDate').value=asDateInputValue(stop.datum)||today();
+  document.getElementById('sType').value=stop.type_stop||'Camperplaats';
+  document.getElementById('sPlace').value=stop.camperplaats||'';
+  document.getElementById('sCountry').value=stop.land||'';
+  document.getElementById('sKm').value=stop.km_aankomst??'';
+  document.getElementById('sPrice').value=stop.prijs_per_nacht??'';
+  document.getElementById('sRating').value=String(stop.beoordeling||5);
+  document.getElementById('sFacilities').value=stop.voorzieningen||'';
+  document.getElementById('sRegio').value=stop.regio||'';
+  document.getElementById('sReferentie').value=stop.referentie||'';
+  document.getElementById('sNotes').value=stop.ervaring||'';
+  document.getElementById('shareWithFriends').checked=!Boolean(stop.gedeeld_met_vrienden);
+  currentEditingStopPhotos=(fotos||[]);
+  stopPhotosToDelete=[];
+  renderExistingStopPhotos();
+  resetPhotoSelection();
+  document.getElementById('activeTripInfo').textContent='Stop bewerken: pas gegevens aan en sla op.';
+  showStatus('',true);
+  updateTripFormMode();
+};
 
 
 function prepareNextStop(){
+if(editingStopId){
+  showStatus('Rond eerst het bewerken van deze stop af.',false);
+  return;
+}
 if(!currentStopSaved){
   showStatus('Sla eerst de huidige stop op.',false);
   return;
@@ -2082,12 +2313,17 @@ function clearStopFields(){
   document.getElementById('sType').value='Camperplaats';
   document.getElementById('sDate').value=today();
   document.getElementById('shareWithFriends').checked=false;
+  currentEditingStopPhotos=[];
+  stopPhotosToDelete=[];
+  renderExistingStopPhotos();
   resetPhotoSelection();
 }
 function cancelTrip(){
   activeTripId=null;
+  editingTripId=null;
   stopNumber=1;
   currentStopSaved=false;
+  resetStopEditState();
   resetPhotoSelection();
   document.getElementById('tripForm').classList.add('hidden');
   document.getElementById('tripChooser').classList.remove('hidden');
@@ -2111,6 +2347,8 @@ async function loadPersonOptions(){
   document.getElementById('tPassagier').innerHTML='<option value="">— geen —</option>'+opties;
 }
  async function loadActiveTrip(){
+  editingTripId=null;
+  resetStopEditState();
 
   const { data, error } = await supabase
   .from('reizen')
@@ -2202,7 +2440,10 @@ return `<div class="item">
 <div class="muted">${ts.length} stop${ts.length===1?'':'s'}${km!=null?' · '+km.toLocaleString('nl-BE')+' km':''}</div>
 ${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
-<button class="secondary" onclick="showTripDetail(${t.id})">Bekijk reis</button>
+<div class="edit-actions">
+  <button class="secondary" onclick="showTripDetail(${t.id})">Bekijk reis</button>
+  <button class="secondary" onclick="startTripEdit(${t.id})">✏️ Bewerken</button>
+</div>
 </div>`;
 }).join('');
 }
@@ -2214,7 +2455,7 @@ const eindDatum=t.einddatum||new Date().toISOString().slice(0,10);
 const [{data:stops},{data:reiskosten},{data:tankbeurten}]=await Promise.all([
   supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde'),
   supabase.from('reiskosten').select('*').eq('reis_id',id).order('datum'),
-  supabase.from('tankbeurten').select('datum,liters,prijs_per_liter,totaalbedrag,brandstof_type,locatie,land').eq('camper_id',activeCamperId).gte('datum',t.datum).lte('datum',eindDatum).order('datum')
+  supabase.from('tankbeurten').select('id,datum,kmstand,liters,prijs_per_liter,totaalbedrag,brandstof_type,locatie,land').eq('camper_id',activeCamperId).gte('datum',t.datum).lte('datum',eindDatum).order('datum')
 ]);
 const stopIds=(stops||[]).map(s=>s.id);
 const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
@@ -2324,13 +2565,15 @@ ${s.voorzieningen?`<div>${esc(s.voorzieningen)}</div>`:''}
 ${s.ervaring?`<p>${esc(s.ervaring)}</p>`:''}
 ${s.prijs_per_nacht!=null?`<div class="muted">💶 ${fmt(s.prijs_per_nacht)} / nacht</div>`:''}
 ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+''+stopFotos.map(f=>`<div style="margin-top:10px"><img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;"></div>`).join(''):''}
+<div class="edit-actions"><button class="secondary" onclick="startStopEdit(${s.id},${id})">✏️ Bewerken</button></div>
 </div>`;
   }
   if(item.type==='kost'){
     const k=item.data;
     return `<div class="trip-stop" style="border-left-color:#e0a800"><b>${esc(getTravelCostCategoryLabel(k.type_kost))}</b>${k.land?' · '+esc(k.land):''}
 <div class="muted">${esc(k.datum)}${k.opmerking?' · '+esc(k.opmerking):''}</div>
-<div>💶 ${fmt(k.bedrag)}</div></div>`;
+<div>💶 ${fmt(k.bedrag)}</div>
+<div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${k.id})">✏️ Bewerken</button></div></div>`;
   }
   if(item.type==='tank'){
     const x=item.data;
@@ -2338,7 +2581,8 @@ ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+'
     const kost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*Number(x.prijs_per_liter||0);
     return `<div class="trip-stop" style="border-left-color:#2e7d32"><b>⛽ Tanken${x.brandstof_type?' ('+esc(x.brandstof_type)+')':''}</b>${x.locatie?' · '+esc(x.locatie):''}${x.land?' · '+esc(x.land):''}
 <div class="muted">${esc(x.datum)}</div>
-<div>${liters.toFixed(2).replace('.',',')} l · ${fmt(kost)}</div></div>`;
+<div>${liters.toFixed(2).replace('.',',')} l · ${fmt(kost)}</div>
+<div class="edit-actions"><button class="secondary" onclick="startFuelEdit(${x.id})">✏️ Bewerken</button></div></div>`;
   }
   return '';
 }).join(''):'<div class="muted">Geen activiteiten.</div>'}
@@ -2389,6 +2633,30 @@ async function getPreviousTank(km){
   return data||null;
 }
 
+async function validateFuelKmSequence(km,currentId=null){
+  const {data,error}=await supabase
+    .from('tankbeurten')
+    .select('id,kmstand')
+    .eq('camper_id',activeCamperId)
+    .order('kmstand',{ascending:true});
+  if(error){
+    return 'Controle van kilometerstand mislukt: '+error.message;
+  }
+  const others=(data||[]).filter(x=>!currentId||x.id!==currentId);
+  if(others.some(x=>Number(x.kmstand)===km)){
+    return 'Er bestaat al een tankbeurt met dezelfde KM-stand.';
+  }
+  const prev=[...others].filter(x=>Number(x.kmstand)<km).pop();
+  const next=others.find(x=>Number(x.kmstand)>km);
+  if(prev&&km<=Number(prev.kmstand)){
+    return 'De KM-stand moet hoger zijn dan de vorige tankbeurt.';
+  }
+  if(next&&km>=Number(next.kmstand)){
+    return 'De KM-stand moet lager zijn dan de volgende tankbeurt.';
+  }
+  return null;
+}
+
 async function updateFuelCalc(){
   const liters=Number(v('fLiters')||0);
   const price=Number(v('fPrice')||0);
@@ -2437,37 +2705,76 @@ window.addFuel=async()=>{
     status.className='status err';return;
   }
 
-  const prev=await getPreviousTank(km);
-  if(prev && km<=Number(prev.kmstand)){
-    status.textContent='De KM-stand moet hoger zijn dan de vorige tankbeurt.';
-    status.className='status err';return;
+  const kmValidationError=await validateFuelKmSequence(km,editingFuelId);
+  if(kmValidationError){
+    status.textContent=kmValidationError;
+    status.className='status err';
+    return;
   }
-  const {error}=await supabase.from('tankbeurten').insert({
-  datum,
-  kmstand:km,
-  liters,
-  prijs_per_liter:price,
-  locatie:v('fLocation')||null,
-  land:v('fCountry')||null,
-  brandstof_type:document.getElementById('fFuelType').value,
-  camper_id: activeCamperId
-});
+  const payload={
+    datum,
+    kmstand:km,
+    liters,
+    prijs_per_liter:price,
+    locatie:v('fLocation')||null,
+    land:v('fCountry')||null,
+    brandstof_type:document.getElementById('fFuelType').value,
+    camper_id: activeCamperId
+  };
+  const query=editingFuelId
+    ? supabase.from('tankbeurten').update(payload).eq('id',editingFuelId)
+    : supabase.from('tankbeurten').insert(payload);
+  const {error}=await query;
 
 
   if(error){
-    status.textContent='Tankbeurt opslaan mislukt: '+error.message;
+    status.textContent=(editingFuelId?'Tankbeurt bijwerken':'Tankbeurt opslaan')+' mislukt: '+error.message;
     status.className='status err';return;
   }
 
-  status.textContent='✓ Tankbeurt opgeslagen.';
+  status.textContent=editingFuelId?'✓ Tankbeurt bijgewerkt.':'✓ Tankbeurt opgeslagen.';
   status.className='status ok';
+  cancelFuelEdit(false);
+  await loadFuel();
+  await loadStats();
+  if(editingTripId){
+    await showTripDetail(editingTripId);
+  }
+};
+
+window.startFuelEdit=async function(id){
+  const {data,error}=await supabase.from('tankbeurten').select('*').eq('id',id).single();
+  if(error){
+    alert('Tankbeurt laden mislukt: '+error.message);
+    return;
+  }
+  editingFuelId=id;
+  document.getElementById('fDate').value=asDateInputValue(data.datum)||today();
+  document.getElementById('fKm').value=data.kmstand??'';
+  document.getElementById('fFuelType').value=data.brandstof_type||'Diesel';
+  document.getElementById('fLiters').value=data.liters??'';
+  document.getElementById('fPrice').value=data.prijs_per_liter??'';
+  document.getElementById('fLocation').value=data.locatie||'';
+  document.getElementById('fCountry').value=data.land||'';
+  document.getElementById('saveFuelBtn').textContent='💾 Tankbeurt wijzigen';
+  document.getElementById('cancelFuelEditBtn').classList.remove('hidden');
+  document.getElementById('fuelStatus').className='status hidden';
+  await updateFuelCalc();
+  document.getElementById('fuel').scrollIntoView({behavior:'smooth',block:'start'});
+};
+
+window.cancelFuelEdit=function(resetStatus=true){
+  editingFuelId=null;
   ['fKm','fLiters','fPrice','fLocation','fCountry'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fFuelType').value='Diesel';
   document.getElementById('fDate').value=today();
   document.getElementById('fuelKmHint').textContent='';
   document.getElementById('fuelCalc').textContent='Totaalbedrag: € 0,00 · Eerste/nieuwe tankbeurt — · Verbruik: —';
-  await loadFuel();
-  await loadStats();
+  document.getElementById('saveFuelBtn').textContent='⛽ Tankbeurt opslaan';
+  document.getElementById('cancelFuelEditBtn').classList.add('hidden');
+  if(resetStatus){
+    document.getElementById('fuelStatus').className='status hidden';
+  }
 };
 
 async function prepareFuelForm(){
@@ -2529,6 +2836,7 @@ async function loadFuel(){
             ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · verbruik niet berekend (liters ontbreken of zijn 0)</div>`
             :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>')
           :''}
+        <div class="edit-actions"><button class="secondary" onclick="startFuelEdit(${x.id})">✏️ Bewerken</button></div>
       </div>`;
     }).join(''):'Nog geen tankbeurten opgeslagen.';
 
@@ -2908,6 +3216,30 @@ function renderPhotoList(photos){
     .join('');
 }
 
+function renderExistingStopPhotos(){
+  const box=document.getElementById('existingPhotoList');
+  if(!box)return;
+  const visiblePhotos=(currentEditingStopPhotos||[]).filter(photo=>!stopPhotosToDelete.includes(photo.id));
+  if(!editingStopId||!visiblePhotos.length){
+    box.innerHTML='';
+    return;
+  }
+  box.innerHTML=visiblePhotos.map(photo=>`
+    <div class="existing-photo-item">
+      <img src="${esc(photo.url)}" alt="${esc(photo.bestandsnaam||'stopfoto')}">
+      <button class="secondary" onclick="markStopPhotoForDeletion(${photo.id})">🗑️ Verwijderen</button>
+    </div>
+  `).join('');
+}
+
+window.markStopPhotoForDeletion=function(photoId){
+  if(!editingStopId)return;
+  if(!stopPhotosToDelete.includes(photoId)){
+    stopPhotosToDelete.push(photoId);
+  }
+  renderExistingStopPhotos();
+};
+
 function resetPhotoSelection(){
   selectedPhotos=[];
   if(photoUpload){
@@ -3121,119 +3453,122 @@ const maintenanceOptions = {
 
 };
 
-document.getElementById('mCategory').addEventListener('change', function(){
-
-  const container =
-    document.getElementById('maintenanceOptions');
-
-  const items =
-    maintenanceOptions[this.value] || [];
-
-container.innerHTML = items.map(item => `
-  <label>
-    <input type="checkbox"
-           class="maintenanceCheck"
-           value="${item}">
-    ${item}
-  </label>
-`).join('<br>');
-
-document.querySelectorAll('.maintenanceCheck')
-  .forEach(cb => {
-
-    cb.addEventListener('change', function(){
-
-      const overigAangevinkt =
-        [...document.querySelectorAll('.maintenanceCheck')]
-        .some(x => x.checked && x.value === 'Overig');
-
-      document.getElementById('otherMaintenanceBox')
-        .style.display =
-          overigAangevinkt ? 'block' : 'none';
-
-    });
-     });
-  });
-document.getElementById('saveMaintenanceBtn')
-  .addEventListener('click', async function(){
+function setMaintenanceStatus(message,isOk){
   const status=document.getElementById('maintenanceStatus');
-  function setMaintenanceStatus(message,isOk){
-    if(!status)return;
-    if(!message){
-      status.className='status hidden';
-      status.textContent='';
-      return;
-    }
-    status.textContent=message;
-    status.className='status '+(isOk?'ok':'err');
+  if(!status)return;
+  if(!message){
+    status.className='status hidden';
+    status.textContent='';
+    return;
   }
-  function resetMaintenanceForm(){
-    document.getElementById('mCategory').value='';
-    document.getElementById('mDate').value='';
-    document.getElementById('mKm').value='';
-    document.getElementById('mCost').value='';
-    document.getElementById('mPerformer').value='';
-    document.getElementById('mNotes').value='';
-    const overig=document.getElementById('otherMaintenanceText');
-    if(overig)overig.value='';
-    document.querySelectorAll('.maintenanceCheck').forEach(cb=>{cb.checked=false;});
-    const overigBox=document.getElementById('otherMaintenanceBox');
-    if(overigBox)overigBox.style.display='none';
-    loadMaintenanceOptions();
-  }
+  status.textContent=message;
+  status.className='status '+(isOk?'ok':'err');
+}
+
+function updateOtherMaintenanceVisibility(){
+  const overigAangevinkt=[...document.querySelectorAll('.maintenanceCheck')]
+    .some(x=>x.checked&&x.value==='Overig');
+  const overigBox=document.getElementById('otherMaintenanceBox');
+  if(overigBox)overigBox.style.display=overigAangevinkt?'block':'none';
+}
+
+function loadMaintenanceOptions(selectedItems=[]){
+  const category=document.getElementById('mCategory').value;
+  const container=document.getElementById('maintenanceOptions');
+  if(!container)return;
+  const items=maintenanceOptions[category]||[];
+  container.innerHTML=items.map(item=>`
+    <label>
+      <input type="checkbox" class="maintenanceCheck" value="${item}" ${selectedItems.includes(item)?'checked':''}>
+      ${item}
+    </label>
+  `).join('<br>');
+  document.querySelectorAll('.maintenanceCheck').forEach(cb=>{
+    cb.addEventListener('change',updateOtherMaintenanceVisibility);
+  });
+  updateOtherMaintenanceVisibility();
+}
+
+function resetMaintenanceForm(){
+  editingMaintenanceId=null;
+  document.getElementById('mCategory').value='';
+  document.getElementById('mDate').value='';
+  document.getElementById('mKm').value='';
+  document.getElementById('mCost').value='';
+  document.getElementById('mPerformer').value='';
+  document.getElementById('mNotes').value='';
+  const overig=document.getElementById('otherMaintenanceText');
+  if(overig)overig.value='';
+  loadMaintenanceOptions([]);
+  document.getElementById('saveMaintenanceBtn').textContent='💾 Onderhoud opslaan';
+  document.getElementById('cancelMaintenanceEditBtn').classList.add('hidden');
+}
+
+document.getElementById('mCategory').addEventListener('change',()=>loadMaintenanceOptions([]));
+
+window.startMaintenanceEdit=function(item){
+  const werkItems=String(item.werkzaamheden||'').split(',').map(x=>x.trim()).filter(Boolean);
+  editingMaintenanceId=item.id;
+  document.getElementById('mCategory').value=item.categorie||'';
+  loadMaintenanceOptions(werkItems);
+  document.getElementById('mDate').value=asDateInputValue(item.datum)||today();
+  document.getElementById('mKm').value=item.kmstand??'';
+  document.getElementById('mCost').value=item.kosten??'';
+  document.getElementById('mPerformer').value=item.uitvoerder||'';
+  document.getElementById('mNotes').value=item.opmerkingen||'';
+  document.getElementById('otherMaintenanceText').value=item.omschrijving_overig||'';
+  document.getElementById('saveMaintenanceBtn').textContent='💾 Onderhoud wijzigen';
+  document.getElementById('cancelMaintenanceEditBtn').classList.remove('hidden');
   setMaintenanceStatus('',false);
+  document.getElementById('maintenance').scrollIntoView({behavior:'smooth',block:'start'});
+};
 
-  const category =
-    document.getElementById('mCategory').value;
+window.startMaintenanceEditById=async function(id){
+  const {data,error}=await supabase.from('onderhoud').select('*').eq('id',id).single();
+  if(error){
+    alert('Onderhoud laden mislukt: '+error.message);
+    return;
+  }
+  window.startMaintenanceEdit(data);
+};
 
+window.cancelMaintenanceEdit=function(){
+  resetMaintenanceForm();
+  setMaintenanceStatus('',false);
+};
+
+document.getElementById('saveMaintenanceBtn').addEventListener('click', async function(){
+  setMaintenanceStatus('',false);
+  const category=document.getElementById('mCategory').value;
   if(!category){
     setMaintenanceStatus('Kies eerst een categorie.',false);
     return;
   }
-
-  const selectedWork = [
-    ...document.querySelectorAll('.maintenanceCheck:checked')
-  ].map(x => x.value);
-
-  const { error } = await supabase
-    .from('onderhoud')
-    .insert({
-
-      camper_id: activeCamperId,
-
-      datum:
-        document.getElementById('mDate').value || null,
-
-      categorie: category,
-
-      werkzaamheden:
-        selectedWork.join(', '),
-
-      omschrijving_overig:
-        document.getElementById('otherMaintenanceText')
-          ?.value || null,
-
-      kosten:
-        document.getElementById('mCost').value || null,
-
-      uitvoerder:
-        document.getElementById('mPerformer').value || null,
-
-      opmerkingen:
-        document.getElementById('mNotes').value || null
-
-    });
-
+  const selectedWork=[...document.querySelectorAll('.maintenanceCheck:checked')].map(x=>x.value);
+  const payload={
+    camper_id: activeCamperId,
+    datum: document.getElementById('mDate').value || null,
+    categorie: category,
+    werkzaamheden: selectedWork.join(', '),
+    omschrijving_overig: document.getElementById('otherMaintenanceText')?.value || null,
+    kosten: document.getElementById('mCost').value || null,
+    uitvoerder: document.getElementById('mPerformer').value || null,
+    opmerkingen: document.getElementById('mNotes').value || null
+  };
+  const isEdit=Boolean(editingMaintenanceId);
+  const query=isEdit
+    ? supabase.from('onderhoud').update(payload).eq('id',editingMaintenanceId)
+    : supabase.from('onderhoud').insert(payload);
+  const { error } = await query;
   if(error){
-    setMaintenanceStatus('Opslaan mislukt: '+error.message,false);
+    setMaintenanceStatus((isEdit?'Bijwerken':'Opslaan')+' mislukt: '+error.message,false);
     console.error(error);
     return;
   }
-
-  setMaintenanceStatus('✅ Onderhoud opgeslagen',true);
+  setMaintenanceStatus(isEdit?'✅ Onderhoud bijgewerkt':'✅ Onderhoud opgeslagen',true);
   resetMaintenanceForm();
   await loadMaintenance();
-    });
+});
 async function loadMaintenance(){
 
   const { data, error } = await supabase
@@ -3272,7 +3607,7 @@ async function loadMaintenance(){
       ${x.kosten
         ? `<div>💶 € ${x.kosten}</div>`
         : ''}
-
+      <div class="edit-actions"><button class="secondary" onclick="startMaintenanceEditById(${x.id})">✏️ Bewerken</button></div>
     </div>
   `).join('');
 
@@ -3320,6 +3655,7 @@ box.innerHTML = data.map(x => `
     ${x.opmerking
       ? `<div class="muted">${x.opmerking}</div>`
       : ''}
+    <div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${x.id})">✏️ Bewerken</button></div>
 
   </div>
 `).join('');
@@ -3364,6 +3700,38 @@ async function loadTravelCostTrips(){
   const costDate=document.getElementById('costDate');
   if(costDate&&!costDate.value)costDate.value=new Date().toISOString().slice(0,10);
 }
+window.startTravelCostEdit=async function(id){
+  const {data,error}=await supabase.from('reiskosten').select('*').eq('id',id).single();
+  if(error){
+    alert('Reiskost laden mislukt: '+error.message);
+    return;
+  }
+  editingTravelCostId=id;
+  document.getElementById('costTrip').value=String(data.reis_id||'');
+  document.getElementById('costDate').value=asDateInputValue(data.datum)||today();
+  document.getElementById('costAmount').value=data.bedrag??'';
+  document.getElementById('costNote').value=data.opmerking||'';
+  document.getElementById('costCountry').value=data.land||'';
+  selectedTravelCostCategory=mapTravelCostTypeToCategory(data.type_kost||'');
+  updateTravelCostCategoryCards();
+  document.getElementById('saveTravelCostBtn').textContent='💾 Reiskost wijzigen';
+  document.getElementById('cancelTravelCostEditBtn').classList.remove('hidden');
+  document.getElementById('reiskosten').scrollIntoView({behavior:'smooth',block:'start'});
+};
+
+window.cancelTravelCostEdit=function(){
+  editingTravelCostId=null;
+  document.getElementById('costTrip').selectedIndex=0;
+  document.getElementById('costDate').value=today();
+  selectedTravelCostCategory='';
+  updateTravelCostCategoryCards();
+  document.getElementById('costCountry').selectedIndex=0;
+  document.getElementById('costAmount').value='';
+  document.getElementById('costNote').value='';
+  document.getElementById('saveTravelCostBtn').textContent='💾 Reiskosten opslaan';
+  document.getElementById('cancelTravelCostEditBtn').classList.add('hidden');
+};
+
 window.saveTravelCost = async function(){
 
   const reisId = Number(
@@ -3387,44 +3755,31 @@ window.saveTravelCost = async function(){
     alert('Kies een categorie.');
     return;
   }
-  const { error } = await supabase
-    .from('reiskosten')
-    .insert({
-      
-
-      reis_id: reisId,
-      camper_id: activeCamperId,
-
-      datum:
-        document.getElementById('costDate').value,
-
-      type_kost:
-        selectedTravelCostCategory,
-
-      land:
-        document.getElementById('costCountry').value,
-
-      bedrag: bedrag,
-
-      opmerking:
-        document.getElementById('costNote').value
-
-    });
+  const isEdit=Boolean(editingTravelCostId);
+  const payload={
+    reis_id: reisId,
+    camper_id: activeCamperId,
+    datum: document.getElementById('costDate').value,
+    type_kost: selectedTravelCostCategory,
+    land: document.getElementById('costCountry').value,
+    bedrag: bedrag,
+    opmerking: document.getElementById('costNote').value
+  };
+  const query=isEdit
+    ? supabase.from('reiskosten').update(payload).eq('id',editingTravelCostId)
+    : supabase.from('reiskosten').insert(payload);
+  const { error } = await query;
 if(error){
   alert(error.message);
   return;
 }
 
 await loadTravelCosts();
-  document.getElementById('costTrip').selectedIndex=0;
-  document.getElementById('costDate').value=new Date().toISOString().slice(0,10);
-  selectedTravelCostCategory='';
-  updateTravelCostCategoryCards();
-  document.getElementById('costCountry').selectedIndex=0;
-  document.getElementById('costAmount').value='';
-  document.getElementById('costNote').value='';
-
-alert('✅ Reiskosten opgeslagen');
+  cancelTravelCostEdit();
+  if(editingTripId){
+    await showTripDetail(editingTripId);
+  }
+alert(isEdit?'✅ Reiskost bijgewerkt':'✅ Reiskosten opgeslagen');
 
 };
 
