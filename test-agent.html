@@ -239,6 +239,11 @@ Nog geen foto geselecteerd.
 <button class="secondary" onclick="showEndTrip()">🏁 Einde reis</button>
 <button class="secondary" onclick="cancelTrip()">Annuleren</button>
 
+<div id="activeTripStopsPanel" class="card hidden" style="margin-top:14px">
+  <h3>Stops in deze reis</h3>
+  <div id="activeTripStopsList" class="muted">Nog geen stops opgeslagen.</div>
+</div>
+
 <div id="endBox" class="end-box hidden">
 <h3>🏁 Einde reis</h3>
 <div class="grid">
@@ -1880,6 +1885,45 @@ function resetStopEditState(){
   updateTripFormMode();
 }
 
+async function loadActiveTripStopsPanel(){
+  const panel=document.getElementById('activeTripStopsPanel');
+  const list=document.getElementById('activeTripStopsList');
+  if(!panel||!list)return;
+  if(!activeTripId){
+    panel.classList.add('hidden');
+    list.className='muted';
+    list.textContent='Nog geen stops opgeslagen.';
+    return;
+  }
+  panel.classList.remove('hidden');
+  list.className='muted';
+  list.textContent='Stops laden...';
+  const {data:stops,error}=await supabase
+    .from('reis_stops')
+    .select('id,reis_id,volgorde,datum,camperplaats,land')
+    .eq('reis_id',activeTripId)
+    .order('volgorde',{ascending:true});
+  if(error){
+    list.className='status err';
+    list.textContent='Stops laden mislukt: '+error.message;
+    return;
+  }
+  if(!stops?.length){
+    list.className='muted';
+    list.textContent='Nog geen stops opgeslagen.';
+    return;
+  }
+  list.innerHTML=stops.map(stop=>`
+    <div class="item">
+      <b>${Number(stop.volgorde||0)}. ${esc(stop.camperplaats||'Onbenoemde stop')}</b> · ${esc(stop.land||'')}
+      <div class="muted">${esc(stop.datum||'')}</div>
+      <div class="edit-actions">
+        <button class="secondary" onclick="startStopEdit(${stop.id},${stop.reis_id})">✏️ Bewerken</button>
+      </div>
+    </div>
+  `).join('');
+}
+
 window.startNewTrip=async()=>{
 activeTripId=null;stopNumber=1;currentStopSaved=false;
 editingTripId=null;
@@ -1903,6 +1947,7 @@ document.getElementById('nextStopBtn').classList.add('hidden');
 clearStopFields();
 showStatus('',true);
 updateTripFormMode();
+await loadActiveTripStopsPanel();
 
 const latest=await getLatestOdometer();
 if(latest!=null){
@@ -1947,6 +1992,7 @@ window.startTripEdit=async function(tripId){
   clearStopFields();
   showStatus('',true);
   updateTripFormMode();
+  await loadActiveTripStopsPanel();
 };
 
 window.saveTripEdit=async function(){
@@ -2159,6 +2205,7 @@ if(editingStopId){
 }
 await loadTrips();
 await loadStats();
+await loadActiveTripStopsPanel();
 if(editingTripId){
   await showTripDetail(editingTripId);
 }
@@ -2214,6 +2261,7 @@ window.startStopEdit=async function(stopId,tripId){
   document.getElementById('activeTripInfo').textContent='Stop bewerken: pas gegevens aan en sla op.';
   showStatus('',true);
   updateTripFormMode();
+  await loadActiveTripStopsPanel();
 };
 
 
@@ -2298,11 +2346,13 @@ return;
 const gereden=endKm-startKm;
 showStatus('✓ Reis afgesloten · '+gereden.toLocaleString('nl-BE')+' km gereden.',true);
 activeTripId=null;stopNumber=1;currentStopSaved=false;
+resetStopEditState();
 document.getElementById('tripForm').classList.add('hidden');
 document.getElementById('saveStopBtn').classList.remove('hidden');
 document.getElementById('nextStopBtn').classList.add('hidden');
 document.getElementById('tripChooser').classList.remove('hidden');
 document.getElementById('endBox').classList.add('hidden');
+await loadActiveTripStopsPanel();
 await loadTrips();await loadStats();
 }
 
@@ -2341,6 +2391,7 @@ function cancelTrip(){
   resetPhotoSelection();
   document.getElementById('tripForm').classList.add('hidden');
   document.getElementById('tripChooser').classList.remove('hidden');
+  loadActiveTripStopsPanel().catch(error=>console.error('Stopslijst reset mislukt:',error));
 }
 function showStatus(text,ok){
 const el=document.getElementById('tripStatus');
