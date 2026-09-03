@@ -2927,44 +2927,85 @@ async function uploadPhotos() {
     return [];
   }
   const uploadedUrls = [];
+ const uploadErrors = [];
 
-  for(const photo of validation.files){
+ function createPhotoUploadFilename(photo){
+   const originalName=photo?.name||'foto';
+   const extension=originalName.includes('.')?'.'+originalName.split('.').pop():'';
+   const safeName=originalName
+     .replace(/\.[^.]+$/,'')
+     .replace(/\s+/g,'_')
+     .replace(/[^a-zA-Z0-9_-]/g,'')
+     .slice(0,40)||'foto';
+   try{
+     if(globalThis.crypto?.randomUUID){
+       return crypto.randomUUID()+extension;
+     }
+     if(globalThis.crypto?.getRandomValues){
+       const bytes=new Uint8Array(16);
+       crypto.getRandomValues(bytes);
+       const token=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+       return token+'_'+safeName+extension;
+     }
+   }catch(error){
+     console.warn('Fallback bestandsnaam generatie gebruikt:', error);
+   }
+   return Date.now()+'_'+Math.random().toString(16).slice(2)+'_'+safeName+extension;
+ }
 
-    const extension=photo.name.includes('.')?'.'+photo.name.split('.').pop():'';
-    const filename = crypto.randomUUID()+extension;
+ for(const photo of validation.files){
+   try{
+     const filename=createPhotoUploadFilename(photo);
 
-    const { error } = await supabase.storage
-      .from('fotos')
-      .upload(filename, photo);
+     const { error } = await supabase.storage
+       .from('fotos')
+       .upload(filename, photo);
 
-    if(error){
-  console.error('Upload mislukt:', error);
-  setPhotoStatus('Upload mislukt: ' + error.message,true);
-  continue;
-}
+     if(error){
+       console.error('Upload mislukt:', error);
+       uploadErrors.push(`"${photo.name}": ${error.message}`);
+       continue;
+     }
 
-    const { data } = supabase.storage
-  .from('fotos')
-  .getPublicUrl(filename);
-    const publicUrl=data?.publicUrl;
-    if(!publicUrl){
-      console.error('Public URL ophalen mislukt voor:', filename);
-      continue;
-    }
+     const { data } = supabase.storage
+       .from('fotos')
+       .getPublicUrl(filename);
+     const publicUrl=data?.publicUrl;
+     if(!publicUrl){
+       console.error('Public URL ophalen mislukt voor:', filename);
+       uploadErrors.push(`"${photo.name}": public URL kon niet opgehaald worden.`);
+       continue;
+     }
 
-uploadedUrls.push({
-  naam: photo.name,
-  url: publicUrl
-});
-}
+     uploadedUrls.push({
+       naam: photo.name,
+       url: publicUrl
+     });
+   }catch(error){
+     console.error('Onverwachte fout tijdens foto-upload:', error);
+     uploadErrors.push(`"${photo?.name||'Onbekend bestand'}": ${error?.message||'onverwachte fout tijdens upload.'}`);
+   }
+ }
 
-  return uploadedUrls;
+ if(uploadErrors.length){
+   setPhotoStatus(
+     `Upload mislukt voor ${uploadErrors.length} foto('s). ${uploadErrors[0]}`,
+     true
+   );
+ }else{
+   setPhotoStatus(uploadedUrls.length+' foto(s) geüpload');
+ }
+
+ return uploadedUrls;
 }
 window.testUpload = async function(){
 
-  const uploads = await uploadPhotos();
+ const uploads = await uploadPhotos();
 
-  setPhotoStatus(uploads.length + ' foto(s) geüpload');
+ if(!uploads.length && selectedPhotos?.length){
+   return;
+ }
+ setPhotoStatus(uploads.length + ' foto(s) geüpload');
 };
 
 const maintenanceOptions = {
