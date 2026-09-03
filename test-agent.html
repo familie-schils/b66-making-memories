@@ -2956,10 +2956,21 @@ async function uploadPhotos() {
  for(const photo of validation.files){
    try{
      const filename=createPhotoUploadFilename(photo);
+     if(typeof photo?.arrayBuffer!=='function'){
+       throw new Error(`"${photo?.name||'Onbekend bestand'}": bestand kon niet gelezen worden. Kies de foto opnieuw en probeer opnieuw.`);
+     }
+     const fileBuffer=await photo.arrayBuffer();
+     if(!fileBuffer.byteLength){
+       throw new Error(`"${photo?.name||'Onbekend bestand'}": bestand bevat geen inhoud. Kies de foto opnieuw en probeer opnieuw.`);
+     }
 
      const { error } = await supabase.storage
        .from('fotos')
-       .upload(filename, photo);
+       .upload(
+         filename,
+         fileBuffer,
+         photo.type ? { contentType: photo.type } : undefined
+       );
 
      if(error){
        console.error('Upload mislukt:', error);
