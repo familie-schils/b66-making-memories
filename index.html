@@ -2809,6 +2809,10 @@ function validateSelectedPhotos(files){
       errors.push(`Bestand "${file.name}" is geen toegelaten afbeelding (JPEG, PNG of WEBP).`);
       continue;
     }
+    if(file.size<=0){
+      errors.push(`Bestand "${file.name}" bevat geen inhoud. Kies de foto opnieuw en probeer opnieuw.`);
+      continue;
+    }
     if(file.size>PHOTO_UPLOAD_MAX_FILE_SIZE_BYTES){
       errors.push(`Bestand "${file.name}" is groter dan 10 MB.`);
     }
@@ -2845,6 +2849,31 @@ if (photoUpload) {
   });
 
 }
+async function uploadPhotoToStorage(filename,photo){
+  const storage=supabase.storage.from('fotos');
+  let { error } = await storage.upload(filename, photo);
+  if(!error){
+    return;
+  }
+  if(error.message!=='No content provided'){
+    throw error;
+  }
+  if(typeof photo?.arrayBuffer!=='function'){
+    throw new Error(`Bestand "${photo?.name||'Onbekend bestand'}" kon niet gelezen worden. Kies de foto opnieuw en probeer opnieuw.`);
+  }
+  const bytes=new Uint8Array(await photo.arrayBuffer());
+  if(!bytes.byteLength){
+    throw new Error(`Bestand "${photo?.name||'Onbekend bestand'}" bevat geen inhoud. Kies de foto opnieuw en probeer opnieuw.`);
+  }
+  ({ error } = await storage.upload(
+    filename,
+    bytes,
+    photo.type ? { contentType: photo.type } : undefined
+  ));
+  if(error){
+    throw error;
+  }
+}
 async function uploadPhotos() {
 
   if(!selectedPhotos?.length){
@@ -2857,24 +2886,22 @@ async function uploadPhotos() {
   }
   const uploadedUrls = [];
 
-  for(const photo of validation.files){
+ for(const photo of validation.files){
 
-    const extension=photo.name.includes('.')?'.'+photo.name.split('.').pop():'';
-    const filename = crypto.randomUUID()+extension;
+   const extension=photo.name.includes('.')?'.'+photo.name.split('.').pop():'';
+   const filename = crypto.randomUUID()+extension;
 
-    const { error } = await supabase.storage
-      .from('fotos')
-      .upload(filename, photo);
+   try{
+     await uploadPhotoToStorage(filename,photo);
+   }catch(error){
+     console.error('Upload mislukt:', error);
+     setPhotoStatus('Upload mislukt: ' + error.message,true);
+     continue;
+   }
 
-    if(error){
-  console.error('Upload mislukt:', error);
-  setPhotoStatus('Upload mislukt: ' + error.message,true);
-  continue;
-}
-
-    const { data } = supabase.storage
-  .from('fotos')
-  .getPublicUrl(filename);
+   const { data } = supabase.storage
+ .from('fotos')
+ .getPublicUrl(filename);
     const publicUrl=data?.publicUrl;
     if(!publicUrl){
       console.error('Public URL ophalen mislukt voor:', filename);
