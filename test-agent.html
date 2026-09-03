@@ -57,6 +57,17 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .role-card.selected .role-card-check{opacity:1}
 .role-card-desc{margin:0;padding:0 0 0 16px;font-size:13px;color:#444;font-weight:400}
 .role-card-desc li{margin:3px 0}
+.travel-cost-category-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+.travel-cost-category-card{border:2px solid #ddd;border-radius:12px;padding:14px;cursor:pointer;background:#fff;transition:border-color .15s,background .15s,transform .05s;display:flex;align-items:center;gap:10px;font-weight:700;text-align:left;width:100%}
+.travel-cost-category-card:hover{border-color:#a3d9a5}
+.travel-cost-category-card:focus-visible{outline:2px solid #2e7d32;outline-offset:2px}
+.travel-cost-category-card.selected{border-color:#2e7d32;background:#f0faf1}
+.travel-cost-category-card .emoji{font-size:20px;line-height:1}
+.travel-cost-category-card .check{margin-left:auto;color:#2e7d32;font-weight:900;opacity:0}
+.travel-cost-category-card.selected .check{opacity:1}
+@media (max-width:560px){
+  .travel-cost-category-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -269,7 +280,7 @@ Nog geen foto geselecteerd.
 <h2>🛣️ Reiskosten</h2>
 
 <p class="muted">
-Registreer péage, ferry, tunnel, brug, parkeren en andere reiskosten.
+Registreer snel dagelijkse uitgaven en verplaatsingskosten.
 </p>
 <div class="grid">
 
@@ -284,35 +295,32 @@ Registreer péage, ferry, tunnel, brug, parkeren en andere reiskosten.
   </div>
 
   <div>
-    <label>Type kosten</label>
-    <select id="costType">
-      <option>Péage</option>
-      <option>Ferry</option>
-      <option>Tunnel</option>
-      <option>Brug</option>
-      <option>Parkeren</option>
-      <option>Milieusticker</option>
-      <option>Vignet</option>
-      <option>Overig</option>
-    </select>
-  </div>
-
-  <div>
-    <label>Land</label>
-    <select id="costCountry"></select>
-  </div>
-
-  <div>
     <label>Bedrag (€)</label>
-    <input id="costAmount" type="number" step="0.01">
+    <input id="costAmount" type="number" step="0.01" min="0.01">
+  </div>
+
+  <div>
+    <label>Omschrijving (optioneel)</label>
+    <input id="costNote" maxlength="120">
   </div>
 
 </div>
 
 <br>
 
-<label>Opmerking</label>
-<input id="costNote">
+<label>Categorie</label>
+<div id="costCategoryCards" class="travel-cost-category-grid">
+  <button type="button" class="travel-cost-category-card" data-category="Boodschappen" onclick="selectTravelCostCategory('Boodschappen')"><span class="emoji">🛒</span><span>Boodschappen</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Eten & drinken" onclick="selectTravelCostCategory('Eten & drinken')"><span class="emoji">🍽️</span><span>Eten & drinken</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Overnachting" onclick="selectTravelCostCategory('Overnachting')"><span class="emoji">🏕️</span><span>Overnachting</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Verplaatsing" onclick="selectTravelCostCategory('Verplaatsing')"><span class="emoji">🛣️</span><span>Verplaatsing</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Overig" onclick="selectTravelCostCategory('Overig')"><span class="emoji">📦</span><span>Overig</span><span class="check">✓</span></button>
+</div>
+
+<br>
+
+<label>Land (optioneel)</label>
+<select id="costCountry"></select>
 
 <br><br>
 
@@ -921,6 +929,48 @@ function populateCountrySelects(){
       CAMPER_COUNTRIES.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
   }
 }
+
+const TRAVEL_COST_CATEGORIES=['Boodschappen','Eten & drinken','Overnachting','Verplaatsing','Overig'];
+const TRAVEL_COST_CATEGORY_EMOJI={
+  'Boodschappen':'🛒',
+  'Eten & drinken':'🍽️',
+  'Overnachting':'🏕️',
+  'Verplaatsing':'🛣️',
+  'Overig':'📦'
+};
+const LEGACY_TRAVEL_COST_TYPE_TO_CATEGORY={
+  'Péage':'Verplaatsing',
+  'Ferry':'Verplaatsing',
+  'Tunnel':'Verplaatsing',
+  'Brug':'Verplaatsing',
+  'Parkeren':'Verplaatsing',
+  'Milieusticker':'Overig',
+  'Vignet':'Overig'
+};
+let selectedTravelCostCategory='';
+
+function mapTravelCostTypeToCategory(type){
+  if(TRAVEL_COST_CATEGORIES.includes(type))return type;
+  if(LEGACY_TRAVEL_COST_TYPE_TO_CATEGORY[type])return LEGACY_TRAVEL_COST_TYPE_TO_CATEGORY[type];
+  return 'Overig';
+}
+
+function getTravelCostCategoryLabel(type){
+  const category=mapTravelCostTypeToCategory(type||'');
+  const emoji=TRAVEL_COST_CATEGORY_EMOJI[category]||'📦';
+  return `${emoji} ${category}`;
+}
+
+function updateTravelCostCategoryCards(){
+  document.querySelectorAll('#costCategoryCards .travel-cost-category-card').forEach(card=>{
+    card.classList.toggle('selected',card.dataset.category===selectedTravelCostCategory);
+  });
+}
+
+window.selectTravelCostCategory=function(category){
+  selectedTravelCostCategory=category;
+  updateTravelCostCategoryCards();
+};
 
 window.filterRegioSuggesties=function(input){
   const val=(input.value||'').trim();
@@ -2176,14 +2226,14 @@ const aantalStops=(stops||[]).length;
 // Overnachtingskosten
 const overnachtingKost=(stops||[]).reduce((s,x)=>s+(x.prijs_per_nacht!=null?Number(x.prijs_per_nacht):0),0);
 
-// Reiskosten per type
-const kostenTypes=['Péage','Ferry','Tunnel','Brug','Parkeren','Milieusticker','Vignet','Overig'];
+// Reiskosten per categorie
+const kostenTypes=TRAVEL_COST_CATEGORIES;
 const kostenPerType={};
 let totaalReiskosten=0;
 for(const k of (reiskosten||[])){
   const b=Number(k.bedrag||0);
   totaalReiskosten+=b;
-  const type=kostenTypes.includes(k.type_kost)?k.type_kost:'Overig';
+  const type=mapTravelCostTypeToCategory(k.type_kost);
   kostenPerType[type]=(kostenPerType[type]||0)+b;
 }
 
@@ -2245,7 +2295,7 @@ detail.innerHTML=`<h2>📖 Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagie
 
 <h4>🛣️ Reiskosten</h4>
 <div class="item">
-  ${kostenTypes.map(type=>kostenPerType[type]?`<div><b>${esc(type)}:</b> ${fmt(kostenPerType[type])}</div>`:``).join('')}
+  ${kostenTypes.map(type=>kostenPerType[type]?`<div><b>${esc(getTravelCostCategoryLabel(type))}:</b> ${fmt(kostenPerType[type])}</div>`:``).join('')}
   <div style="margin-top:6px"><b>Totaal reiskosten:</b> ${fmt(totaalReiskosten)}</div>
 </div>
 
@@ -2278,7 +2328,7 @@ ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+'
   }
   if(item.type==='kost'){
     const k=item.data;
-    return `<div class="trip-stop" style="border-left-color:#e0a800"><b>🛣️ ${esc(k.type_kost)}</b>${k.land?' · '+esc(k.land):''}
+    return `<div class="trip-stop" style="border-left-color:#e0a800"><b>${esc(getTravelCostCategoryLabel(k.type_kost))}</b>${k.land?' · '+esc(k.land):''}
 <div class="muted">${esc(k.datum)}${k.opmerking?' · '+esc(k.opmerking):''}</div>
 <div>💶 ${fmt(k.bedrag)}</div></div>`;
   }
@@ -3261,7 +3311,7 @@ box.innerHTML = data.map(x => `
 
     <b>${x.datum}</b><br>
 
-    ${x.type_kost}<br>
+    ${esc(getTravelCostCategoryLabel(x.type_kost))}<br>
 
     ${x.land || ''}<br>
 
@@ -3311,6 +3361,8 @@ async function loadTravelCostTrips(){
       </option>
     `)
     .join('');
+  const costDate=document.getElementById('costDate');
+  if(costDate&&!costDate.value)costDate.value=new Date().toISOString().slice(0,10);
 }
 window.saveTravelCost = async function(){
 
@@ -3331,6 +3383,10 @@ window.saveTravelCost = async function(){
     alert('Vul een geldig bedrag in.');
     return;
   }
+  if(!selectedTravelCostCategory){
+    alert('Kies een categorie.');
+    return;
+  }
   const { error } = await supabase
     .from('reiskosten')
     .insert({
@@ -3343,7 +3399,7 @@ window.saveTravelCost = async function(){
         document.getElementById('costDate').value,
 
       type_kost:
-        document.getElementById('costType').value,
+        selectedTravelCostCategory,
 
       land:
         document.getElementById('costCountry').value,
@@ -3361,8 +3417,9 @@ if(error){
 
 await loadTravelCosts();
   document.getElementById('costTrip').selectedIndex=0;
-  document.getElementById('costDate').value='';
-  document.getElementById('costType').selectedIndex=0;
+  document.getElementById('costDate').value=new Date().toISOString().slice(0,10);
+  selectedTravelCostCategory='';
+  updateTravelCostCategoryCards();
   document.getElementById('costCountry').selectedIndex=0;
   document.getElementById('costAmount').value='';
   document.getElementById('costNote').value='';
