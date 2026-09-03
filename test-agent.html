@@ -2876,6 +2876,14 @@ function validateSelectedPhotos(files){
     errors.push(`Je kan maximaal ${PHOTO_UPLOAD_MAX_COUNT} foto's per stop uploaden.`);
   }
   for(const file of files){
+    if(!(file instanceof File)){
+      errors.push('Minstens één geselecteerd item is geen geldig bestand.');
+      continue;
+    }
+    if(file.size<=0){
+      errors.push(`Bestand "${file.name}" bevat geen inhoud.`);
+      continue;
+    }
     if(!PHOTO_UPLOAD_ALLOWED_TYPES.includes(file.type)){
       errors.push(`Bestand "${file.name}" is geen toegelaten afbeelding (JPEG, PNG of WEBP).`);
       continue;
@@ -2955,15 +2963,27 @@ async function uploadPhotos() {
 
  for(const photo of validation.files){
    try{
-     const filename=createPhotoUploadFilename(photo);
+     const file=photo;
+     console.log(file);
+     console.log(file?.size);
+     console.log(file?.type);
+     if(!(file instanceof File)){
+       uploadErrors.push('Upload overgeslagen: geselecteerd item is geen File-object.');
+       continue;
+     }
+     if(file.size<=0){
+       uploadErrors.push(`"${file.name}": bestand bevat geen inhoud (0 bytes).`);
+       continue;
+     }
+     const filename=createPhotoUploadFilename(file);
 
      const { error } = await supabase.storage
        .from('fotos')
-       .upload(filename, photo);
+       .upload(filename, file);
 
      if(error){
        console.error('Upload mislukt:', error);
-       uploadErrors.push(`"${photo.name}": ${error.message}`);
+       uploadErrors.push(`"${file.name}": ${error.message}`);
        continue;
      }
 
@@ -2978,7 +2998,7 @@ async function uploadPhotos() {
      }
 
      uploadedUrls.push({
-       naam: photo.name,
+       naam: file.name,
        url: publicUrl
      });
    }catch(error){
