@@ -2964,22 +2964,26 @@ async function uploadPhotos() {
  for(const photo of validation.files){
    try{
      const file=photo;
-     console.log(file);
-     console.log(file?.size);
-     console.log(file?.type);
      if(!(file instanceof File)){
        uploadErrors.push('Upload overgeslagen: geselecteerd item is geen File-object.');
        continue;
      }
-     if(file.size<=0){
-       uploadErrors.push(`"${file.name}": bestand bevat geen inhoud (0 bytes).`);
-       continue;
-     }
      const filename=createPhotoUploadFilename(file);
+     if(typeof file.arrayBuffer!=='function'){
+       throw new Error(`"${file.name}": bestand kon niet gelezen worden. Kies de foto opnieuw en probeer opnieuw.`);
+     }
+     const fileBuffer=await file.arrayBuffer();
+     if(!fileBuffer.byteLength){
+       throw new Error(`"${file.name}": bestand bevat geen inhoud. Kies de foto opnieuw en probeer opnieuw.`);
+     }
 
      const { error } = await supabase.storage
        .from('fotos')
-       .upload(filename, file);
+       .upload(
+         filename,
+         fileBuffer,
+         file.type ? { contentType: file.type } : undefined
+       );
 
      if(error){
        console.error('Upload mislukt:', error);
