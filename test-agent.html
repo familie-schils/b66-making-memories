@@ -1967,12 +1967,19 @@ window.saveTripEdit=async function(){
   }
   const passagier=v('tPassagier')||null;
   const crew=passagier?bestuurder+' & '+passagier:bestuurder;
-  const {error}=await supabase
+  const {data:updatedTrip,error}=await supabase
     .from('reizen')
     .update({datum:startDate,start_km:startKm,bestuurder,passagier,crew})
-    .eq('id',editingTripId);
+    .eq('id',editingTripId)
+    .eq('camper_id',activeCamperId)
+    .select('id')
+    .maybeSingle();
   if(error){
     showStatus('Reis bijwerken mislukt: '+error.message,false);
+    return;
+  }
+  if(!updatedTrip){
+    showStatus('Reis bijwerken mislukt: geen record aangepast (mogelijk geen update-recht via RLS).',false);
     return;
   }
   showStatus('✓ Reis bijgewerkt.',true);
@@ -2066,12 +2073,19 @@ if(!stop.camperplaats){
 
 let stopId=editingStopId;
 if(editingStopId){
-  const {error}=await supabase
+  const {data:updatedStop,error}=await supabase
     .from('reis_stops')
     .update(stop)
-    .eq('id',editingStopId);
+    .eq('id',editingStopId)
+    .eq('reis_id',activeTripId)
+    .select('id')
+    .maybeSingle();
   if(error){
     showStatus('Stop bijwerken mislukt: '+error.message,false);
+    return;
+  }
+  if(!updatedStop){
+    showStatus('Stop bijwerken mislukt: geen record aangepast (mogelijk geen update-recht via RLS).',false);
     return;
   }
 }else{
@@ -2721,10 +2735,22 @@ window.addFuel=async()=>{
     brandstof_type:document.getElementById('fFuelType').value,
     camper_id: activeCamperId
   };
-  const query=editingFuelId
-    ? supabase.from('tankbeurten').update(payload).eq('id',editingFuelId)
-    : supabase.from('tankbeurten').insert(payload);
-  const {error}=await query;
+  let error=null;
+  if(editingFuelId){
+    const {data:updatedFuel,error:updateError}=await supabase
+      .from('tankbeurten')
+      .update(payload)
+      .eq('id',editingFuelId)
+      .eq('camper_id',activeCamperId)
+      .select('id')
+      .maybeSingle();
+    error=updateError;
+    if(!error&&!updatedFuel){
+      error={message:'geen record aangepast (mogelijk geen update-recht via RLS)'};
+    }
+  }else{
+    ({error}=await supabase.from('tankbeurten').insert(payload));
+  }
 
 
   if(error){
@@ -3556,10 +3582,22 @@ document.getElementById('saveMaintenanceBtn').addEventListener('click', async fu
     opmerkingen: document.getElementById('mNotes').value || null
   };
   const isEdit=Boolean(editingMaintenanceId);
-  const query=isEdit
-    ? supabase.from('onderhoud').update(payload).eq('id',editingMaintenanceId)
-    : supabase.from('onderhoud').insert(payload);
-  const { error } = await query;
+  let error=null;
+  if(isEdit){
+    const {data:updatedMaintenance,error:updateError}=await supabase
+      .from('onderhoud')
+      .update(payload)
+      .eq('id',editingMaintenanceId)
+      .eq('camper_id',activeCamperId)
+      .select('id')
+      .maybeSingle();
+    error=updateError;
+    if(!error&&!updatedMaintenance){
+      error={message:'geen record aangepast (mogelijk geen update-recht via RLS)'};
+    }
+  }else{
+    ({error}=await supabase.from('onderhoud').insert(payload));
+  }
   if(error){
     setMaintenanceStatus((isEdit?'Bijwerken':'Opslaan')+' mislukt: '+error.message,false);
     console.error(error);
@@ -3766,11 +3804,21 @@ window.saveTravelCost = async function(){
     opmerking: document.getElementById('costNote').value
   };
   const query=isEdit
-    ? supabase.from('reiskosten').update(payload).eq('id',editingTravelCostId)
+    ? supabase
+        .from('reiskosten')
+        .update(payload)
+        .eq('id',editingTravelCostId)
+        .eq('camper_id',activeCamperId)
+        .select('id')
+        .maybeSingle()
     : supabase.from('reiskosten').insert(payload);
-  const { error } = await query;
+  const { data:updatedTravelCost, error } = await query;
 if(error){
   alert(error.message);
+  return;
+}
+if(isEdit&&!updatedTravelCost){
+  alert('Reiskost bijwerken mislukt: geen record aangepast (mogelijk geen update-recht via RLS).');
   return;
 }
 
