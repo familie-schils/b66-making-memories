@@ -2876,6 +2876,14 @@ function validateSelectedPhotos(files){
     errors.push(`Je kan maximaal ${PHOTO_UPLOAD_MAX_COUNT} foto's per stop uploaden.`);
   }
   for(const file of files){
+    if(!(file instanceof File)){
+      errors.push('Minstens één geselecteerd item is geen geldig bestand.');
+      continue;
+    }
+    if(file.size<=0){
+      errors.push(`Bestand "${file.name}" bevat geen inhoud.`);
+      continue;
+    }
     if(!PHOTO_UPLOAD_ALLOWED_TYPES.includes(file.type)){
       errors.push(`Bestand "${file.name}" is geen toegelaten afbeelding (JPEG, PNG of WEBP).`);
       continue;
@@ -2955,13 +2963,18 @@ async function uploadPhotos() {
 
  for(const photo of validation.files){
    try{
-     const filename=createPhotoUploadFilename(photo);
-     if(typeof photo?.arrayBuffer!=='function'){
-       throw new Error(`"${photo?.name||'Onbekend bestand'}": bestand kon niet gelezen worden. Kies de foto opnieuw en probeer opnieuw.`);
+     const file=photo;
+     if(!(file instanceof File)){
+       uploadErrors.push('Upload overgeslagen: geselecteerd item is geen File-object.');
+       continue;
      }
-     const fileBuffer=await photo.arrayBuffer();
+     const filename=createPhotoUploadFilename(file);
+     if(typeof file.arrayBuffer!=='function'){
+       throw new Error(`"${file.name}": bestand kon niet gelezen worden. Kies de foto opnieuw en probeer opnieuw.`);
+     }
+     const fileBuffer=await file.arrayBuffer();
      if(!fileBuffer.byteLength){
-       throw new Error(`"${photo?.name||'Onbekend bestand'}": bestand bevat geen inhoud. Kies de foto opnieuw en probeer opnieuw.`);
+       throw new Error(`"${file.name}": bestand bevat geen inhoud. Kies de foto opnieuw en probeer opnieuw.`);
      }
 
      const { error } = await supabase.storage
@@ -2969,12 +2982,12 @@ async function uploadPhotos() {
        .upload(
          filename,
          fileBuffer,
-         photo.type ? { contentType: photo.type } : undefined
+         file.type ? { contentType: file.type } : undefined
        );
 
      if(error){
        console.error('Upload mislukt:', error);
-       uploadErrors.push(`"${photo.name}": ${error.message}`);
+       uploadErrors.push(`"${file.name}": ${error.message}`);
        continue;
      }
 
@@ -2989,7 +3002,7 @@ async function uploadPhotos() {
      }
 
      uploadedUrls.push({
-       naam: photo.name,
+       naam: file.name,
        url: publicUrl
      });
    }catch(error){
