@@ -70,6 +70,8 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .existing-photo-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:10px}
 .existing-photo-item{background:#f7f7f7;border:1px solid #ddd;border-radius:10px;padding:8px}
 .existing-photo-item img{width:100%;max-height:100px;object-fit:cover;border-radius:8px;display:block;margin-bottom:6px}
+.trip-toolbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px;align-items:end}
+.trip-report-panel{background:#f7f7f7;border-radius:12px;padding:14px;margin-top:18px}
 @media (max-width:560px){
   .travel-cost-category-grid{grid-template-columns:1fr}
   .edit-actions .secondary,.edit-actions .primary{flex:1 1 100%}
@@ -157,6 +159,16 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="tripChooser" class="card">
 <h2>🚐 Reizen</h2>
 <button class="primary" onclick="startNewTrip()">＋ Nieuwe reis starten</button>
+<div class="trip-toolbar">
+  <div>
+    <label for="tripFilter">Reisfilter</label>
+    <select id="tripFilter" onchange="handleTripFilterChange()">
+      <option value="current">Huidige reis</option>
+      <option value="closed">Afgesloten reizen</option>
+    </select>
+  </div>
+  <div id="tripFilterHint" class="muted">Toon de actieve reis of schakel naar afgesloten reizen voor rapporten.</div>
+</div>
 <div id="tripList" style="margin-top:14px">Reizen laden...</div>
 </div>
 
@@ -848,6 +860,8 @@ let editingMaintenanceId=null;
 let currentEditingStopPhotos=[];
 let stopPhotosToDelete=[];
   let selectedPhotos = [];
+  let tripReportPdfLibPromise = null;
+  let tripReportXlsxLibPromise = null;
   let activeCamperId = null;
   let currentUser = null;
   let canAccessBeheer = false;
@@ -2491,12 +2505,30 @@ const {data:trips,error}=await supabase
   .order('datum',{ascending:false});
 
 if(error){list.textContent='Laden mislukt: '+error.message;list.className='status err';return}
-if(!trips.length){list.innerHTML='<div class="muted">Nog geen reizen. Start jullie eerste reis!</div>';return}
-
-const ids=trips.map(t=>t.id);
+if(!trips.length){
+  setTripFilterHint('Nog geen reizen gevonden.');
+  list.innerHTML='<div class="muted">Nog geen reizen. Start jullie eerste reis!</div>';
+  return;
+}
+const filterValue=getTripFilterValue();
+const filteredTrips=trips.filter(t=>filterValue==='closed'?Boolean(t.einddatum):!t.einddatum);
+if(!filteredTrips.length){
+  setTripFilterHint(filterValue==='closed'
+    ?'Toon afgesloten reizen met rapportknoppen.'
+    :'Toon de actieve reis. Schakel naar afgesloten reizen voor eerdere rapporten.');
+  list.innerHTML=`<div class="muted">${filterValue==='closed'
+    ?'Nog geen afgesloten reizen beschikbaar.'
+    :'Er is momenteel geen actieve reis. Kies "Afgesloten reizen" om eerdere reizen te bekijken.'}</div>`;
+  return;
+}
+setTripFilterHint(filterValue==='closed'
+  ?'Afgesloten reizen tonen de knop 📄 Reisrapport.'
+  :'Toon de huidige actieve reis. Afgesloten reizen blijven beschikbaar via het filter.');
+ 
+const ids=filteredTrips.map(t=>t.id);
 const {data:stops}=await supabase.from('reis_stops').select('*').in('reis_id',ids).order('volgorde');
-
-list.innerHTML=trips.map(t=>{
+ 
+list.innerHTML=filteredTrips.map(t=>{
 const ts=(stops||[]).filter(s=>s.reis_id===t.id);
 const closed=t.einddatum!=null;
 const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
@@ -2506,70 +2538,29 @@ return `<div class="item">
 ${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
 <div class="edit-actions">
-  <button class="secondary" onclick="showTripDetail(${t.id})">Bekijk reis</button>
-  <button class="secondary" onclick="startTripEdit(${t.id})">✏️ Bewerken</button>
+ <button class="secondary" onclick="showTripDetail(${t.id})">Bekijk reis</button>
+ ${closed?`<button class="primary" onclick="showTripDetail(${t.id},true)">📄 Reisrapport</button>`:''}
+ <button class="secondary" onclick="startTripEdit(${t.id})">✏️ Bewerken</button>
 </div>
 </div>`;
 }).join('');
 }
-
-window.showTripDetail=async(id)=>{
-const {data:t,error}=await supabase.from('reizen').select('*').eq('id',id).single();
-if(error)return;
-const eindDatum=t.einddatum||new Date().toISOString().slice(0,10);
-const [{data:stops},{data:reiskosten},{data:tankbeurten}]=await Promise.all([
-  supabase.from('reis_stops').select('*').eq('reis_id',id).order('volgorde'),
-  supabase.from('reiskosten').select('*').eq('reis_id',id).order('datum'),
-  supabase.from('tankbeurten').select('id,datum,kmstand,liters,prijs_per_liter,totaalbedrag,brandstof_type,locatie,land').eq('camper_id',activeCamperId).gte('datum',t.datum).lte('datum',eindDatum).order('datum')
-]);
-const stopIds=(stops||[]).map(s=>s.id);
-const {data:fotos}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
-const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
-
-// Reissamenvatting
-const aantalStops=(stops||[]).length;
-
-// Overnachtingskosten
-const overnachtingKost=(stops||[]).reduce((s,x)=>s+(x.prijs_per_nacht!=null?Number(x.prijs_per_nacht):0),0);
-
-// Reiskosten per categorie
+ 
+window.showTripDetail=async(id,openReportActions=false)=>{
+let report;
+try{
+ report=await loadTripReportData(id);
+}catch(error){
+ alert('Reis laden mislukt: '+(error?.message||String(error)));
+ return;
+}
+const {trip:t,stops,reiskosten,tankbeurten,photosByStopId,summary}=report;
 const kostenTypes=TRAVEL_COST_CATEGORIES;
-const kostenPerType={};
-let totaalReiskosten=0;
-for(const k of (reiskosten||[])){
-  const b=Number(k.bedrag||0);
-  totaalReiskosten+=b;
-  const type=mapTravelCostTypeToCategory(k.type_kost);
-  kostenPerType[type]=(kostenPerType[type]||0)+b;
-}
-
-// Brandstofkosten per type
-const tanks=tankbeurten||[];
 const brandstofTypes=['Diesel','AdBlue','Gas'];
-const brandstofPerType={Diesel:{liters:0,kost:0,aantal:0},AdBlue:{liters:0,kost:0,aantal:0},Gas:{liters:0,kost:0,aantal:0}};
-let totaalLiters=0,totaalBrandstof=0;
-for(const x of tanks){
-  const liters=Number(x.liters||0);
-  const kost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*Number(x.prijs_per_liter||0);
-  totaalLiters+=liters;totaalBrandstof+=kost;
-  const btype=brandstofTypes.includes(x.brandstof_type)?x.brandstof_type:'Diesel';
-  brandstofPerType[btype].liters+=liters;
-  brandstofPerType[btype].kost+=kost;
-  brandstofPerType[btype].aantal++;
-}
-const aantalTankbeurten=tanks.length;
-
-// Reistotaal
-const reistotaal=overnachtingKost+totaalReiskosten+totaalBrandstof;
-
-const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
-const fmtKm=n=>Number(n).toLocaleString('nl-BE');
-
-// Chronologische reislog: stops + reiskosten + tankbeurten gemengd op datum
 const logItems=[];
-(stops||[]).forEach(s=>logItems.push({datum:s.datum,volgorde:s.volgorde||0,type:'stop',data:s}));
-(reiskosten||[]).forEach(k=>logItems.push({datum:k.datum,volgorde:0,type:'kost',data:k}));
-tanks.forEach(x=>logItems.push({datum:x.datum,volgorde:0,type:'tank',data:x}));
+stops.forEach(s=>logItems.push({datum:s.datum,volgorde:s.volgorde||0,type:'stop',data:s}));
+reiskosten.forEach(k=>logItems.push({datum:k.datum,volgorde:0,type:'kost',data:k}));
+tankbeurten.forEach(x=>logItems.push({datum:x.datum,volgorde:0,type:'tank',data:x}));
 logItems.sort((a,b)=>a.datum<b.datum?-1:a.datum>b.datum?1:a.volgorde-b.volgorde);
 
 const detail=document.getElementById('tripDetail');
@@ -2584,10 +2575,10 @@ detail.innerHTML=`<h2>📖 Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagie
   <div><b>Passagier:</b> ${esc(t.passagier||'—')}</div>
   <div><b>Startdatum:</b> ${esc(t.datum||'—')}</div>
   <div><b>Einddatum:</b> ${esc(t.einddatum||'nog actief')}</div>
-  <div><b>Start KM:</b> ${t.start_km!=null?fmtKm(t.start_km):'—'}</div>
-  <div><b>Eind KM:</b> ${t.eind_km!=null?fmtKm(t.eind_km):'—'}</div>
-  <div><b>Totaal gereden KM:</b> ${km!=null?fmtKm(km)+' km':'—'}</div>
-  <div><b>Aantal stops:</b> ${aantalStops}</div>
+  <div><b>Start KM:</b> ${formatKilometers(t.start_km)}</div>
+  <div><b>Eind KM:</b> ${formatKilometers(t.eind_km)}</div>
+  <div><b>Totaal gereden KM:</b> ${summary.distance!=null?formatKilometers(summary.distance):'—'}</div>
+  <div><b>Aantal stops:</b> ${summary.stopCount}</div>
 </div>
 
 <hr>
@@ -2595,40 +2586,50 @@ detail.innerHTML=`<h2>📖 Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagie
 
 <h4>🏕️ Overnachtingskosten</h4>
 <div class="item">
-  ${(stops||[]).filter(s=>s.prijs_per_nacht!=null).map(s=>`<div>${esc(s.datum)} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${fmt(s.prijs_per_nacht)}/nacht</div>`).join('')}
-  <div style="margin-top:6px"><b>Totaal overnachtingen:</b> ${fmt(overnachtingKost)}</div>
+  ${stops.filter(s=>s.prijs_per_nacht!=null).map(s=>`<div>${esc(s.datum)} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${formatCurrency(s.prijs_per_nacht)}/nacht</div>`).join('')||'<div class="muted">Geen overnachtingskosten geregistreerd.</div>'}
+  <div style="margin-top:6px"><b>Totaal overnachtingen:</b> ${formatCurrency(summary.overnightTotal)}</div>
 </div>
 
 <h4>🛣️ Reiskosten</h4>
 <div class="item">
-  ${kostenTypes.map(type=>kostenPerType[type]?`<div><b>${esc(getTravelCostCategoryLabel(type))}:</b> ${fmt(kostenPerType[type])}</div>`:``).join('')}
-  <div style="margin-top:6px"><b>Totaal reiskosten:</b> ${fmt(totaalReiskosten)}</div>
+  ${kostenTypes.map(type=>summary.travelCostByType[type]?`<div><b>${esc(getTravelCostCategoryLabel(type))}:</b> ${formatCurrency(summary.travelCostByType[type])}</div>`:``).join('')||'<div class="muted">Geen reiskosten geregistreerd.</div>'}
+  <div style="margin-top:6px"><b>Totaal reiskosten:</b> ${formatCurrency(summary.travelCostTotal)}</div>
 </div>
 
 <h4>⛽ Brandstofkosten</h4>
 <div class="item">
-  ${brandstofTypes.filter(bt=>brandstofPerType[bt].aantal>0).map(bt=>`<div><b>${esc(bt)}:</b> ${brandstofPerType[bt].liters.toFixed(2).replace('.',',')} l · ${fmt(brandstofPerType[bt].kost)} (${brandstofPerType[bt].aantal} tankbeurt${brandstofPerType[bt].aantal===1?'':'en'})</div>`).join('')}
-  <div style="margin-top:6px"><b>Totaal liters:</b> ${totaalLiters.toFixed(2).replace('.',',')} l</div>
-  <div><b>Totale brandstofkost:</b> ${fmt(totaalBrandstof)}</div>
+  ${brandstofTypes.filter(bt=>summary.fuelByType[bt].count>0).map(bt=>`<div><b>${esc(bt)}:</b> ${formatLiters(summary.fuelByType[bt].liters)} · ${formatCurrency(summary.fuelByType[bt].cost)} (${summary.fuelByType[bt].count} tankbeurt${summary.fuelByType[bt].count===1?'':'en'})</div>`).join('')||'<div class="muted">Geen brandstofregistraties in deze reisperiode.</div>'}
+  <div style="margin-top:6px"><b>Totaal liters:</b> ${formatLiters(summary.fuelTotalLiters)}</div>
+  <div><b>Totale brandstofkost:</b> ${formatCurrency(summary.fuelTotalCost)}</div>
 </div>
 
 <h4>💰 Reistotaal</h4>
 <div class="item" style="font-size:1.1em">
-  <div>${fmt(overnachtingKost)} overnachtingen + ${fmt(totaalReiskosten)} reiskosten + ${fmt(totaalBrandstof)} brandstof</div>
-  <div style="margin-top:6px"><b>Totaal: ${fmt(reistotaal)}</b></div>
+  <div>${formatCurrency(summary.overnightTotal)} overnachtingen + ${formatCurrency(summary.travelCostTotal)} reiskosten + ${formatCurrency(summary.fuelTotalCost)} brandstof</div>
+  <div style="margin-top:6px"><b>Totaal: ${formatCurrency(summary.grandTotal)}</b></div>
 </div>
-
+${t.einddatum?`
+<div id="tripReportPanel" class="trip-report-panel">
+  <h3 style="margin-top:0">📄 Reisrapport</h3>
+  <p class="muted">Download deze afgesloten reis als PDF of Excel.</p>
+  <div class="edit-actions">
+    <button class="primary" onclick="exportTripPdf(${id})">PDF downloaden</button>
+    <button class="secondary" onclick="exportTripExcel(${id})">Excel downloaden</button>
+  </div>
+  <div id="tripReportStatus" class="status hidden"></div>
+</div>`:''}
+ 
 <hr>
 <h3>🗓️ Chronologische reislog</h3>
 ${logItems.length?logItems.map(item=>{
   if(item.type==='stop'){
     const s=item.data;
-    const stopFotos=(fotos||[]).filter(f=>f.stop_id===s.id);
+    const stopFotos=photosByStopId[s.id]||[];
     return `<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div>
 ${s.voorzieningen?`<div>${esc(s.voorzieningen)}</div>`:''}
 ${s.ervaring?`<p>${esc(s.ervaring)}</p>`:''}
-${s.prijs_per_nacht!=null?`<div class="muted">💶 ${fmt(s.prijs_per_nacht)} / nacht</div>`:''}
+${s.prijs_per_nacht!=null?`<div class="muted">💶 ${formatCurrency(s.prijs_per_nacht)} / nacht</div>`:''}
 ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+''+stopFotos.map(f=>`<div style="margin-top:10px"><img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;"></div>`).join(''):''}
 <div class="edit-actions"><button class="secondary" onclick="startStopEdit(${s.id},${id})">✏️ Bewerken</button></div>
 </div>`;
@@ -2637,7 +2638,7 @@ ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+'
     const k=item.data;
     return `<div class="trip-stop" style="border-left-color:#e0a800"><b>${esc(getTravelCostCategoryLabel(k.type_kost))}</b>${k.land?' · '+esc(k.land):''}
 <div class="muted">${esc(k.datum)}${k.opmerking?' · '+esc(k.opmerking):''}</div>
-<div>💶 ${fmt(k.bedrag)}</div>
+<div>💶 ${formatCurrency(k.bedrag)}</div>
 <div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${k.id})">✏️ Bewerken</button></div></div>`;
   }
   if(item.type==='tank'){
@@ -2646,14 +2647,244 @@ ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+'
     const kost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*Number(x.prijs_per_liter||0);
     return `<div class="trip-stop" style="border-left-color:#2e7d32"><b>⛽ Tanken${x.brandstof_type?' ('+esc(x.brandstof_type)+')':''}</b>${x.locatie?' · '+esc(x.locatie):''}${x.land?' · '+esc(x.land):''}
 <div class="muted">${esc(x.datum)}</div>
-<div>${liters.toFixed(2).replace('.',',')} l · ${fmt(kost)}</div>
+<div>${liters.toFixed(2).replace('.',',')} l · ${formatCurrency(kost)}</div>
 <div class="edit-actions"><button class="secondary" onclick="startFuelEdit(${x.id})">✏️ Bewerken</button></div></div>`;
   }
   return '';
 }).join(''):'<div class="muted">Geen activiteiten.</div>'}
-
+ 
 <br><button class="secondary" onclick="document.getElementById('tripDetail').classList.add('hidden')">Sluiten</button>`;
 detail.scrollIntoView({behavior:'smooth'});
+setTripReportStatus('');
+if(openReportActions&&t.einddatum){
+  document.getElementById('tripReportPanel')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+};
+
+window.exportTripPdf=async function(tripId){
+  setTripReportStatus('PDF wordt opgebouwd...',true);
+  try{
+    const report=await loadTripReportData(tripId);
+    if(!report.trip.einddatum){
+      throw new Error('Een reisrapport kan alleen voor een afgesloten reis worden gemaakt.');
+    }
+    const {jsPDF}=await loadTripReportPdfLib();
+    const doc=new jsPDF({unit:'mm',format:'a4'});
+    const pageWidth=doc.internal.pageSize.getWidth();
+    const pageHeight=doc.internal.pageSize.getHeight();
+    const margin=15;
+    const contentWidth=pageWidth-(margin*2);
+    let y=18;
+    const ensureSpace=(space=10)=>{
+      if(y+space<=pageHeight-15)return;
+      doc.addPage();
+      y=18;
+    };
+    const addParagraph=(text,fontSize=11,fontStyle='normal',extraSpacing=2)=>{
+      const lines=doc.splitTextToSize(String(text||'—'),contentWidth);
+      const lineHeight=Math.max(5,fontSize*0.45+0.6);
+      ensureSpace(lines.length*lineHeight+extraSpacing);
+      doc.setFont('helvetica',fontStyle);
+      doc.setFontSize(fontSize);
+      doc.text(lines,margin,y);
+      y+=lines.length*lineHeight+extraSpacing;
+    };
+    const addSection=(title)=>{
+      y+=2;
+      addParagraph(title,14,'bold',1);
+    };
+    const addKeyValue=(label,value)=>{
+      addParagraph(`${label}: ${value}`,11,'normal',1);
+    };
+    const addDivider=()=>{
+      ensureSpace(4);
+      doc.setDrawColor(210);
+      doc.line(margin,y,pageWidth-margin,y);
+      y+=5;
+    };
+    const tripTitle=`Reisrapport · ${report.trip.bestuurder||report.trip.crew||'Reis'}${report.trip.passagier?' & '+report.trip.passagier:''}`;
+    addParagraph(tripTitle,18,'bold',2);
+    addParagraph(`${formatDate(report.trip.datum)} t/m ${formatDate(report.trip.einddatum)}`,11,'normal',4);
+    addSection('Reisinfo');
+    addKeyValue('Bestuurder',report.trip.bestuurder||report.trip.crew||'—');
+    addKeyValue('Passagier',report.trip.passagier||'—');
+    addKeyValue('Startdatum',formatDate(report.trip.datum));
+    addKeyValue('Einddatum',formatDate(report.trip.einddatum));
+    addKeyValue('Start KM',formatKilometers(report.trip.start_km));
+    addKeyValue('Eind KM',formatKilometers(report.trip.eind_km));
+    addKeyValue('Totaal gereden',report.summary.distance!=null?formatKilometers(report.summary.distance):'—');
+    addKeyValue('Aantal stops',String(report.summary.stopCount));
+    addDivider();
+    addSection('Stops');
+    if(report.stops.length){
+      for(const stop of report.stops){
+        addParagraph(`${stop.volgorde||'-'}. ${stop.camperplaats||'Onbenoemde stop'} · ${stop.land||'—'}`,12,'bold',1);
+        addKeyValue('Datum',formatDate(stop.datum));
+        addKeyValue('Type',stop.type_stop||'—');
+        addKeyValue('KM bij aankomst',formatKilometers(stop.km_aankomst));
+        if(stop.regio)addKeyValue('Regio',stop.regio);
+        if(stop.referentie)addKeyValue('Referentie',stop.referentie);
+        if(stop.voorzieningen)addKeyValue('Voorzieningen / indruk',stop.voorzieningen);
+        if(stop.ervaring)addParagraph(`Onze ervaring: ${stop.ervaring}`,10,'normal',1);
+        if(stop.prijs_per_nacht!=null)addKeyValue('Prijs per nacht',formatCurrency(stop.prijs_per_nacht));
+        const stopPhotos=report.photosByStopId[stop.id]||[];
+        addKeyValue('Foto\'s',String(stopPhotos.length));
+        y+=2;
+      }
+    }else{
+      addParagraph('Geen stops geregistreerd.',11,'normal',2);
+    }
+    addDivider();
+    addSection('Foto\'s');
+    if(report.photos.length){
+      const photoWidth=(contentWidth-6)/2;
+      for(const stop of report.stops){
+        const stopPhotos=report.photosByStopId[stop.id]||[];
+        if(!stopPhotos.length)continue;
+        addParagraph(`${stop.volgorde||'-'}. ${stop.camperplaats||'Onbenoemde stop'} · ${formatDate(stop.datum)}`,12,'bold',2);
+        for(let index=0;index<stopPhotos.length;index+=2){
+          const rowPhotos=stopPhotos.slice(index,index+2);
+          const prepared=[];
+          for(const photo of rowPhotos){
+            try{
+              const dataUrl=await imageUrlToJpegDataUrl(photo.url);
+              const props=doc.getImageProperties(dataUrl);
+              const ratio=(props.height||1)/(props.width||1);
+              const height=Math.min(55,photoWidth*ratio);
+              prepared.push({dataUrl,height});
+            }catch(error){
+              prepared.push({error:true});
+            }
+          }
+          const rowHeight=Math.max(...prepared.map(item=>item.height||10),10);
+          ensureSpace(rowHeight+8);
+          prepared.forEach((item,columnIndex)=>{
+            const x=margin+(columnIndex*(photoWidth+6));
+            if(item.error){
+              doc.setDrawColor(210);
+              doc.rect(x,y,photoWidth,10);
+              doc.setFontSize(9);
+              doc.text('Foto kon niet worden geladen',x+3,y+6);
+              return;
+            }
+            doc.addImage(item.dataUrl,'JPEG',x,y,photoWidth,item.height);
+          });
+          y+=rowHeight+6;
+        }
+      }
+    }else{
+      addParagraph('Geen foto\'s geregistreerd.',11,'normal',2);
+    }
+    addDivider();
+    addSection('Brandstofsamenvatting');
+    ['Diesel','AdBlue','Gas'].forEach(type=>{
+      const fuel=report.summary.fuelByType[type];
+      if(!fuel.count)return;
+      addParagraph(`${type}: ${formatLiters(fuel.liters)} · ${formatCurrency(fuel.cost)} · ${fuel.count} tankbeurt${fuel.count===1?'':'en'}`,11,'normal',1);
+    });
+    addKeyValue('Totaal liters',formatLiters(report.summary.fuelTotalLiters));
+    addKeyValue('Totale brandstofkost',formatCurrency(report.summary.fuelTotalCost));
+    addDivider();
+    addSection('Reiskostensamenvatting');
+    TRAVEL_COST_CATEGORIES.forEach(category=>{
+      if(!report.summary.travelCostByType[category])return;
+      addParagraph(`${getTravelCostCategoryLabel(category)}: ${formatCurrency(report.summary.travelCostByType[category])}`,11,'normal',1);
+    });
+    addKeyValue('Totaal reiskosten',formatCurrency(report.summary.travelCostTotal));
+    addKeyValue('Totaal overnachtingen',formatCurrency(report.summary.overnightTotal));
+    addDivider();
+    addSection('Totalen');
+    addKeyValue('Overnachtingen',formatCurrency(report.summary.overnightTotal));
+    addKeyValue('Reiskosten',formatCurrency(report.summary.travelCostTotal));
+    addKeyValue('Brandstof',formatCurrency(report.summary.fuelTotalCost));
+    addParagraph(`Totaal reisbudget: ${formatCurrency(report.summary.grandTotal)}`,13,'bold',2);
+    downloadBlob(doc.output('blob'),buildTripReportFilename(report.trip,'pdf'));
+    setTripReportStatus('PDF-reisrapport gedownload.',true);
+  }catch(error){
+    setTripReportStatus(error?.message||'PDF-export mislukt.',false);
+  }
+};
+
+window.exportTripExcel=async function(tripId){
+  setTripReportStatus('Excel wordt opgebouwd...',true);
+  try{
+    const report=await loadTripReportData(tripId);
+    if(!report.trip.einddatum){
+      throw new Error('Een reisrapport kan alleen voor een afgesloten reis worden gemaakt.');
+    }
+    const XLSX=await loadTripReportXlsxLib();
+    const workbook=XLSX.utils.book_new();
+    const reisSheet=XLSX.utils.aoa_to_sheet([
+      ['Veld','Waarde'],
+      ['Bestuurder',report.trip.bestuurder||report.trip.crew||'—'],
+      ['Passagier',report.trip.passagier||'—'],
+      ['Startdatum',formatDate(report.trip.datum)],
+      ['Einddatum',formatDate(report.trip.einddatum)],
+      ['Start KM',report.trip.start_km??''],
+      ['Eind KM',report.trip.eind_km??''],
+      ['Totaal gereden KM',report.summary.distance??''],
+      ['Aantal stops',report.summary.stopCount],
+      ['Totaal overnachtingen',report.summary.overnightTotal],
+      ['Totaal reiskosten',report.summary.travelCostTotal],
+      ['Totale brandstofkost',report.summary.fuelTotalCost],
+      ['Reistotaal',report.summary.grandTotal]
+    ]);
+    reisSheet['!cols']=[{wch:24},{wch:28}];
+    XLSX.utils.book_append_sheet(workbook,reisSheet,'Reis');
+    const stopSheet=XLSX.utils.aoa_to_sheet([
+      ['Stop','Datum','Type','Plaats','Land','Regio','Referentie','KM aankomst','Prijs per nacht','Beoordeling','Voorzieningen','Ervaring','Fotoaantal'],
+      ...report.stops.map(stop=>[
+        stop.volgorde||'',
+        formatDate(stop.datum),
+        stop.type_stop||'',
+        stop.camperplaats||'',
+        stop.land||'',
+        stop.regio||'',
+        stop.referentie||'',
+        stop.km_aankomst??'',
+        stop.prijs_per_nacht??'',
+        stop.beoordeling??'',
+        stop.voorzieningen||'',
+        stop.ervaring||'',
+        (report.photosByStopId[stop.id]||[]).length
+      ])
+    ]);
+    stopSheet['!cols']=[{wch:8},{wch:14},{wch:16},{wch:24},{wch:18},{wch:18},{wch:18},{wch:14},{wch:16},{wch:12},{wch:26},{wch:34},{wch:10}];
+    XLSX.utils.book_append_sheet(workbook,stopSheet,'Stops');
+    const fuelSheet=XLSX.utils.aoa_to_sheet([
+      ['Datum','Type','Locatie','Land','KM','Liters','Prijs per liter','Totaal'],
+      ...report.tankbeurten.map(tank=>[
+        formatDate(tank.datum),
+        tank.brandstof_type||'Diesel',
+        tank.locatie||'',
+        tank.land||'',
+        tank.kmstand??'',
+        Number(tank.liters||0),
+        Number(tank.prijs_per_liter||0),
+        tank.totaalbedrag!=null?Number(tank.totaalbedrag):Number(tank.liters||0)*Number(tank.prijs_per_liter||0)
+      ])
+    ]);
+    fuelSheet['!cols']=[{wch:14},{wch:12},{wch:24},{wch:18},{wch:12},{wch:12},{wch:14},{wch:12}];
+    XLSX.utils.book_append_sheet(workbook,fuelSheet,'Brandstof');
+    const costSheet=XLSX.utils.aoa_to_sheet([
+      ['Datum','Categorie','Label','Land','Bedrag','Omschrijving'],
+      ...report.reiskosten.map(cost=>[
+        formatDate(cost.datum),
+        mapTravelCostTypeToCategory(cost.type_kost),
+        getTravelCostCategoryLabel(cost.type_kost),
+        cost.land||'',
+        Number(cost.bedrag||0),
+        cost.opmerking||''
+      ])
+    ]);
+    costSheet['!cols']=[{wch:14},{wch:18},{wch:22},{wch:18},{wch:12},{wch:32}];
+    XLSX.utils.book_append_sheet(workbook,costSheet,'Reiskosten');
+    const content=XLSX.write(workbook,{bookType:'xlsx',type:'array'});
+    downloadBlob(new Blob([content],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),buildTripReportFilename(report.trip,'xlsx'));
+    setTripReportStatus('Excel-reisrapport gedownload.',true);
+  }catch(error){
+    setTripReportStatus(error?.message||'Excel-export mislukt.',false);
+  }
 };
 
 
@@ -3006,6 +3237,174 @@ function formatDate(value){
   const date=new Date(value);
   if(Number.isNaN(date.getTime()))return String(value).slice(0,10);
   return date.toLocaleDateString('nl-BE');
+}
+function formatCurrency(value){
+  return '€ '+Number(value||0).toFixed(2).replace('.',',');
+}
+function formatLiters(value){
+  return Number(value||0).toFixed(2).replace('.',',')+' l';
+}
+function formatKilometers(value){
+  if(value==null||value==='')return '—';
+  return Number(value).toLocaleString('nl-BE')+' km';
+}
+function getTripFilterValue(){
+  return document.getElementById('tripFilter')?.value||'current';
+}
+window.handleTripFilterChange=async function(){
+  document.getElementById('tripDetail').classList.add('hidden');
+  await loadTrips();
+};
+function setTripFilterHint(text){
+  const hint=document.getElementById('tripFilterHint');
+  if(hint)hint.textContent=text;
+}
+function setTripReportStatus(message,isOk=true){
+  const el=document.getElementById('tripReportStatus');
+  if(!el)return;
+  if(!message){
+    el.className='status hidden';
+    el.textContent='';
+    return;
+  }
+  el.className='status '+(isOk?'ok':'err');
+  el.textContent=message;
+}
+async function loadTripReportPdfLib(){
+  if(!tripReportPdfLibPromise){
+    tripReportPdfLibPromise=import('https://cdn.jsdelivr.net/npm/jspdf@3.0.1/+esm');
+  }
+  return tripReportPdfLibPromise;
+}
+async function loadTripReportXlsxLib(){
+  if(!tripReportXlsxLibPromise){
+    tripReportXlsxLibPromise=import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+  }
+  return tripReportXlsxLibPromise;
+}
+function sanitizeReportFilePart(value,fallback='reisrapport'){
+  return String(value||fallback)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'')
+    .toLowerCase()||fallback;
+}
+function downloadBlob(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;
+  link.download=filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function buildTripReportFilename(trip,extension){
+  const title=sanitizeReportFilePart(trip.bestuurder||trip.crew||'reis');
+  const start=sanitizeReportFilePart(trip.datum||'');
+  const end=sanitizeReportFilePart(trip.einddatum||'');
+  return `reisrapport-${title}${start?`-${start}`:''}${end?`-${end}`:''}.${extension}`;
+}
+async function imageUrlToJpegDataUrl(url,maxDimension=1400,quality=0.82){
+  const response=await fetch(url);
+  if(!response.ok){
+    throw new Error('Foto laden mislukt');
+  }
+  const blob=await response.blob();
+  const objectUrl=URL.createObjectURL(blob);
+  try{
+    const img=await new Promise((resolve,reject)=>{
+      const image=new Image();
+      image.onload=()=>resolve(image);
+      image.onerror=()=>reject(new Error('Foto verwerken mislukt'));
+      image.src=objectUrl;
+    });
+    const scale=Math.min(1,maxDimension/Math.max(img.naturalWidth||1,img.naturalHeight||1));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round((img.naturalWidth||1)*scale));
+    canvas.height=Math.max(1,Math.round((img.naturalHeight||1)*scale));
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw new Error('Canvas niet beschikbaar');
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    return canvas.toDataURL('image/jpeg',quality);
+  }finally{
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+async function loadTripReportData(tripId){
+  const {data:trip,error}=await supabase.from('reizen').select('*').eq('id',tripId).single();
+  if(error)throw error;
+  const camperId=trip.camper_id||activeCamperId;
+  const endDate=trip.einddatum||new Date().toISOString().slice(0,10);
+  const [{data:stops,error:stopsError},{data:reiskosten,error:kostenError},{data:tankbeurten,error:tankError}]=await Promise.all([
+    supabase.from('reis_stops').select('*').eq('reis_id',tripId).order('volgorde'),
+    supabase.from('reiskosten').select('*').eq('reis_id',tripId).order('datum'),
+    supabase.from('tankbeurten').select('id,datum,kmstand,liters,prijs_per_liter,totaalbedrag,brandstof_type,locatie,land').eq('camper_id',camperId).gte('datum',trip.datum).lte('datum',endDate).order('datum'),
+    ]);
+  if(stopsError)throw stopsError;
+  if(kostenError)throw kostenError;
+  if(tankError)throw tankError;
+  const stopRows=stops||[];
+  const stopIds=stopRows.map(stop=>stop.id);
+  let photos=[];
+  if(stopIds.length){
+    const {data:fotos,error:fotosError}=await supabase.from('fotos').select('*').in('stop_id',stopIds);
+    if(fotosError)throw fotosError;
+    photos=fotos||[];
+  }
+  const photosByStopId=photos.reduce((acc,photo)=>{
+    const key=photo.stop_id;
+    if(!acc[key])acc[key]=[];
+    acc[key].push(photo);
+    return acc;
+  },{});
+  const stopCount=stopRows.length;
+  const distance=(trip.start_km!=null&&trip.eind_km!=null)?Number(trip.eind_km)-Number(trip.start_km):null;
+  const overnightTotal=stopRows.reduce((sum,stop)=>sum+(stop.prijs_per_nacht!=null?Number(stop.prijs_per_nacht):0),0);
+  const fuelByType={Diesel:{liters:0,cost:0,count:0},AdBlue:{liters:0,cost:0,count:0},Gas:{liters:0,cost:0,count:0}};
+  let fuelTotalLiters=0;
+  let fuelTotalCost=0;
+  for(const tank of (tankbeurten||[])){
+    const type=fuelByType[tank.brandstof_type]?tank.brandstof_type:'Diesel';
+    const liters=Number(tank.liters||0);
+    const cost=tank.totaalbedrag!=null?Number(tank.totaalbedrag):liters*Number(tank.prijs_per_liter||0);
+    fuelByType[type].liters+=liters;
+    fuelByType[type].cost+=cost;
+    fuelByType[type].count+=1;
+    fuelTotalLiters+=liters;
+    fuelTotalCost+=cost;
+  }
+  const travelCostByType={};
+  let travelCostTotal=0;
+  for(const cost of (reiskosten||[])){
+    const category=mapTravelCostTypeToCategory(cost.type_kost);
+    const amount=Number(cost.bedrag||0);
+    travelCostByType[category]=(travelCostByType[category]||0)+amount;
+    travelCostTotal+=amount;
+  }
+  const grandTotal=overnightTotal+travelCostTotal+fuelTotalCost;
+  return {
+    trip,
+    stops:stopRows,
+    reiskosten:reiskosten||[],
+    tankbeurten:tankbeurten||[],
+    photos,
+    photosByStopId,
+    summary:{
+      stopCount,
+      distance,
+      overnightTotal,
+      fuelByType,
+      fuelTotalLiters,
+      fuelTotalCost,
+      travelCostByType,
+      travelCostTotal,
+      grandTotal
+    }
+  };
 }
 function generateInviteCode(length=9){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
