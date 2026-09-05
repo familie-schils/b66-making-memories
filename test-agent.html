@@ -399,17 +399,30 @@ Reiskosten laden...
 <h2>🔧 Onderhoud</h2>
 <div id="maintenanceStatus" class="status hidden"></div>
 
+<div class="card" style="margin-bottom:12px">
+  <div class="muted"><b>Huidige camper</b></div>
+  <div>Merk: <span id="maintenanceCamperBrand">—</span></div>
+  <div>Model: <span id="maintenanceCamperModel">—</span></div>
+  <div>Kenteken: <span id="maintenanceCamperPlate">—</span></div>
+</div>
+
 <div class="grid">
 
 <div>
 <label>Categorie</label>
 <select id="mCategory">
-  <option value="">Kies categorie</option>
-  <option value="fiat">Fiat Onderhoud</option>
-  <option value="vanomobil">Vanomobil Onderhoud</option>
-  <option value="repair">Schade / Reparatie</option>
-  <option value="other">Overig</option>
+  <option value="">(optioneel)</option>
+  <option value="onderhoud">Onderhoud</option>
+  <option value="schade">Schade</option>
+  <option value="keuring">Keuring</option>
+  <option value="accessoire">Accessoire</option>
+  <option value="overig">Overig</option>
 </select>
+</div>
+
+<div>
+<label>Uitgevoerd door</label>
+<input id="mPerformer" placeholder="Bijv. Garage Janssen of Zelf gedaan">
 </div>
 
 <div>
@@ -425,20 +438,6 @@ Reiskosten laden...
 <div>
 <label>Kosten (€)</label>
 <input id="mCost" type="number" step="0.01">
-  <div>
-<label>Uitvoerder</label>
-<input id="mPerformer">
-</div>
-
-
-</div>
-
-<br>
-
-<div id="maintenanceOptions"></div>
-  <div id="otherMaintenanceBox" style="display:none;margin-top:10px">
-  <label>Omschrijving overig</label>
-  <input id="otherMaintenanceText">
 </div>
 
 <br>
@@ -859,6 +858,8 @@ let editingStopId=null;
 let editingFuelId=null;
 let editingTravelCostId=null;
 let editingMaintenanceId=null;
+let editingMaintenanceLegacyWork=null;
+let editingMaintenanceLegacyOther=null;
 let currentEditingStopPhotos=[];
 let stopPhotosToDelete=[];
   let selectedPhotos = [];
@@ -1123,6 +1124,7 @@ function renderNoActiveCamperState(){
   if(bestuurder)bestuurder.innerHTML='';
   const passagier=document.getElementById('tPassagier');
   if(passagier)passagier.innerHTML='<option value="">— geen —</option>';
+  updateMaintenanceCamperInfo(null);
 }
 
 function renderCurrentRoleSummary(){
@@ -1649,6 +1651,7 @@ await loadPersonOptions();
 await loadActiveTrip();
 
 await loadTrips();
+  await loadCamperProfile();
 await loadMaintenance();
 await loadStats();
 await loadTravelCostTrips();
@@ -1657,7 +1660,6 @@ try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
   await loadTravelCosts();
   await loadPersonen();
-  await loadCamperProfile();
   await loadCamperMembers();
 }
 
@@ -3914,43 +3916,16 @@ window.testUpload = async function(){
  setPhotoStatus(uploads.length + ' foto(s) geüpload');
 };
 
-const maintenanceOptions = {
-
-  fiat: [
-    'Olie',
-    'Oliefilter',
-    'Luchtfilter',
-    'Brandstoffilter',
-    'Banden',
-    'Remmen',
-    'Accu',
-    'APK / Keuring',
-    'Ruitenwissers',
-    'Overig'
-  ],
-
-  vanomobil: [
-    'Vochtcontrole',
-    'Zonnepaneel',
-    'Omvormer',
-    'Kachel',
-    'Boiler',
-    'Waterpomp',
-    'Koelkast',
-    'Luifel',
-    'Overig'
-  ],
-
-  repair: [
-    'Schade',
-    'Steenslag',
-    'Lekke band',
-    'Slot',
-    'Verlichting',
-    'Camera',
-    'Overig'
-  ]
-
+const maintenanceCategoryLabels = {
+  onderhoud:'Onderhoud',
+  schade:'Schade',
+  keuring:'Keuring',
+  accessoire:'Accessoire',
+  overig:'Overig',
+  fiat:'Fiat Onderhoud',
+  vanomobil:'Vanomobil Onderhoud',
+  repair:'Schade / Reparatie',
+  other:'Overig'
 };
 
 function setMaintenanceStatus(message,isOk){
@@ -3965,58 +3940,56 @@ function setMaintenanceStatus(message,isOk){
   status.className='status '+(isOk?'ok':'err');
 }
 
-function updateOtherMaintenanceVisibility(){
-  const overigAangevinkt=[...document.querySelectorAll('.maintenanceCheck')]
-    .some(x=>x.checked&&x.value==='Overig');
-  const overigBox=document.getElementById('otherMaintenanceBox');
-  if(overigBox)overigBox.style.display=overigAangevinkt?'block':'none';
+function getMaintenanceCategoryLabel(category){
+  return maintenanceCategoryLabels[category]||category||'';
 }
 
-function loadMaintenanceOptions(selectedItems=[]){
-  const category=document.getElementById('mCategory').value;
-  const container=document.getElementById('maintenanceOptions');
-  if(!container)return;
-  const items=maintenanceOptions[category]||[];
-  container.innerHTML=items.map(item=>`
-    <label>
-      <input type="checkbox" class="maintenanceCheck" value="${item}" ${selectedItems.includes(item)?'checked':''}>
-      ${item}
-    </label>
-  `).join('<br>');
-  document.querySelectorAll('.maintenanceCheck').forEach(cb=>{
-    cb.addEventListener('change',updateOtherMaintenanceVisibility);
-  });
-  updateOtherMaintenanceVisibility();
+function cleanupTemporaryMaintenanceCategoryOptions(){
+  const select=document.getElementById('mCategory');
+  if(!select)return;
+  select.querySelectorAll('option[data-temporary="true"]').forEach(opt=>opt.remove());
+}
+
+function ensureMaintenanceCategoryOption(category){
+  const select=document.getElementById('mCategory');
+  if(!select||!category)return;
+  cleanupTemporaryMaintenanceCategoryOptions();
+  const existing=[...select.options].some(opt=>opt.value===category);
+  if(existing)return;
+  const label=getMaintenanceCategoryLabel(category)||category;
+  const opt=document.createElement('option');
+  opt.value=category;
+  opt.textContent=label+' (bestaand)';
+  opt.dataset.temporary='true';
+  select.appendChild(opt);
 }
 
 function resetMaintenanceForm(){
   editingMaintenanceId=null;
+  editingMaintenanceLegacyWork=null;
+  editingMaintenanceLegacyOther=null;
+  cleanupTemporaryMaintenanceCategoryOptions();
   document.getElementById('mCategory').value='';
   document.getElementById('mDate').value='';
   document.getElementById('mKm').value='';
   document.getElementById('mCost').value='';
   document.getElementById('mPerformer').value='';
   document.getElementById('mNotes').value='';
-  const overig=document.getElementById('otherMaintenanceText');
-  if(overig)overig.value='';
-  loadMaintenanceOptions([]);
   document.getElementById('saveMaintenanceBtn').textContent='💾 Onderhoud opslaan';
   document.getElementById('cancelMaintenanceEditBtn').classList.add('hidden');
 }
 
-document.getElementById('mCategory').addEventListener('change',()=>loadMaintenanceOptions([]));
-
 window.startMaintenanceEdit=function(item){
-  const werkItems=String(item.werkzaamheden||'').split(',').map(x=>x.trim()).filter(Boolean);
   editingMaintenanceId=item.id;
+  editingMaintenanceLegacyWork=item.werkzaamheden??null;
+  editingMaintenanceLegacyOther=item.omschrijving_overig??null;
+  ensureMaintenanceCategoryOption(item.categorie||'');
   document.getElementById('mCategory').value=item.categorie||'';
-  loadMaintenanceOptions(werkItems);
   document.getElementById('mDate').value=asDateInputValue(item.datum)||today();
   document.getElementById('mKm').value=item.kmstand??'';
   document.getElementById('mCost').value=item.kosten??'';
   document.getElementById('mPerformer').value=item.uitvoerder||'';
   document.getElementById('mNotes').value=item.opmerkingen||'';
-  document.getElementById('otherMaintenanceText').value=item.omschrijving_overig||'';
   document.getElementById('saveMaintenanceBtn').textContent='💾 Onderhoud wijzigen';
   document.getElementById('cancelMaintenanceEditBtn').classList.remove('hidden');
   setMaintenanceStatus('',false);
@@ -4039,23 +4012,23 @@ window.cancelMaintenanceEdit=function(){
 
 document.getElementById('saveMaintenanceBtn').addEventListener('click', async function(){
   setMaintenanceStatus('',false);
-  const category=document.getElementById('mCategory').value;
-  if(!category){
-    setMaintenanceStatus('Kies eerst een categorie.',false);
+  if(!activeCamperId){
+    setMaintenanceStatus('Geen actieve camper gevonden.',false);
     return;
   }
-  const selectedWork=[...document.querySelectorAll('.maintenanceCheck:checked')].map(x=>x.value);
+  const isEdit=Boolean(editingMaintenanceId);
+  const rawCategory=document.getElementById('mCategory').value;
+  const categoryForSave=rawCategory===''?null:rawCategory;
   const payload={
     camper_id: activeCamperId,
     datum: document.getElementById('mDate').value || null,
-    categorie: category,
-    werkzaamheden: selectedWork.join(', '),
-    omschrijving_overig: document.getElementById('otherMaintenanceText')?.value || null,
+    categorie: categoryForSave,
+    werkzaamheden: isEdit ? editingMaintenanceLegacyWork : null,
+    omschrijving_overig: isEdit ? editingMaintenanceLegacyOther : null,
     kosten: document.getElementById('mCost').value || null,
     uitvoerder: document.getElementById('mPerformer').value || null,
     opmerkingen: document.getElementById('mNotes').value || null
   };
-  const isEdit=Boolean(editingMaintenanceId);
   let error=null;
   if(isEdit){
     const {data:updatedMaintenance,error:updateError}=await supabase
@@ -4106,7 +4079,7 @@ async function loadMaintenance(){
   box.innerHTML = data.map(x => `
     <div class="item">
       <b>${x.datum || ''}</b><br>
-      ${x.categorie || ''}<br>
+      ${esc(getMaintenanceCategoryLabel(x.categorie) || '')}<br>
 
       <div class="muted">
         ${x.werkzaamheden || ''}
@@ -4490,6 +4463,15 @@ function updateDashboardCamperInfo(camperData){
   if(specs)specs.textContent=[camperData.basisvoertuig,camperData.motor,camperData.versnellingsbak].filter(Boolean).join(' · ')||'—';
 }
 
+function updateMaintenanceCamperInfo(camperData){
+  const brand=document.getElementById('maintenanceCamperBrand');
+  const model=document.getElementById('maintenanceCamperModel');
+  const plate=document.getElementById('maintenanceCamperPlate');
+  if(brand)brand.textContent=camperData?.merk||'—';
+  if(model)model.textContent=camperData?.model||'—';
+  if(plate)plate.textContent=camperData?.kenteken||'—';
+}
+
 async function loadCamperProfile(){
   if(!activeCamperId)return;
   const {data,error}=await supabase
@@ -4511,6 +4493,7 @@ async function loadCamperProfile(){
   setVal('camperReferenceDate',data.reference_date);
   setVal('camperReferenceKm',data.reference_km);
   updateDashboardCamperInfo(data);
+  updateMaintenanceCamperInfo(data);
 }
 
 window.saveCamperProfile=async function(){
@@ -4542,6 +4525,7 @@ window.saveCamperProfile=async function(){
   if(result.error){status.textContent='Opslaan mislukt: '+result.error.message;status.className='status err';return;}
   status.textContent='✓ Camperprofiel opgeslagen';status.className='status ok';
   updateDashboardCamperInfo(payload);
+  updateMaintenanceCamperInfo(payload);
 };
 
 // ── Vrienden ──────────────────────────────────────────────
