@@ -689,18 +689,9 @@ Nog geen onderhoud geregistreerd.
     used_at     timestamptz
   );
 
-  -- TEST-omgeving: voeg een SECURITY DEFINER RPC toe die in één transactie:
-  -- 1) auth.users aanmaakt
-  -- 2) public.profiles aanmaakt
-  -- 3) campers aanmaakt met naam "Camper van {email}" en owner_id koppelt
-  -- 4) camper_users record aanmaakt met role='admin'
-  --
-  -- Voorbeeldsignatuur:
-  -- create function admin_create_camper_owner(p_email text, p_password text)
-  -- returns jsonb
-  -- language plpgsql
-  -- security definer
-  -- as $$ ... $$;
+  -- TEST-omgeving: voer /home/runner/work/b66-making-memories/b66-making-memories/admin_create_camper_owner_test_agent.sql uit.
+  -- Dit script maakt de SECURITY DEFINER RPC admin_create_camper_owner(p_email text, p_password text)
+  -- en koppelt in één transactie auth.users, public.profiles, public.campers.owner_id en public.camper_users(role='admin').
 -->
 
 <div class="card">
