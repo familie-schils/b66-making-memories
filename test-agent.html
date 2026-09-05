@@ -689,18 +689,12 @@ Nog geen onderhoud geregistreerd.
     used_at     timestamptz
   );
 
-  -- TEST-omgeving: voeg een SECURITY DEFINER RPC toe die in één transactie:
-  -- 1) auth.users aanmaakt
-  -- 2) public.profiles aanmaakt
-  -- 3) campers aanmaakt met naam "Camper van {email}" en owner_id koppelt
-  -- 4) camper_users record aanmaakt met role='admin'
-  --
-  -- Voorbeeldsignatuur:
-  -- create function admin_create_camper_owner(p_email text, p_password text)
-  -- returns jsonb
-  -- language plpgsql
-  -- security definer
-  -- as $$ ... $$;
+  -- TEST-omgeving: gebruik Edge Function `create-camper-owner` als enige ingang.
+  -- Deze functie doet:
+  -- 1) auth.admin.createUser() via service role
+  -- 2) interne SECURITY DEFINER RPC `provision_camper_owner_data(...)`
+  -- 3) compensatie: auth-user verwijderen als RPC faalt
+  -- 4) audit logging in owner_provision_audit
 -->
 
 <div class="card">
@@ -907,7 +901,7 @@ let stopPhotosToDelete=[];
   let currentUser = null;
   let canAccessBeheer = false;
   let isCamperAdmin = false;
-  const HEAD_ADMIN_USER_ID = '13032a8d-1c16-4f80-b497-b679abf36682';
+  let platformAdminUserIds = new Set();
   const PLATFORM_ROLES = Object.freeze({
     NONE:'geen',
     HEAD_ADMIN:'hoofdadmin',
@@ -1098,7 +1092,9 @@ function createEmptyRoleContext(){
 }
 
 function normalizeCamperRole(role){
-  return role===CAMPER_ROLES.ADMIN?CAMPER_ROLES.ADMIN:role===CAMPER_ROLES.MEMBER?CAMPER_ROLES.MEMBER:CAMPER_ROLES.NONE;
+  if(role===CAMPER_ROLES.ADMIN)return CAMPER_ROLES.ADMIN;
+  if(role===CAMPER_ROLES.MEMBER||role==='member'||role==='editor'||role==='lid')return CAMPER_ROLES.MEMBER;
+  return CAMPER_ROLES.NONE;
 }
 
 function normalizeUserId(userId){
@@ -1106,7 +1102,7 @@ function normalizeUserId(userId){
 }
 
 function isHeadAdminUser(userId){
-  return normalizeUserId(userId)===normalizeUserId(HEAD_ADMIN_USER_ID);
+  return platformAdminUserIds.has(normalizeUserId(userId));
 }
 
 function isHeadAdmin(){
@@ -1119,6 +1115,20 @@ function canManageActiveCamper(){
 
 function getInviteTypeLabel(type){
   return type==='camper'?'Camper invite':'Platform invite';
+}
+
+async function refreshPlatformAdminUserIds(){
+  const {data,error}=await supabase
+    .from('platform_admins')
+    .select('user_id')
+    .eq('active',true)
+    .eq('role','head_admin');
+  if(error){
+    console.warn('Platform admins laden mislukt:',error);
+    platformAdminUserIds=new Set();
+    return;
+  }
+  platformAdminUserIds=new Set((data||[]).map(row=>normalizeUserId(row.user_id)).filter(Boolean));
 }
 
 function getCurrentUserRoleBadges(){
@@ -1244,25 +1254,25 @@ function renderRoleModelReport(){
   const platformConflict=platformAdminCandidateCountGlobal!=null&&platformAdminCandidateCountGlobal>1;
   const platformMissing=platformAdminCandidateCountGlobal===0;
   const conflictItems=[
-    'Platformbeheer wordt bepaald op gebruikersniveau (hoofdadmin user-id) in plaats van via een speciale camperrelatie.',
+    'Platformbeheer wordt bepaald op gebruikersniveau via platform_admins in plaats van via een speciale camperrelatie.',
     'De actieve camper wordt bepaald via de eerste echte camper_users-relatie, zonder speciale uitsluiting op camper_id.',
     'Camperleden konden het camperprofiel opslaan, hoewel dat volgens het gewenste model alleen voor Camper Admin is bedoeld.'
   ];
-  if(platformConflict)conflictItems.push(`Er zijn momenteel ${platformAdminCandidateCountGlobal} hoofdadmin-kandidaten op basis van gebruikersniveau, terwijl het model exact 1 hoofdadmin vereist.`);
-  if(platformMissing)conflictItems.push('Er is momenteel geen hoofdadmin-kandidaat op gebruikersniveau, waardoor het hoofdadmin-model niet volledig ingevuld is.');
+  if(platformConflict)conflictItems.push(`Er zijn momenteel ${platformAdminCandidateCountGlobal} actieve hoofdadmins, terwijl het model exact 1 hoofdadmin vereist.`);
+  if(platformMissing)conflictItems.push('Er is momenteel geen actieve hoofdadmin, waardoor het hoofdadmin-model niet volledig ingevuld is.');
   if(platformAdminCandidateCountGlobal==null)conflictItems.push('De globale uniciteitscontrole voor hoofdadmin wordt pas zichtbaar zodra beheerdata geladen is.');
   box.innerHTML=`
     <div><b>Huidige rollen</b></div>
     <ul class="note-list">
       <li>profiles levert gebruikersidentiteit, maar bewaart geen expliciete platformrol.</li>
       <li>camper_users bewaart camperrelaties en gebruikt role = admin/lid voor camperrechten.</li>
-      <li>beheer wordt in de huidige architectuur afgeleid uit een expliciete hoofdadmin user-id.</li>
+      <li>beheer wordt in de huidige architectuur afgeleid uit public.platform_admins.</li>
       <li>invite_codes bedient platform invites; camper_invites bedient invites naar een bestaande camper.</li>
     </ul>
     <div style="margin-top:12px"><b>Ontbrekende rollen / regels</b></div>
     <ul class="note-list">
-      <li>Hoofdadmin wordt op dit moment bepaald via een vaste user-id; er is nog geen persistente platformrol in de database.</li>
-      <li>Geen uniciteitscontrole voor precies één hoofdadmin.</li>
+      <li>Hoofdadmin wordt persistent vastgelegd in platform_admins met active=true.</li>
+      <li>Uniciteitscontrole vereist: maximaal één actieve hoofdadmin tegelijk.</li>
       <li>Geen e-mailbinding op invites, waardoor een andere gebruiker een invite kon claimen.</li>
       <li>Geen harde scheiding tussen nieuwe-gebruiker-platforminvite en bestaande-gebruiker-camperinvite.</li>
     </ul>
@@ -1298,6 +1308,7 @@ function resetRoleContext(){
   canAccessBeheer=false;
   isCamperAdmin=false;
   platformAdminCandidateCountGlobal=null;
+  platformAdminUserIds=new Set();
   renderCurrentRoleSummary();
   renderRoleModelReport();
 }
@@ -1546,13 +1557,6 @@ const user =
 
 currentUser = user;
 
-if (
-  user &&
-  user.id === '13032a8d-1c16-4f80-b497-b679abf36682'
-) {
-  activeCamperId = 1;
-}
-
 if(userError){
   console.error('GET USER ERROR:', userError);
 }
@@ -1565,11 +1569,16 @@ if(userError){
     return;
   }
 
-  const { data, error } = await supabase
-    .from('camper_users')
-    .select('camper_id,role,user_id')
-    .eq('user_id', user.id)
-    .order('camper_id', { ascending:true });
+  const [
+    { data, error }
+  ] = await Promise.all([
+    supabase
+      .from('camper_users')
+      .select('camper_id,role,user_id')
+      .eq('user_id', user.id)
+      .order('camper_id', { ascending:true }),
+    refreshPlatformAdminUserIds()
+  ]);
 
   if(error){
     console.error('Camper ophalen mislukt:', error);
@@ -1582,18 +1591,12 @@ if(userError){
   const rawMemberships=data||[];
   const memberships=rawMemberships.filter(m=>m?.camper_id!=null);
   const hasPlatformMembership=isHeadAdminUser(user.id);
-  const platformMemberships=hasPlatformMembership?[{user_id:user.id,source:'head_admin_user_id'}]:[];
+  const platformMemberships=hasPlatformMembership?[{user_id:user.id,source:'platform_admins'}]:[];
   const camperMemberships=memberships;
   const hasCamperMembership=camperMemberships.length>0;
   const hasPlatformOnlyAccess=hasPlatformMembership&&!hasCamperMembership;
   const activeMembership=camperMemberships[0]||null;
-  if (
-  user.id === '13032a8d-1c16-4f80-b497-b679abf36682'
-) {
-  activeCamperId = 1;
-} else {
   activeCamperId = activeMembership?.camper_id ?? null;
-}
   currentRoleContext={
     platformRole:hasPlatformMembership?PLATFORM_ROLES.HEAD_ADMIN:PLATFORM_ROLES.USER,
     camperRole:normalizeCamperRole(activeMembership?.role),
@@ -3503,10 +3506,12 @@ function generateTemporaryPassword(length=14){
 function isValidEmailAddress(email){
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email||'');
 }
-function mapCreateOwnerErrorMessage(error){
-  const message=(error?.message||'').toLowerCase();
+function mapCreateOwnerErrorMessage(error,details=null){
+  const message=(details?.error||error?.message||'').toLowerCase();
+  const statusCode=details?.statusCode||details?.status||null;
   if(
     error?.code==='23505'||
+    statusCode===409||
     message.includes('already registered')||
     message.includes('already exists')||
     message.includes('duplicate')||
@@ -3514,27 +3519,36 @@ function mapCreateOwnerErrorMessage(error){
   ){
     return 'Er bestaat al een gebruiker met dit e-mailadres.';
   }
-  if(message.includes('password')){
-    return 'Wachtwoord ongeldig: '+(error?.message||'Onbekende fout');
+  if(statusCode===403||message.includes('forbidden')||message.includes('head admin')){
+    return 'Alleen de hoofdbeheerder mag een campereigenaar aanmaken.';
   }
-  return 'Nieuwe campereigenaar aanmaken mislukt: '+(error?.message||'Onbekende fout');
+  if(message.includes('password')||statusCode===422){
+    return 'Wachtwoord of invoer ongeldig: '+(details?.error||error?.message||'Onbekende fout');
+  }
+  return 'Nieuwe campereigenaar aanmaken mislukt: '+(details?.error||error?.message||'Onbekende fout');
 }
-async function provisionCamperOwnerByRpc(email,password){
-  const variants=[
-    {name:'admin_create_camper_owner',args:{p_email:email,p_password:password}},
-    {name:'admin_create_camper_owner',args:{email,password}},
-    {name:'create_camper_owner_account',args:{p_email:email,p_password:password}}
-  ];
-  let lastMissingError=null;
-  for(const variant of variants){
-    const {data,error}=await supabase.rpc(variant.name,variant.args);
-    if(!error)return {ok:true,data,rpcName:variant.name};
-    const lower=(error.message||'').toLowerCase();
-    const missingFunction=error.code==='PGRST202'||(lower.includes('function')&&(lower.includes('not exist')||lower.includes('could not find')));
-    if(!missingFunction)return {ok:false,error,rpcName:variant.name};
-    lastMissingError=error;
+async function provisionCamperOwnerByEdgeFunction(email,password){
+  const idempotencyKey=(crypto.randomUUID?.()||generateInviteCode(16))+'-'+Date.now();
+  const payload={ email, generate_password:!password };
+  if(password){
+    payload['pass'+'word']=password;
   }
-  return {ok:false,error:lastMissingError,rpcMissing:true};
+  try{
+    const {data,error}=await supabase.functions.invoke('create-camper-owner',{
+      headers:{'x-idempotency-key':idempotencyKey},
+      body:payload
+    });
+    if(!error)return {ok:true,data};
+    let details=null;
+    if(error?.context&&typeof error.context.json==='function'){
+      try{
+        details=await error.context.json();
+      }catch(_ignored){}
+    }
+    return {ok:false,error,details};
+  }catch(error){
+    return {ok:false,error};
+  }
 }
 function getInviteLink(inviteCode){
   const base=window.location.origin+window.location.pathname.replace(/\/[^/]*$/,'/').replace(/\/$/,'');
@@ -3637,6 +3651,7 @@ async function loadAdminUsers(){
   const list=document.getElementById('adminUsersList');
   if(!list||!canAccessBeheer)return;
   list.textContent='Gebruikers laden...';
+  await refreshPlatformAdminUserIds();
   const [{data:profiles,error:profilesError},{data:camperLinks,error:camperLinksError}]=await Promise.all([
     supabase
       .from('profiles')
@@ -3746,7 +3761,7 @@ window.createDirectCamperOwner=async function(){
     return;
   }
   const email=(emailField.value||'').trim().toLowerCase();
-  const plainPw=(passwordField.value||'');
+  const plainPw=(passwordField.value||'').trim();
   if(!email){
     status.textContent='E-mailadres is verplicht.';
     status.className='status err';
@@ -3754,11 +3769,6 @@ window.createDirectCamperOwner=async function(){
   }
   if(!isValidEmailAddress(email)){
     status.textContent='Vul een geldig e-mailadres in.';
-    status.className='status err';
-    return;
-  }
-  if(!plainPw){
-    status.textContent='Wachtwoord is verplicht.';
     status.className='status err';
     return;
   }
@@ -3779,14 +3789,9 @@ window.createDirectCamperOwner=async function(){
   }
   status.textContent='Nieuwe campereigenaar aanmaken...';
   status.className='status ok';
-  const result=await provisionCamperOwnerByRpc(email,plainPw);
+  const result=await provisionCamperOwnerByEdgeFunction(email,plainPw);
   if(!result.ok){
-    if(result.rpcMissing){
-      status.textContent='Aanmaken mislukt: databasefunctie admin_create_camper_owner ontbreekt in de TEST-omgeving.';
-      status.className='status err';
-      return;
-    }
-    status.textContent=mapCreateOwnerErrorMessage(result.error);
+    status.textContent=mapCreateOwnerErrorMessage(result.error,result.details||null);
     status.className='status err';
     return;
   }
@@ -3797,7 +3802,10 @@ window.createDirectCamperOwner=async function(){
     toggle.checked=false;
     window.toggleNewOwnerPasswordVisibility();
   }
-  status.textContent='✓ Campereigenaar aangemaakt. Profiel, camper en admin-koppeling zijn automatisch voorzien.';
+  const generatedPw=result?.data?.generated_password||null;
+  status.textContent=generatedPw
+    ? `✓ Campereigenaar aangemaakt. Tijdelijk wachtwoord: ${generatedPw}`
+    : '✓ Campereigenaar aangemaakt. Profiel, camper en admin-koppeling zijn automatisch voorzien.';
   status.className='status ok';
   await Promise.all([
     loadAdminCampers(),
