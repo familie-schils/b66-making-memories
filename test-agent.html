@@ -598,6 +598,7 @@ Nog geen onderhoud geregistreerd.
 <h3>🧭 Rollenoverzicht</h3>
 <div id="currentRoleSummary">Rollen laden...</div>
 <div id="camperRoleStatus" class="status hidden"></div>
+<div id="camperCompletenessNotice" class="status hidden"></div>
 </div>
 <div class="card"><h2>Mijn Camper</h2>
 <div class="grid">
@@ -687,6 +688,19 @@ Nog geen onderhoud geregistreerd.
     used        boolean not null default false,
     used_at     timestamptz
   );
+
+  -- TEST-omgeving: voeg een SECURITY DEFINER RPC toe die in één transactie:
+  -- 1) auth.users aanmaakt
+  -- 2) public.profiles aanmaakt
+  -- 3) campers aanmaakt met naam "Camper van {email}" en owner_id koppelt
+  -- 4) camper_users record aanmaakt met role='admin'
+  --
+  -- Voorbeeldsignatuur:
+  -- create function admin_create_camper_owner(p_email text, p_password text)
+  -- returns jsonb
+  -- language plpgsql
+  -- security definer
+  -- as $$ ... $$;
 -->
 
 <div class="card">
@@ -715,6 +729,30 @@ Nog geen onderhoud geregistreerd.
 <hr>
 <h3>Overzicht uitnodigingen</h3>
 <div id="inviteList">Uitnodigingen laden...</div>
+</div>
+
+<div class="card">
+<h3>➕ Nieuwe Campereigenaar</h3>
+<div id="newOwnerStatus" class="status hidden"></div>
+<div class="grid">
+  <div>
+    <label>E-mailadres</label>
+    <input id="newOwnerEmail" type="email" placeholder="naam@example.com">
+  </div>
+  <div>
+    <label>Wachtwoord</label>
+    <input id="newOwnerPassword" type="password" placeholder="Kies een wachtwoord">
+    <label style="margin-top:8px;font-weight:normal;display:flex;align-items:center;gap:8px">
+      <input id="newOwnerShowPassword" type="checkbox" onchange="toggleNewOwnerPasswordVisibility()">
+      👁 Wachtwoord tonen/verbergen
+    </label>
+  </div>
+</div>
+<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+  <button class="secondary" onclick="generateTemporaryOwnerPassword()">🎲 Genereer tijdelijk wachtwoord</button>
+  <button class="primary" onclick="createDirectCamperOwner()">Opslaan</button>
+</div>
+<p class="muted" style="margin-top:10px">De nieuwe eigenaar vult later zelf de campergegevens in via Mijn Camper.</p>
 </div>
 
 <div class="card">
@@ -1125,6 +1163,26 @@ function renderNoActiveCamperState(){
   const passagier=document.getElementById('tPassagier');
   if(passagier)passagier.innerHTML='<option value="">— geen —</option>';
   updateMaintenanceCamperInfo(null);
+  renderCamperCompletenessNotice(null);
+}
+
+function renderCamperCompletenessNotice(camperData){
+  const notice=document.getElementById('camperCompletenessNotice');
+  if(!notice)return;
+  if(!camperData){
+    notice.className='status hidden';
+    notice.textContent='';
+    return;
+  }
+  const requiredKeys=['merk','model','kenteken','bouwjaar'];
+  const hasMissingDetails=requiredKeys.some(key=>!(camperData?.[key]||'').toString().trim());
+  if(!hasMissingDetails){
+    notice.className='status hidden';
+    notice.textContent='';
+    return;
+  }
+  notice.textContent='Welkom! Start met het invullen van Mijn Camper zodat je alle functies optimaal kunt gebruiken.';
+  notice.className='status ok';
 }
 
 function renderCurrentRoleSummary(){
@@ -3437,6 +3495,47 @@ function generateInviteCode(length=9){
   const bytes=crypto.getRandomValues(new Uint8Array(length));
   return Array.from(bytes,x=>chars[x%chars.length]).join('');
 }
+function generateTemporaryPassword(length=14){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*?';
+  const bytes=crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes,x=>chars[x%chars.length]).join('');
+}
+function isValidEmailAddress(email){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email||'');
+}
+function mapCreateOwnerErrorMessage(error){
+  const message=(error?.message||'').toLowerCase();
+  if(
+    error?.code==='23505'||
+    message.includes('already registered')||
+    message.includes('already exists')||
+    message.includes('duplicate')||
+    message.includes('unique')
+  ){
+    return 'Er bestaat al een gebruiker met dit e-mailadres.';
+  }
+  if(message.includes('password')){
+    return 'Wachtwoord ongeldig: '+(error?.message||'Onbekende fout');
+  }
+  return 'Nieuwe campereigenaar aanmaken mislukt: '+(error?.message||'Onbekende fout');
+}
+async function provisionCamperOwnerByRpc(email,password){
+  const variants=[
+    {name:'admin_create_camper_owner',args:{p_email:email,p_password:password}},
+    {name:'admin_create_camper_owner',args:{email,password}},
+    {name:'create_camper_owner_account',args:{p_email:email,p_password:password}}
+  ];
+  let lastMissingError=null;
+  for(const variant of variants){
+    const {data,error}=await supabase.rpc(variant.name,variant.args);
+    if(!error)return {ok:true,data,rpcName:variant.name};
+    const lower=(error.message||'').toLowerCase();
+    const missingFunction=error.code==='PGRST202'||(lower.includes('function')&&(lower.includes('not exist')||lower.includes('could not find')));
+    if(!missingFunction)return {ok:false,error,rpcName:variant.name};
+    lastMissingError=error;
+  }
+  return {ok:false,error:lastMissingError,rpcMissing:true};
+}
 function getInviteLink(inviteCode){
   const base=window.location.origin+window.location.pathname.replace(/\/[^/]*$/,'/').replace(/\/$/,'');
   return base+'/?invite='+encodeURIComponent(inviteCode);
@@ -3619,6 +3718,94 @@ async function loadBeheer(){
   ]);
 }
 
+window.toggleNewOwnerPasswordVisibility=function(){
+  const pw=document.getElementById('newOwnerPassword');
+  const toggle=document.getElementById('newOwnerShowPassword');
+  if(!pw||!toggle)return;
+  pw.type=toggle.checked?'text':'password';
+};
+
+window.generateTemporaryOwnerPassword=function(){
+  const pw=document.getElementById('newOwnerPassword');
+  const status=document.getElementById('newOwnerStatus');
+  if(!pw||!status)return;
+  pw.value=generateTemporaryPassword();
+  status.textContent='Tijdelijk wachtwoord gegenereerd.';
+  status.className='status ok';
+};
+
+window.createDirectCamperOwner=async function(){
+  const status=document.getElementById('newOwnerStatus');
+  const emailField=document.getElementById('newOwnerEmail');
+  const passwordField=document.getElementById('newOwnerPassword');
+  if(!status||!emailField||!passwordField)return;
+  status.className='status hidden';
+  if(!canAccessBeheer){
+    status.textContent='Geen toegang tot beheer.';
+    status.className='status err';
+    return;
+  }
+  const email=(emailField.value||'').trim().toLowerCase();
+  const plainPw=(passwordField.value||'');
+  if(!email){
+    status.textContent='E-mailadres is verplicht.';
+    status.className='status err';
+    return;
+  }
+  if(!isValidEmailAddress(email)){
+    status.textContent='Vul een geldig e-mailadres in.';
+    status.className='status err';
+    return;
+  }
+  if(!plainPw){
+    status.textContent='Wachtwoord is verplicht.';
+    status.className='status err';
+    return;
+  }
+  const {data:existingProfile,error:profileLookupError}=await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('email',email)
+    .maybeSingle();
+  if(profileLookupError){
+    status.textContent='Bestaande gebruikerscontrole mislukt: '+profileLookupError.message;
+    status.className='status err';
+    return;
+  }
+  if(existingProfile){
+    status.textContent='Er bestaat al een gebruiker met dit e-mailadres.';
+    status.className='status err';
+    return;
+  }
+  status.textContent='Nieuwe campereigenaar aanmaken...';
+  status.className='status ok';
+  const result=await provisionCamperOwnerByRpc(email,plainPw);
+  if(!result.ok){
+    if(result.rpcMissing){
+      status.textContent='Aanmaken mislukt: databasefunctie admin_create_camper_owner ontbreekt in de TEST-omgeving.';
+      status.className='status err';
+      return;
+    }
+    status.textContent=mapCreateOwnerErrorMessage(result.error);
+    status.className='status err';
+    return;
+  }
+  emailField.value='';
+  passwordField.value='';
+  const toggle=document.getElementById('newOwnerShowPassword');
+  if(toggle){
+    toggle.checked=false;
+    window.toggleNewOwnerPasswordVisibility();
+  }
+  status.textContent='✓ Campereigenaar aangemaakt. Profiel, camper en admin-koppeling zijn automatisch voorzien.';
+  status.className='status ok';
+  await Promise.all([
+    loadAdminCampers(),
+    loadAdminUsers(),
+    loadAdminStats()
+  ]);
+};
+
 window.createInviteCode=async function(){
   const status=document.getElementById('inviteStatus');
   const emailField=document.getElementById('inviteEmail');
@@ -3635,7 +3822,7 @@ window.createInviteCode=async function(){
     status.className='status err';
     return;
   }
-  const isValidEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidEmail=isValidEmailAddress(email);
   if(!isValidEmail){
     status.textContent='Vul een geldig e-mailadres in.';
     status.className='status err';
@@ -4479,8 +4666,8 @@ async function loadCamperProfile(){
     .select('merk,model,basisvoertuig,motor,versnellingsbak,max_massa,kenteken,bouwjaar,reference_date,reference_km')
     .eq('id',activeCamperId)
     .single();
-  if(error){console.error('Camperprofiel laden mislukt:',error);return;}
-  if(!data)return;
+  if(error){console.error('Camperprofiel laden mislukt:',error);renderCamperCompletenessNotice(null);return;}
+  if(!data){renderCamperCompletenessNotice(null);return;}
   const setVal=(id,val)=>{const el=document.getElementById(id);if(el&&val!=null)el.value=val;};
   setVal('camperMerk',data.merk);
   setVal('camperModel',data.model);
@@ -4494,6 +4681,7 @@ async function loadCamperProfile(){
   setVal('camperReferenceKm',data.reference_km);
   updateDashboardCamperInfo(data);
   updateMaintenanceCamperInfo(data);
+  renderCamperCompletenessNotice(data);
 }
 
 window.saveCamperProfile=async function(){
