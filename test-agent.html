@@ -283,8 +283,9 @@ Nog geen foto geselecteerd.
 <div><div class="muted">Tankbeurten</div><div class="fuel-number" id="fuelCount">0</div></div>
 </div>
 </div>
-<h3>Nieuwe tankbeurt</h3>
+<h3 id="fuelFormTitle">Nieuwe tankbeurt</h3>
 <div id="fuelStatus" class="status hidden"></div>
+<div id="fuelEditNotice" class="status hidden"></div>
 <div class="grid">
 <div><label>Datum</label><input id="fDate" type="date"></div>
 <div><label>KM-stand</label><input id="fKm" type="number" min="0" step="1"><div id="fuelKmHint" class="muted" style="margin-top:5px"></div></div>
@@ -298,6 +299,7 @@ Nog geen foto geselecteerd.
 <div id="fuelCalc" class="muted">Totaalbedrag: € 0,00 · KM sinds vorige tankbeurt: — · Verbruik: —</div>
 <br>
 <button id="saveFuelBtn" class="primary" onclick="addFuel()">⛽ Tankbeurt opslaan</button>
+<button id="newFuelEntryBtn" class="secondary hidden" onclick="startNewFuelEntry()">➕ Nieuwe tankbeurt</button>
 <button id="cancelFuelEditBtn" class="secondary hidden" onclick="cancelFuelEdit()">Annuleren bewerken</button>
 </div>
 <div class="card"><h2>Tankhistorie</h2><div id="fuelList">Tankbeurten laden...</div></div>
@@ -2981,6 +2983,22 @@ async function updateFuelCalcAsync(km,liters){
   }
 }
 
+function updateFuelFormMode(){
+  const isEditing=Boolean(editingFuelId);
+  document.getElementById('fuelFormTitle').textContent=isEditing?'✏️ Tankbeurt bewerken':'Nieuwe tankbeurt';
+  document.getElementById('saveFuelBtn').textContent=isEditing?'💾 Tankbeurt wijzigen':'⛽ Tankbeurt opslaan';
+  document.getElementById('cancelFuelEditBtn').classList.toggle('hidden',!isEditing);
+  document.getElementById('newFuelEntryBtn').classList.toggle('hidden',!isEditing);
+  const notice=document.getElementById('fuelEditNotice');
+  if(isEditing){
+    notice.textContent='Je bewerkt een bestaande tankbeurt. Kies "➕ Nieuwe tankbeurt" om een extra record toe te voegen.';
+    notice.className='status ok';
+  }else{
+    notice.textContent='';
+    notice.className='status hidden';
+  }
+}
+
 ['fKm','fLiters','fPrice'].forEach(id=>{
   document.getElementById(id).addEventListener('input',()=>updateFuelCalc());
 });
@@ -2988,6 +3006,7 @@ async function updateFuelCalcAsync(km,liters){
 window.addFuel=async()=>{
   const status=document.getElementById('fuelStatus');
   status.className='status hidden';
+  const wasEditing=Boolean(editingFuelId);
 
   const datum=v('fDate'),kmText=v('fKm'),litersText=v('fLiters'),priceText=v('fPrice');
   if(!datum||kmText===''||litersText===''||priceText===''){
@@ -3018,7 +3037,7 @@ window.addFuel=async()=>{
     camper_id: activeCamperId
   };
   let error=null;
-  if(editingFuelId){
+  if(wasEditing){
     const {data:updatedFuel,error:updateError}=await supabase
       .from('tankbeurten')
       .update(payload)
@@ -3031,16 +3050,19 @@ window.addFuel=async()=>{
       error={message:'geen record aangepast (mogelijk geen update-recht via RLS)'};
     }
   }else{
-    ({error}=await supabase.from('tankbeurten').insert(payload));
+    ({error}=await supabase.from('tankbeurten').insert(payload).select('id').single());
   }
 
 
   if(error){
-    status.textContent=(editingFuelId?'Tankbeurt bijwerken':'Tankbeurt opslaan')+' mislukt: '+error.message;
+    status.textContent=(wasEditing?'Tankbeurt bijwerken':'Tankbeurt opslaan')+' mislukt: '+error.message;
     status.className='status err';return;
   }
 
-  status.textContent=editingFuelId?'✓ Tankbeurt bijgewerkt.':'✓ Tankbeurt opgeslagen.';
+  if(wasEditing){
+    editingFuelId=null;
+  }
+  status.textContent=wasEditing?'✅ Tankbeurt bijgewerkt':'✅ Nieuwe tankbeurt opgeslagen';
   status.className='status ok';
   cancelFuelEdit(false);
   await loadFuel();
@@ -3064,9 +3086,8 @@ window.startFuelEdit=async function(id){
   document.getElementById('fPrice').value=data.prijs_per_liter??'';
   document.getElementById('fLocation').value=data.locatie||'';
   document.getElementById('fCountry').value=data.land||'';
-  document.getElementById('saveFuelBtn').textContent='💾 Tankbeurt wijzigen';
-  document.getElementById('cancelFuelEditBtn').classList.remove('hidden');
   document.getElementById('fuelStatus').className='status hidden';
+  updateFuelFormMode();
   await updateFuelCalc();
   document.getElementById('fuel').scrollIntoView({behavior:'smooth',block:'start'});
 };
@@ -3078,11 +3099,14 @@ window.cancelFuelEdit=function(resetStatus=true){
   document.getElementById('fDate').value=today();
   document.getElementById('fuelKmHint').textContent='';
   document.getElementById('fuelCalc').textContent='Totaalbedrag: € 0,00 · Eerste/nieuwe tankbeurt — · Verbruik: —';
-  document.getElementById('saveFuelBtn').textContent='⛽ Tankbeurt opslaan';
-  document.getElementById('cancelFuelEditBtn').classList.add('hidden');
+  updateFuelFormMode();
   if(resetStatus){
     document.getElementById('fuelStatus').className='status hidden';
   }
+};
+
+window.startNewFuelEntry=function(){
+  cancelFuelEdit();
 };
 
 async function prepareFuelForm(){
