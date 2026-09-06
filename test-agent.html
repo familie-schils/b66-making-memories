@@ -1134,8 +1134,14 @@ let stopPhotosToDelete=[];
   let currentRoleContext = createEmptyRoleContext();
   let platformAdminCandidateCountGlobal = null;
   const PHOTO_UPLOAD_ALLOWED_TYPES=['image/jpeg','image/png','image/webp'];
-  const PHOTO_UPLOAD_MAX_FILE_SIZE_BYTES=10*1024*1024;
+  const PHOTO_UPLOAD_MAX_SOURCE_FILE_SIZE_BYTES=20*1024*1024;
+  const PHOTO_UPLOAD_TARGET_FILE_SIZE_BYTES=3*1024*1024;
   const PHOTO_UPLOAD_MAX_COUNT=10;
+  const PHOTO_UPLOAD_MAX_DIMENSION=2000;
+  const PHOTO_UPLOAD_INITIAL_QUALITY=0.86;
+  const PHOTO_UPLOAD_MIN_QUALITY=0.5;
+  const PHOTO_UPLOAD_DIMENSION_REDUCTION_FACTOR=0.85;
+  const PHOTO_UPLOAD_MIN_DIMENSION=1280;
 
   function asDateInputValue(value){
     if(!value)return '';
@@ -3847,6 +3853,124 @@ async function imageUrlToJpegDataUrl(url,maxDimension=1400,quality=0.82){
     URL.revokeObjectURL(objectUrl);
   }
 }
+
+async function canvasToBlob(canvas,type,quality){
+  return await new Promise((resolve,reject)=>{
+    canvas.toBlob(blob=>{
+      if(blob){
+        resolve(blob);
+        return;
+      }
+      reject(new Error('Foto verwerken mislukt'));
+    },type,quality);
+  });
+}
+
+async function loadImageSource(file){
+  if(typeof createImageBitmap==='function'){
+    try{
+      const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
+      return {
+        width:bitmap.width||1,
+        height:bitmap.height||1,
+        draw(ctx,width,height){
+          ctx.drawImage(bitmap,0,0,width,height);
+        },
+        cleanup(){
+          if(typeof bitmap.close==='function'){
+            bitmap.close();
+          }
+        }
+      };
+    }catch(error){
+      console.warn('createImageBitmap fallback gebruikt:',error);
+    }
+  }
+  const objectUrl=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((resolve,reject)=>{
+      const image=new Image();
+      image.onload=()=>resolve(image);
+      image.onerror=()=>reject(new Error('Foto verwerken mislukt'));
+      image.src=objectUrl;
+    });
+    return {
+      width:img.naturalWidth||1,
+      height:img.naturalHeight||1,
+      draw(ctx,width,height){
+        ctx.drawImage(img,0,0,width,height);
+      },
+      cleanup(){
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }catch(error){
+    URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
+}
+
+function buildOptimizedPhotoName(originalName){
+  const baseName=String(originalName||'foto')
+    .replace(/\.[^.]+$/,'')
+    .replace(/\s+/g,'_')
+    .replace(/[^a-zA-Z0-9_-]/g,'')
+    .slice(0,40)||'foto';
+  return `${baseName}.jpg`;
+}
+
+async function optimizePhotoForUpload(file){
+  if(!(file instanceof File)){
+    throw new Error('Geselecteerd item is geen geldig bestand.');
+  }
+  const imageSource=await loadImageSource(file);
+  try{
+    const longestSide=Math.max(imageSource.width||1,imageSource.height||1);
+    const startScale=Math.min(1,PHOTO_UPLOAD_MAX_DIMENSION/longestSide);
+    let width=Math.max(1,Math.round((imageSource.width||1)*startScale));
+    let height=Math.max(1,Math.round((imageSource.height||1)*startScale));
+    let quality=PHOTO_UPLOAD_INITIAL_QUALITY;
+    let attempts=0;
+    while(attempts<12){
+      const canvas=document.createElement('canvas');
+      canvas.width=width;
+      canvas.height=height;
+      const ctx=canvas.getContext('2d');
+      if(!ctx){
+        throw new Error('Canvas niet beschikbaar');
+      }
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(0,0,width,height);
+      imageSource.draw(ctx,width,height);
+      const blob=await canvasToBlob(canvas,'image/jpeg',quality);
+      if(blob.size<=PHOTO_UPLOAD_TARGET_FILE_SIZE_BYTES){
+        return {
+          file:new File([blob],buildOptimizedPhotoName(file.name),{
+            type:'image/jpeg',
+            lastModified:Date.now()
+          }),
+          originalSize:file.size,
+          optimizedSize:blob.size
+        };
+      }
+      if(quality>PHOTO_UPLOAD_MIN_QUALITY){
+        quality=Math.max(PHOTO_UPLOAD_MIN_QUALITY,quality-0.08);
+      }else{
+        const nextWidth=Math.max(1,Math.round(width*PHOTO_UPLOAD_DIMENSION_REDUCTION_FACTOR));
+        const nextHeight=Math.max(1,Math.round(height*PHOTO_UPLOAD_DIMENSION_REDUCTION_FACTOR));
+        if(Math.max(nextWidth,nextHeight)<PHOTO_UPLOAD_MIN_DIMENSION || (nextWidth===width&&nextHeight===height)){
+          break;
+        }
+        width=nextWidth;
+        height=nextHeight;
+      }
+      attempts+=1;
+    }
+  }finally{
+    imageSource.cleanup();
+  }
+  throw new Error(`"${file.name}": kon niet voldoende verkleind worden voor upload (maximaal 3 MB na optimalisatie).`);
+}
 async function loadTripReportData(tripId){
   const {data:trip,error}=await supabase.from('reizen').select('*').eq('id',tripId).single();
   if(error)throw error;
@@ -4434,8 +4558,8 @@ function validateSelectedPhotos(files){
       errors.push(`Bestand "${file.name}" is geen toegelaten afbeelding (JPEG, PNG of WEBP).`);
       continue;
     }
-    if(file.size>PHOTO_UPLOAD_MAX_FILE_SIZE_BYTES){
-      errors.push(`Bestand "${file.name}" is groter dan 10 MB.`);
+    if(file.size>PHOTO_UPLOAD_MAX_SOURCE_FILE_SIZE_BYTES){
+      errors.push(`Bestand "${file.name}" is groter dan 20 MB.`);
     }
   }
   if(errors.length){
@@ -4482,6 +4606,8 @@ async function uploadPhotos() {
   }
   const uploadedUrls = [];
  const uploadErrors = [];
+ let optimizedCount=0;
+ let savedBytes=0;
 
  function createPhotoUploadFilename(photo){
    const originalName=photo?.name||'foto';
@@ -4514,21 +4640,29 @@ async function uploadPhotos() {
        uploadErrors.push('Upload overgeslagen: geselecteerd item is geen File-object.');
        continue;
      }
-     const filename=createPhotoUploadFilename(file);
-     if(typeof file.arrayBuffer!=='function'){
+     setPhotoStatus(`Foto ${uploadedUrls.length+uploadErrors.length+1} van ${validation.files.length} wordt geoptimaliseerd...`);
+     const optimized=await optimizePhotoForUpload(file);
+     const optimizedFile=optimized.file;
+     if(optimized.optimizedSize<optimized.originalSize){
+       optimizedCount+=1;
+       savedBytes+=Math.max(0,optimized.originalSize-optimized.optimizedSize);
+     }
+     const filename=createPhotoUploadFilename(optimizedFile);
+     if(typeof optimizedFile.arrayBuffer!=='function'){
        throw new Error(`"${file.name}": bestand kon niet gelezen worden. Kies de foto opnieuw en probeer opnieuw.`);
      }
-     const fileBuffer=await file.arrayBuffer();
+     const fileBuffer=await optimizedFile.arrayBuffer();
      if(!fileBuffer.byteLength){
        throw new Error(`"${file.name}": bestand bevat geen inhoud. Kies de foto opnieuw en probeer opnieuw.`);
      }
 
+     setPhotoStatus(`Foto ${uploadedUrls.length+uploadErrors.length+1} van ${validation.files.length} wordt geüpload...`);
      const { error } = await supabase.storage
        .from('fotos')
        .upload(
          filename,
          fileBuffer,
-         file.type ? { contentType: file.type } : undefined
+         optimizedFile.type ? { contentType: optimizedFile.type } : undefined
        );
 
      if(error){
@@ -4563,7 +4697,9 @@ async function uploadPhotos() {
      true
    );
  }else{
-   setPhotoStatus(uploadedUrls.length+' foto(s) geüpload');
+   const savedMb=savedBytes>0?` · ${Math.max(0.1,savedBytes/(1024*1024)).toFixed(1).replace('.',',')} MB bespaard`:'';
+   const optimizedLabel=optimizedCount?` · ${optimizedCount} geoptimaliseerd`:'';
+   setPhotoStatus(uploadedUrls.length+` foto(s) geüpload${optimizedLabel}${savedMb}`);
  }
 
  return uploadedUrls;
