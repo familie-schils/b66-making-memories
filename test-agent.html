@@ -4419,7 +4419,7 @@ async function fetchPlatformOverview(){
 }
 
 function formatLatestCamperValue(camper){
-  if(!camper)return 'Nog geen campers';
+  if(!camper||(!camper?.naam&&!camper?.merk&&!camper?.model&&!camper?.created_at))return 'Nog geen campers';
   const camperName=String(
     camper?.naam
     ||[camper?.merk,camper?.model].filter(Boolean).join(' ')
@@ -4456,12 +4456,12 @@ async function loadSystemInfo(){
   setSystemInfoValue('systemPhotoCount',String(getPlatformOverviewCount(overview?.total_photos)));
   setSystemInfoValue('systemLastPhotoUpload',formatLatestPhotoUploadValue(overview?.latest_photo_uploaded_at));
   setSystemInfoValue('systemPhotoStorageUsed',formatPhotoStorage(overview?.total_photo_bytes));
-  setSystemInfoValue('systemLatestCamper',formatLatestCamperValue(overview?{
+  setSystemInfoValue('systemLatestCamper',formatLatestCamperValue(overview ? {
     naam:overview.latest_camper_name,
     merk:overview.latest_camper_brand,
     model:overview.latest_camper_model,
     created_at:overview.latest_camper_created_at
-  }:null));
+  } : null));
   setSystemInfoValue('systemCurrentVersion',formatVersionLabel(releaseMetadata?.currentVersion));
   setSystemInfoValue('systemCurrentVersionDate',formatDate(releaseMetadata?.releasedAt));
 
