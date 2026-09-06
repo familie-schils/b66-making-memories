@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.2",
-  "releasedAt": "2026-09-06T15:16:11.527Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: add head-admin system info with configurable storage limits",
+  "currentVersion": "1.0.3",
+  "releasedAt": "2026-09-06T15:27:25.458Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: phase out overnight travel cost input",
   "latest5": [
+    {
+      "version": "1.0.3",
+      "releasedAt": "2026-09-06T15:27:25.458Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: phase out overnight travel cost input"
+    },
     {
       "version": "1.0.2",
       "releasedAt": "2026-09-06T15:16:11.527Z",
@@ -22,6 +27,11 @@
   ],
   "history": [
     {
+      "version": "1.0.3",
+      "releasedAt": "2026-09-06T15:27:25.458Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: phase out overnight travel cost input"
+    },
+    {
       "version": "1.0.2",
       "releasedAt": "2026-09-06T15:16:11.527Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: add head-admin system info with configurable storage limits"
@@ -37,5 +47,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "89d20783434f920854f5a38c7ce02e92a0bcb2c1"
+  "lastSyncedTestAgentSha": "d5c273ee892e7492e2bc5677f131806ef60dcdaa"
 }
