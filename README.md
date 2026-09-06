@@ -17,6 +17,6 @@ De bestanden zoals `B66_Making_Memories_v0.8.5_eindkm_opslaan.html` en vergelijk
 
 ## Versiebeheer en updates
 
-- De app-versie komt uit `/home/runner/work/b66-making-memories/b66-making-memories/assets/meta/releases.json` en niet meer uit een tijdstempel.
-- Bij iedere GitHub Release werkt `.github/workflows/release-metadata.yml` dit bestand automatisch bij op basis van release-tags en release notes.
+- De app probeert eerst `/home/runner/work/b66-making-memories/b66-making-memories/assets/meta/sync-releases.json` te laden en valt alleen terug op `/home/runner/work/b66-making-memories/b66-making-memories/assets/meta/releases.json` als de sync-metadata nog ontbreekt.
+- `.github/workflows/sync-test-agent-release.yml` synchroniseert op `main` automatisch `test-agent.html` naar `index.html`, verhoogt het patchversienummer en schrijft commit-onderwerpen weg naar de changelog.
 - In de app worden deze gegevens getoond in de header (`Versie`) en in het scherm `Wat is nieuw?` (laatste 5 versies).

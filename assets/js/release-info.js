@@ -1,3 +1,6 @@
+const PRIMARY_RELEASE_METADATA_URL = 'assets/meta/sync-releases.json';
+const LEGACY_RELEASE_METADATA_URL = 'assets/meta/releases.json';
+
 const FALLBACK_RELEASES = Object.freeze({
   currentVersion: 'unknown',
   releasedAt: null,
@@ -44,15 +47,27 @@ function formatReleaseDate(dateValue) {
   return date.toLocaleDateString('nl-BE', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-export async function loadReleaseMetadata(url = 'assets/meta/releases.json') {
-  try {
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    return normalizeReleasePayload(payload);
-  } catch {
-    return { ...FALLBACK_RELEASES };
+async function fetchReleaseMetadata(url) {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const payload = await response.json();
+  return normalizeReleasePayload(payload);
+}
+
+export async function loadReleaseMetadata(url = PRIMARY_RELEASE_METADATA_URL) {
+  const urls = url === PRIMARY_RELEASE_METADATA_URL
+    ? [PRIMARY_RELEASE_METADATA_URL, LEGACY_RELEASE_METADATA_URL]
+    : [url];
+
+  for (const candidateUrl of urls) {
+    try {
+      return await fetchReleaseMetadata(candidateUrl);
+    } catch {
+      continue;
+    }
   }
+
+  return { ...FALLBACK_RELEASES };
 }
 
 export function renderReleaseInfo(metadata, elements = {}) {

@@ -1,0 +1,21 @@
+{
+  "source": "test-agent-sync",
+  "currentVersion": "1.0.0",
+  "releasedAt": null,
+  "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties.",
+  "latest5": [
+    {
+      "version": "1.0.0",
+      "releasedAt": null,
+      "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
+    }
+  ],
+  "history": [
+    {
+      "version": "1.0.0",
+      "releasedAt": null,
+      "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
+    }
+  ],
+  "lastSyncedTestAgentSha": null
+}
