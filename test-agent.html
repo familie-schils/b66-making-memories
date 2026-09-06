@@ -72,6 +72,9 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .existing-photo-item img{width:100%;max-height:100px;object-fit:cover;border-radius:8px;display:block;margin-bottom:6px}
 .trip-toolbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px;align-items:end}
 .trip-report-panel{background:#f7f7f7;border-radius:12px;padding:14px;margin-top:18px}
+.stop-share-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;max-width:100%;font-weight:400}
+.stop-share-row input[type="checkbox"]{width:auto;flex:0 0 auto;margin-top:2px}
+.stop-share-row-text{flex:1;min-width:0;line-height:1.35;overflow-wrap:break-word}
 @media (max-width:560px){
   .travel-cost-category-grid{grid-template-columns:1fr}
   .edit-actions .secondary,.edit-actions .primary{flex:1 1 100%}
@@ -243,8 +246,9 @@ Nog geen foto geselecteerd.
   <div id="existingPhotoList" class="existing-photo-list"></div>
   <div id="photoList"></div>
 <div id="activeTripInfo" class="muted"></div><br>
-<label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin-bottom:12px">
-  <input id="shareWithFriends" type="checkbox"> ☑ Deze stop niet delen met vrienden
+<label class="stop-share-row">
+  <input id="shareWithFriends" type="checkbox">
+  <span class="stop-share-row-text">Deze stop niet delen met vrienden</span>
 </label>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
