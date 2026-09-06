@@ -420,10 +420,10 @@ Registreer snel dagelijkse uitgaven en verplaatsingskosten.
 <div id="costCategoryCards" class="travel-cost-category-grid">
   <button type="button" class="travel-cost-category-card" data-category="Boodschappen" onclick="selectTravelCostCategory('Boodschappen')"><span>Boodschappen</span><span class="check">OK</span></button>
   <button type="button" class="travel-cost-category-card" data-category="Eten & drinken" onclick="selectTravelCostCategory('Eten & drinken')"><span>Eten & drinken</span><span class="check">OK</span></button>
-  <button type="button" class="travel-cost-category-card" data-category="Overnachting" onclick="selectTravelCostCategory('Overnachting')"><span>Overnachting</span><span class="check">OK</span></button>
   <button type="button" class="travel-cost-category-card" data-category="Verplaatsing" onclick="selectTravelCostCategory('Verplaatsing')"><span>Verplaatsing</span><span class="check">OK</span></button>
   <button type="button" class="travel-cost-category-card" data-category="Overig" onclick="selectTravelCostCategory('Overig')"><span>Overig</span><span class="check">OK</span></button>
 </div>
+<div id="travelCostLegacyCategoryHint" class="muted hidden" style="margin-top:8px">Dit historische record gebruikt de oude categorie Overnachting. Nieuwe overnachtingen registreer je via Reizen → Reisstops.</div>
 
 <br>
 
@@ -1366,7 +1366,9 @@ function populateCountrySelects(){
   }
 }
 
-const TRAVEL_COST_CATEGORIES=['Boodschappen','Eten & drinken','Overnachting','Verplaatsing','Overig'];
+const ACTIVE_TRAVEL_COST_CATEGORIES=['Boodschappen','Eten & drinken','Verplaatsing','Overig'];
+const LEGACY_TRAVEL_COST_CATEGORIES=['Overnachting'];
+const TRAVEL_COST_CATEGORIES=[...ACTIVE_TRAVEL_COST_CATEGORIES,...LEGACY_TRAVEL_COST_CATEGORIES];
 const LEGACY_TRAVEL_COST_TYPE_TO_CATEGORY={
   'Péage':'Verplaatsing',
   'Ferry':'Verplaatsing',
@@ -1393,6 +1395,10 @@ function updateTravelCostCategoryCards(){
   document.querySelectorAll('#costCategoryCards .travel-cost-category-card').forEach(card=>{
     card.classList.toggle('selected',card.dataset.category===selectedTravelCostCategory);
   });
+  const legacyHint=document.getElementById('travelCostLegacyCategoryHint');
+  if(legacyHint){
+    legacyHint.classList.toggle('hidden',!LEGACY_TRAVEL_COST_CATEGORIES.includes(selectedTravelCostCategory));
+  }
 }
 
 window.selectTravelCostCategory=function(category){
