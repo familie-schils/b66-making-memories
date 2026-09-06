@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.6",
-  "releasedAt": "2026-09-06T15:57:20.677Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Replace system info storage RPC",
+  "currentVersion": "1.0.7",
+  "releasedAt": "2026-09-06T17:23:06.559Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Finalize platform dashboard totals\n- Wire platform overview RPC",
   "latest5": [
+    {
+      "version": "1.0.7",
+      "releasedAt": "2026-09-06T17:23:06.559Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Finalize platform dashboard totals\n- Wire platform overview RPC"
+    },
     {
       "version": "1.0.6",
       "releasedAt": "2026-09-06T15:57:20.677Z",
@@ -23,14 +28,14 @@
       "version": "1.0.3",
       "releasedAt": "2026-09-06T15:27:25.458Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: phase out overnight travel cost input"
-    },
-    {
-      "version": "1.0.2",
-      "releasedAt": "2026-09-06T15:16:11.527Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: add head-admin system info with configurable storage limits"
     }
   ],
   "history": [
+    {
+      "version": "1.0.7",
+      "releasedAt": "2026-09-06T17:23:06.559Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Finalize platform dashboard totals\n- Wire platform overview RPC"
+    },
     {
       "version": "1.0.6",
       "releasedAt": "2026-09-06T15:57:20.677Z",
@@ -67,5 +72,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "97f34532f1f9c5c8dc4bab218a4efc1c96cdcf3b"
+  "lastSyncedTestAgentSha": "b044ef7f0f9d8c7ac49ef070b86661ee963573ae"
 }
