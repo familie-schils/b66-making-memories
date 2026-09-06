@@ -18,7 +18,7 @@ async function refreshReleaseMetadata() {
 }
 
 refreshReleaseMetadata().catch(() => {
-  elements.versionText.textContent = 'Versie: onbekend';
+  elements.versionText.textContent = 'Versie onbekend';
 });
 
 

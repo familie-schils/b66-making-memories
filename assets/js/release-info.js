@@ -1,12 +1,19 @@
 const FALLBACK_RELEASES = Object.freeze({
-  currentVersion: 'onbekend',
+  currentVersion: 'unknown',
   releasedAt: null,
   notes: 'Versiegegevens zijn momenteel niet beschikbaar.',
   latest5: [],
 });
 
+function normalizeVersionValue(value, fallback = 'unknown') {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  return trimmed.toLowerCase() === 'onbekend' ? 'unknown' : trimmed;
+}
+
 function normalizeReleaseItem(item) {
-  const version = typeof item?.version === 'string' && item.version.trim() ? item.version.trim() : 'onbekend';
+  const version = normalizeVersionValue(item?.version);
   const releasedAt = typeof item?.releasedAt === 'string' && item.releasedAt.trim() ? item.releasedAt.trim() : null;
   const notes = typeof item?.notes === 'string' && item.notes.trim() ? item.notes.trim() : 'Geen release-opmerkingen.';
   return { version, releasedAt, notes };
@@ -17,9 +24,7 @@ function normalizeReleasePayload(payload) {
     ? payload.latest5.map(normalizeReleaseItem).slice(0, 5)
     : [];
 
-  const currentVersion = typeof payload?.currentVersion === 'string' && payload.currentVersion.trim()
-    ? payload.currentVersion.trim()
-    : (latest5[0]?.version || FALLBACK_RELEASES.currentVersion);
+  const currentVersion = normalizeVersionValue(payload?.currentVersion, latest5[0]?.version || FALLBACK_RELEASES.currentVersion);
 
   const releasedAt = typeof payload?.releasedAt === 'string' && payload.releasedAt.trim()
     ? payload.releasedAt.trim()
@@ -54,7 +59,9 @@ export function renderReleaseInfo(metadata, elements = {}) {
   const data = normalizeReleasePayload(metadata || FALLBACK_RELEASES);
 
   if (elements.versionText) {
-    elements.versionText.textContent = `Versie: ${data.currentVersion}`;
+    elements.versionText.textContent = data.currentVersion === 'unknown'
+      ? 'Versie onbekend'
+      : `Versie: ${data.currentVersion}`;
   }
 
   if (elements.currentVersionText) {

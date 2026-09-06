@@ -1,6 +1,12 @@
 {
-  "currentVersion": "onbekend",
+  "currentVersion": "1.0.0",
   "releasedAt": null,
-  "notes": "Versiegegevens zijn momenteel niet beschikbaar.",
-  "latest5": []
+  "notes": "Initiële versie van het nieuwe versiesysteem.",
+  "latest5": [
+    {
+      "version": "1.0.0",
+      "releasedAt": null,
+      "notes": "Initiële versie van het nieuwe versiesysteem."
+    }
+  ]
 }
