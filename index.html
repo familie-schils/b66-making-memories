@@ -4454,6 +4454,11 @@ function getMetricCount(result){
   return Number.isFinite(result?.count)?result.count:0;
 }
 
+function isMissingColumnError(error){
+  const message=String(error?.message||'').toLowerCase();
+  return message.includes('column')&&message.includes('does not exist');
+}
+
 async function loadSystemInfo(){
   if(!canAccessBeheer)return;
   setSystemInfoStatus('Systeeminformatie laden...','ok');
@@ -4465,7 +4470,7 @@ async function loadSystemInfo(){
     supabase.from('reizen').select('*',{count:'exact',head:true}).not('einddatum','is',null),
     supabase.from('reis_stops').select('*',{count:'exact',head:true}),
     supabase.from('fotos').select('*',{count:'exact',head:true}),
-    supabase.from('fotos').select('created_at').order('created_at',{ascending:false}).limit(1).maybeSingle(),
+    supabase.from('fotos').select('aangemaakt_op').order('aangemaakt_op',{ascending:false}).limit(1).maybeSingle(),
     supabase.from('campers').select('created_at').order('created_at',{ascending:false}).limit(1).maybeSingle(),
     supabase.from('system_settings').select('id,db_limit_mb,storage_limit_gb').eq('id',1).maybeSingle(),
     supabase.rpc('get_system_storage_metrics')
@@ -4484,6 +4489,8 @@ async function loadSystemInfo(){
     storageResult
   ]=await Promise.all(requests);
 
+  const photoDateColumnMissing=isMissingColumnError(lastPhotoResult?.error);
+  const camperDateColumnMissing=isMissingColumnError(lastCamperResult?.error);
   const errors=[
     usersResult.error,
     campersResult.error,
@@ -4492,8 +4499,8 @@ async function loadSystemInfo(){
     closedTripsResult.error,
     stopsResult.error,
     photosResult.error,
-    lastPhotoResult.error,
-    lastCamperResult.error,
+    photoDateColumnMissing?null:lastPhotoResult.error,
+    camperDateColumnMissing?null:lastCamperResult.error,
     settingsResult.error,
     storageResult.error
   ].filter(Boolean);
@@ -4526,10 +4533,10 @@ async function loadSystemInfo(){
   setSystemInfoValue('systemPhotoStorageMax',formatNumberWithUnit(storageLimitGb,'GB'));
   setSystemInfoValue('systemPhotoStorageAvailable',formatNumberWithUnit(photoAvailableGb,'GB'));
 
-  const photoDate=lastPhotoResult?.data?.created_at||null;
-  const camperDate=lastCamperResult?.data?.created_at||null;
-  setSystemInfoValue('systemLastPhotoUpload',photoDate?formatDate(photoDate):'—');
-  setSystemInfoValue('systemLastCamper',camperDate?formatDate(camperDate):'—');
+  const photoDate=photoDateColumnMissing?null:(lastPhotoResult?.data?.aangemaakt_op||null);
+  const camperDate=camperDateColumnMissing?null:(lastCamperResult?.data?.created_at||null);
+  setSystemInfoValue('systemLastPhotoUpload',photoDateColumnMissing?'Onbekend':(photoDate?formatDate(photoDate):'—'));
+  setSystemInfoValue('systemLastCamper',camperDateColumnMissing?'Onbekend':(camperDate?formatDate(camperDate):'—'));
 
   let releaseMetadata=latestReleaseMetadata;
   if(!releaseMetadata){
