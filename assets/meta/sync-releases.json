@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.4",
-  "releasedAt": "2026-09-06T15:31:33.956Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix systeeminformatie foto-datumkolom",
+  "currentVersion": "1.0.5",
+  "releasedAt": "2026-09-06T15:50:10.532Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Vereenvoudig systeeminformatie naar foto-opslag",
   "latest5": [
+    {
+      "version": "1.0.5",
+      "releasedAt": "2026-09-06T15:50:10.532Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Vereenvoudig systeeminformatie naar foto-opslag"
+    },
     {
       "version": "1.0.4",
       "releasedAt": "2026-09-06T15:31:33.956Z",
@@ -23,15 +28,15 @@
       "version": "1.0.1",
       "releasedAt": "2026-09-06T11:08:41.554Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: add sync-based auto versioning\n- Optimaliseer foto uploads in test-agent\n- Remove decorative UI icons for calmer interface\n- Pas versie-fallback en release-initialisatie aan\n- feat: add automated release metadata and whats-new UI\n- Add self-service password management\n- Simplify mobile navigation flow\n- Vereenvoudig kaarten Ontdekte Plaatsen in test-agent\n- feat: visually mark test-agent version\n- Fix mobile layout for stop-share checkbox row\n- Implement secure camper-owner provisioning via edge function and migration\n- Voeg directe campereigenaar-aanmaak toe in test-agent beheer\n- Vereenvoudig onderhoudsregistratie in test-agent\n- Verduidelijk tankbeurt edit-modus\n- Add trip report exports\n- Synchroniseer index en test-agent voor reisstop-bewerkfunctionaliteit\n- Handle no-op update saves in TEST-AGENT edit flows\n- Voeg bewerkmodus toe voor reizen, stops, kosten, tanken en onderhoud\n- Vereenvoudig reiskosten invoer met categoriekaarten\n- Merge remote-tracking branch 'origin/main' into copilot/upload-photo-failure-fix\n- Use ArrayBuffer in test-agent uploads\n- Add photo upload diagnostics and file-content guards\n- Add upload fallback and errors\n- Ensure profiles are provisioned in TEST-AGENT auth flows\n- Adjust TEST-AGENT friend lookup\n- Implement friend request approval flow\n- feat(pwa): add PWA support to test-agent.html (manifest, service worker, iOS meta tags, placeholder icons)\n- UX: vervang radio buttons door klikbare rolkaarten bij uitnodigingen\n- fix: add error handling to invitations status update in processInvite + update RLS policy comment\n- fix: voeg member-invite afhandeling toe aan handleInviteRoute in test-agent.html\n- fix: use ?invite= query param for camper invite links in test-agent\n- feat: add Leden beheren tab for Camper Admin in test-agent.html\n- fix: add inPasswordRecovery guard for password reset flow\n- feat: add Wachtwoord vergeten / password reset flow in test-agent.html\n- fix: vervang upsert door insert per ontbrekende relatie in test-agent.html\n- Make addVriend create reciprocal friend links\n- fix: Ontdekte Plaatsen toont eigen stops + gedeelde stops vrienden; deel-logica omgekeerd\n- fix: add regio autocomplete to Ontdekte Plaatsen filter\n- feat: add Regio + Referentie fields and extended search to Ontdekte Plaatsen\n- fix: tStartKm bewerkbaar bij nieuwe camper zonder kilometerdata\n- Persist invite onboarding context\n- Update test-agent.html\n- feat: dashboard toont actieve campergegevens dynamisch\n- UX/stabiliteit updates in test-agent.html\n- fix: beheer-tab, camper_id filters, cancelTrip reset\n- Improve photo upload reset flow per stop\n- Stabilize HTML and photo upload validation in test-agent.html\n- Fix platform invite onboarding: 3 bugs in init/inviteRegister/processInvite\n- Fix user precedence in loadCurrentCamper\n- Fix active camper selection when null memberships exist\n- Fix invite signup activation in test-agent flow\n- Add signup-flow debug outputs\n- Decouple head admin from camper_id 1 in test-agent\n- Implement active camper separation\n- Voeg rollenmodel toe aan test-agent\n- fix: restore platform invite camper creation flow\n- Add temporary invite route debug logging\n- Fix handleInviteRoute: use camperInvite/platformInvite, remove old data/error vars\n- feat: implementeer camper-uitnodigingen flow in test-agent.html\n- fix: replace hardcoded INVITE_BASE_URL with dynamic getInviteLink()\n- Fix indentation and formatting in test-agent.html\n- Refactor loadCurrentCamper function for clarity\n- Improve loadCurrentCamper function structure\n- Add SQL comments for campers table alterations\n- Check for active camper ID before proceeding\n- Fix activeCamperId loading fallback and diagnostics\n- Add debug logging to loadCurrentCamper in test-agent.html\n- Fix: guard load functions against null activeCamperId, add logging in showApp\n- Apply remaining changes\n- Add admin beheer UI\n- Fix friends: remove friend_email, use friend_user_id + profiles for display\n- feat: vrienden toevoegen via e-mailadres i.p.v. UUID\n- feat: implement gedeelde stops / Ontdekte plaatsen tab volledig\n- fix: replace friend_email with friend_user_id in friends queries\n- feat: vrienden-netwerk, gedeeld_met_vrienden, ontdekte plaatsen\n- Add fueltype dropdown, rename label, save brandstof_type, show icons, exclude non-diesel from stats\n- feat: extend showTripDetail with full summary, cost breakdown by type, and chronological travel log\n- Extend showTripDetail with summary, costs and fuel blocks\n- Breid camperprofiel uit met referentievelden\n- Add debug logging to saveCamperProfile()\n- feat: Mijn Camper configureerbaar camperprofiel met Supabase opslag\n- Vervang landvelden door centrale dropdowns\n- Auto-fill crew column from bestuurder and passagier when saving new trip\n- Rename loadCrewOptions → loadPersonOptions; crew volledig vervangen door bestuurder/passagier\n- feat: replace crew with bestuurder/passagier in Reizen\n- Fix personen SQL: camper_id bigint (was uuid) to match campers.id int8\n- Add personen management screen to test-agent.html\n- Implement travel costs section in test-agent.html\n- Create test-agent.html"
-    },
-    {
-      "version": "1.0.0",
-      "releasedAt": null,
-      "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
   "history": [
     {
+      "version": "1.0.5",
+      "releasedAt": "2026-09-06T15:50:10.532Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Vereenvoudig systeeminformatie naar foto-opslag"
+    },
+    {
       "version": "1.0.4",
       "releasedAt": "2026-09-06T15:31:33.956Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix systeeminformatie foto-datumkolom"
@@ -57,5 +62,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "c2ee06aa71a10c98a099b18025a19984d3db3905"
+  "lastSyncedTestAgentSha": "39082c9c3d9872d2043bbf2440c39efada0570f5"
 }
