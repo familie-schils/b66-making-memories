@@ -41,17 +41,19 @@ jobs:
                 return bTime - aTime;
               });
 
-            const current = normalized[0] || {
-              version: 'onbekend',
+            const initialRelease = {
+              version: '1.0.0',
               releasedAt: null,
-              notes: 'Versiegegevens zijn momenteel niet beschikbaar.',
+              notes: 'Initiële versie van het nieuwe versiesysteem.',
             };
+            const releases = normalized.length ? normalized : [initialRelease];
+            const current = releases[0];
 
             const payload = {
               currentVersion: current.version,
               releasedAt: current.releasedAt,
               notes: current.notes,
-              latest5: normalized.slice(0, 5),
+              latest5: releases.slice(0, 5),
             };
 
             fs.mkdirSync('assets/meta', { recursive: true });
