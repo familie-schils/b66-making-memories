@@ -4339,26 +4339,19 @@ async function loadAdminStats(){
   const status=document.getElementById('adminStatsStatus');
   if(!status||!canAccessBeheer)return;
   status.className='status hidden';
-  const statTargets=[
-    ['adminUserCount','profiles'],
-    ['adminCamperCount','campers'],
-    ['adminTripCount','reizen'],
-    ['adminStopCount','reis_stops'],
-    ['adminPhotoCount','fotos'],
-    ['adminFuelCount','tankbeurten'],
-    ['adminCostCount','reiskosten']
-  ];
-  const results=await Promise.all(statTargets.map(([,table])=>
-    supabase.from(table).select('*',{count:'exact',head:true})
-  ));
-  const firstError=results.find(result=>result.error)?.error;
-  if(firstError){
-    status.textContent='Platform statistieken laden mislukt: '+firstError.message;
+  const {data:overview,error}=await fetchPlatformOverview();
+  if(error){
+    status.textContent='Platform statistieken laden mislukt: '+error.message;
     status.className='status err';
+    return;
   }
-  statTargets.forEach(([id],index)=>{
-    document.getElementById(id).textContent=String(results[index].count??0);
-  });
+  setSystemInfoValue('adminUserCount',String(getPlatformOverviewCount(overview?.total_users)));
+  setSystemInfoValue('adminCamperCount',String(getPlatformOverviewCount(overview?.total_campers)));
+  setSystemInfoValue('adminTripCount',String(getPlatformOverviewCount(overview?.total_trips)));
+  setSystemInfoValue('adminStopCount',String(getPlatformOverviewCount(overview?.total_stops)));
+  setSystemInfoValue('adminPhotoCount',String(getPlatformOverviewCount(overview?.total_photos)));
+  setSystemInfoValue('adminFuelCount',String(getPlatformOverviewCount(overview?.total_fuel_entries)));
+  setSystemInfoValue('adminCostCount',String(getPlatformOverviewCount(overview?.total_cost_entries)));
 }
 
 async function loadBeheer(){
@@ -4415,39 +4408,14 @@ function setSystemInfoStatus(message,type='hidden'){
   box.className='status '+type;
 }
 
-function getMetricCount(result){
-  if(result?.error)return null;
-  return Number.isFinite(result?.count)?result.count:0;
+function getPlatformOverviewCount(value){
+  return Number.isFinite(Number(value))?Number(value):0;
 }
 
-function getSystemCountTargets(){
-  return [
-    ['systemUserCount','profiles'],
-    ['systemCamperCount','campers'],
-    ['systemTripCount','reizen'],
-    ['systemStopCount','reis_stops'],
-    ['systemPhotoCount','fotos']
-  ];
-}
-
-function getStorageObjectBytes(item){
-  const rawSize=item?.metadata?.size;
-  return Number.isFinite(Number(rawSize))?Number(rawSize):0;
-}
-
-function getStorageObjectTimestamp(item){
-  return item?.created_at||item?.updated_at||null;
-}
-
-function getLatestStorageObject(items){
-  return (items||[]).reduce((latest,item)=>{
-    const itemTimestamp=getStorageObjectTimestamp(item);
-    if(!itemTimestamp)return latest;
-    if(!latest)return item;
-    const latestTimestamp=getStorageObjectTimestamp(latest);
-    if(!latestTimestamp)return item;
-    return new Date(itemTimestamp)>new Date(latestTimestamp)?item:latest;
-  },null);
+async function fetchPlatformOverview(){
+  const {data,error}=await supabase.rpc('get_platform_overview');
+  const row=Array.isArray(data)?(data[0]||null):(data||null);
+  return {data:row,error};
 }
 
 function formatLatestCamperValue(camper){
@@ -4466,63 +4434,39 @@ function formatVersionLabel(version){
   return normalized;
 }
 
-async function listAllPhotoStorageObjects(){
-  const allItems=[];
-  const pageSize=1000;
-  let offset=0;
-  while(true){
-    const {data,error}=await supabase.storage.from('fotos').list('',{
-      limit:pageSize,
-      offset,
-      sortBy:{column:'name',order:'asc'}
-    });
-    if(error)return {data:allItems,error};
-    const batch=(Array.isArray(data)?data:[]).filter(item=>item?.name);
-    allItems.push(...batch);
-    if(batch.length<pageSize)break;
-    offset+=batch.length;
-  }
-  return {data:allItems,error:null};
+function formatLatestPhotoUploadValue(timestamp){
+  return timestamp?formatDateTime(timestamp):'Nog geen foto\'s';
 }
 
 async function loadSystemInfo(){
   if(!canAccessBeheer)return;
   setSystemInfoStatus('Systeeminformatie laden...','ok');
-  const countTargets=getSystemCountTargets();
   const releaseMetadataPromise=latestReleaseMetadata
     ? Promise.resolve(latestReleaseMetadata)
     : refreshReleaseMetadata().catch(()=>null);
-  const countPromises=countTargets.map(([,table])=>
-    supabase.from(table).select('*',{count:'exact',head:true})
-  );
-  const [countResults,latestCamperResult,photoStorageResult,releaseMetadata]=await Promise.all([
-    Promise.all(countPromises),
-    supabase.from('campers').select('naam,merk,model,created_at').order('created_at',{ascending:false}).limit(1).maybeSingle(),
-    listAllPhotoStorageObjects(),
+  const [{data:overview,error:overviewError},releaseMetadata]=await Promise.all([
+    fetchPlatformOverview(),
     releaseMetadataPromise
   ]);
 
-  const errors=[
-    ...countResults.map(result=>result.error),
-    latestCamperResult.error,
-    photoStorageResult.error
-  ].filter(Boolean);
-
-  countTargets.forEach(([id],index)=>{
-    setSystemInfoValue(id,String(getMetricCount(countResults[index])??'Onbekend'));
-  });
-
-  const photoObjects=photoStorageResult?.data||[];
-  const latestPhotoObject=getLatestStorageObject(photoObjects);
-  const totalPhotoBytes=photoObjects.reduce((sum,item)=>sum+getStorageObjectBytes(item),0);
-  setSystemInfoValue('systemLastPhotoUpload',latestPhotoObject?formatDateTime(getStorageObjectTimestamp(latestPhotoObject)):'Nog geen foto\'s');
-  setSystemInfoValue('systemPhotoStorageUsed',formatPhotoStorage(totalPhotoBytes));
-  setSystemInfoValue('systemLatestCamper',formatLatestCamperValue(latestCamperResult.data||null));
+  setSystemInfoValue('systemUserCount',String(getPlatformOverviewCount(overview?.total_users)));
+  setSystemInfoValue('systemCamperCount',String(getPlatformOverviewCount(overview?.total_campers)));
+  setSystemInfoValue('systemTripCount',String(getPlatformOverviewCount(overview?.total_trips)));
+  setSystemInfoValue('systemStopCount',String(getPlatformOverviewCount(overview?.total_stops)));
+  setSystemInfoValue('systemPhotoCount',String(getPlatformOverviewCount(overview?.total_photos)));
+  setSystemInfoValue('systemLastPhotoUpload',formatLatestPhotoUploadValue(overview?.latest_photo_uploaded_at));
+  setSystemInfoValue('systemPhotoStorageUsed',formatPhotoStorage(overview?.total_photo_bytes));
+  setSystemInfoValue('systemLatestCamper',formatLatestCamperValue(overview?{
+    naam:overview.latest_camper_name,
+    merk:overview.latest_camper_brand,
+    model:overview.latest_camper_model,
+    created_at:overview.latest_camper_created_at
+  }:null));
   setSystemInfoValue('systemCurrentVersion',formatVersionLabel(releaseMetadata?.currentVersion));
   setSystemInfoValue('systemCurrentVersionDate',formatDate(releaseMetadata?.releasedAt));
 
-  if(errors.length){
-    setSystemInfoStatus('Systeeminformatie deels geladen: '+(errors[0]?.message||'onbekende fout'),'err');
+  if(overviewError){
+    setSystemInfoStatus('Systeeminformatie deels geladen: '+(overviewError?.message||'onbekende fout'),'err');
     return;
   }
   setSystemInfoStatus('Systeeminformatie geladen.','ok');
