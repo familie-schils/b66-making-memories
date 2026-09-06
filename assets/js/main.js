@@ -1,4 +1,4 @@
-import { APP_VERSION } from './config.js';
+import { loadReleaseMetadata, renderReleaseInfo } from './release-info.js';
 import { createApi } from './api.js';
 import { createElements, setStatus } from './dom.js';
 import { state } from './state.js';
@@ -11,7 +11,16 @@ import { createTripFeature } from './features/trips.js';
 
 const api = createApi();
 const elements = createElements();
-elements.versionText.textContent = `Build: ${APP_VERSION}`;
+
+async function refreshReleaseMetadata() {
+  const metadata = await loadReleaseMetadata();
+  renderReleaseInfo(metadata, { versionText: elements.versionText });
+}
+
+refreshReleaseMetadata().catch(() => {
+  elements.versionText.textContent = 'Versie: onbekend';
+});
+
 
 const photos = createPhotoFeature({ api, elements, state });
 const dashboard = createDashboardFeature({ api, elements, state });

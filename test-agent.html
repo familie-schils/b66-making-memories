@@ -542,9 +542,37 @@ Reiskosten laden...
   <h3>App</h3>
   <div class="section-link-grid">
     <button type="button" class="section-link-card" onclick="openSection('profiel','more')"><span class="section-link-title">Mijn Profiel</span><span class="section-link-copy">Wijzig alleen je eigen wachtwoord.</span></button>
+    <button type="button" class="section-link-card" onclick="openSection('wat-is-nieuw','more')"><span class="section-link-title">Wat is nieuw?</span><span class="section-link-copy">Bekijk de laatste 5 updates per versie.</span></button>
     <button type="button" class="section-link-card" onclick="openSection('home','home')"><span class="section-link-title">Start</span><span class="section-link-copy">Terug naar het startscherm.</span></button>
     <button type="button" class="section-link-card" onclick="logout()"><span class="section-link-title">Uitloggen</span><span class="section-link-copy">Meld je af op dit toestel.</span></button>
   </div>
+</div>
+</section>
+
+
+<section id="wat-is-nieuw">
+<div class="card">
+  <h2>Wat is nieuw?</h2>
+  <p class="muted">Versie-informatie komt automatisch uit GitHub Releases.</p>
+  <div class="grid" style="margin-top:8px">
+    <div>
+      <label>Huidige versie</label>
+      <div id="whatsNewCurrentVersion" class="big">—</div>
+    </div>
+    <div>
+      <label>Releasedatum</label>
+      <div id="whatsNewCurrentDate" class="muted">—</div>
+    </div>
+  </div>
+  <div style="margin-top:10px">
+    <label>Laatste update</label>
+    <p id="whatsNewCurrentNotes" class="muted" style="white-space:pre-wrap">Laden...</p>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Laatste 5 versies</h3>
+  <div id="whatsNewList">Laden...</div>
 </div>
 </section>
 
@@ -1061,6 +1089,7 @@ Nog geen onderhoud geregistreerd.
 
 <script type="module">
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { loadReleaseMetadata, renderReleaseInfo } from './assets/js/release-info.js';
 
 const supabase=createClient(
 'https://hktczewqpevvgxqcswov.supabase.co',
@@ -1104,9 +1133,6 @@ let stopPhotosToDelete=[];
   });
   let currentRoleContext = createEmptyRoleContext();
   let platformAdminCandidateCountGlobal = null;
-  const APP_VERSION =
-  new Date(document.lastModified)
-    .toLocaleString('nl-BE');
   const PHOTO_UPLOAD_ALLOWED_TYPES=['image/jpeg','image/png','image/webp'];
   const PHOTO_UPLOAD_MAX_FILE_SIZE_BYTES=10*1024*1024;
   const PHOTO_UPLOAD_MAX_COUNT=10;
@@ -1118,6 +1144,23 @@ let stopPhotosToDelete=[];
 
 const loginView=document.getElementById('loginView');
 const appView=document.getElementById('appView');
+
+
+async function refreshReleaseMetadata(){
+  const metadata=await loadReleaseMetadata();
+  renderReleaseInfo(metadata,{
+    versionText:document.getElementById('versionText'),
+    currentVersionText:document.getElementById('whatsNewCurrentVersion'),
+    currentReleasedAtText:document.getElementById('whatsNewCurrentDate'),
+    currentNotesText:document.getElementById('whatsNewCurrentNotes'),
+    latestList:document.getElementById('whatsNewList')
+  });
+  return metadata;
+}
+refreshReleaseMetadata().catch(()=>{
+  const versionEl=document.getElementById('versionText');
+  if(versionEl)versionEl.textContent='Versie: onbekend';
+});
 const CAMPER_COUNTRIES=[
   'België',
   'Nederland',
@@ -1928,8 +1971,6 @@ function showLogin(){
   appView.classList.add('hidden');
 }
 async function showApp(sessionUser=null){
-  document.getElementById('versionText').textContent =
-  'Build: ' + APP_VERSION;
 const fallbackUserData=await supabase.auth.getUser();
 const authUser=fallbackUserData?.data?.user||null;
 const profileUser=sessionUser||authUser;
@@ -4260,6 +4301,7 @@ const SECTION_NAV_GROUPS={
   vrienden:'more',
   'ontdekte-plaatsen':'more',
   camper:'more',
+  'wat-is-nieuw':'more',
   beheer:'more',
   'leden-beheren':'more'
 };
@@ -4297,6 +4339,9 @@ async function openSection(sectionId,navKey=SECTION_NAV_GROUPS[sectionId]||'home
   }
   if(sectionId==='leden-beheren'){
     await loadLedenBeheren();
+  }
+  if(sectionId==='wat-is-nieuw'){
+    await refreshReleaseMetadata();
   }
 
   target?.scrollIntoView({behavior:'smooth',block:'start'});

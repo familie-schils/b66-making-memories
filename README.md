@@ -13,3 +13,10 @@ De actieve applicatie-entrypoint is `/home/runner/work/b66-making-memories/b66-m
 ## Opmerking over de versie-HTML-bestanden
 
 De bestanden zoals `B66_Making_Memories_v0.8.5_eindkm_opslaan.html` en vergelijkbare versies blijven in de repository als historische snapshots. Ze zijn niet langer de primaire bron; verdere ontwikkeling gebeurt vanuit `index.html` en de assets-map.
+
+
+## Versiebeheer en updates
+
+- De app-versie komt uit `/home/runner/work/b66-making-memories/b66-making-memories/assets/meta/releases.json` en niet meer uit een tijdstempel.
+- Bij iedere GitHub Release werkt `.github/workflows/release-metadata.yml` dit bestand automatisch bij op basis van release-tags en release notes.
+- In de app worden deze gegevens getoond in de header (`Versie`) en in het scherm `Wat is nieuw?` (laatste 5 versies).
