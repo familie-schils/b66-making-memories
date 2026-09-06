@@ -77,7 +77,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .role-card.selected{border-color:#28a745;background:#f0faf1}
 .role-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .role-card-title{font-weight:700;font-size:15px}
-.role-card-check{color:#28a745;font-size:18px;font-weight:900;opacity:0;transition:opacity .15s}
+.role-card-check{color:#1f5130;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:0;transition:opacity .15s}
 .role-card.selected .role-card-check{opacity:1}
 .role-card-desc{margin:0;padding:0 0 0 16px;font-size:13px;color:#444;font-weight:400}
 .role-card-desc li{margin:3px 0}
@@ -87,7 +87,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .travel-cost-category-card:focus-visible{outline:2px solid #2e7d32;outline-offset:2px}
 .travel-cost-category-card.selected{border-color:#2e7d32;background:#f0faf1}
 .travel-cost-category-card .emoji{font-size:20px;line-height:1}
-.travel-cost-category-card .check{margin-left:auto;color:#2e7d32;font-weight:900;opacity:0}
+.travel-cost-category-card .check{margin-left:auto;color:#1f5130;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:0}
 .travel-cost-category-card.selected .check{opacity:1}
 .edit-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .edit-actions .secondary,.edit-actions .primary{flex:1 1 180px}
@@ -109,7 +109,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </header>
 
 <div id="inviteRouteView" class="card login hidden">
-<h2>🎟️ Registratie via uitnodiging</h2>
+<h2>Registratie via uitnodiging</h2>
 <p id="inviteRouteCode" class="muted"></p>
 <div id="inviteRouteStatus" class="status hidden"></div>
 <div id="inviteRouteForms" class="hidden">
@@ -249,7 +249,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </div><br>
 <label>Onze ervaring</label><textarea id="sNotes"></textarea><br><br>
 
-<label>📷 Foto's toevoegen</label>
+<label>Foto's toevoegen</label>
 <input id="photoUpload" type="file" accept="image/jpeg,image/png,image/webp" multiple>
 
 <div id="photoStatus" class="muted">
@@ -259,7 +259,7 @@ Nog geen foto geselecteerd.
   <div id="photoList"></div>
 <div id="activeTripInfo" class="muted"></div><br>
 <label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin-bottom:12px">
-  <input id="shareWithFriends" type="checkbox"> ☑ Deze stop niet delen met vrienden
+  <input id="shareWithFriends" type="checkbox"> Deze stop niet delen met vrienden
 </label>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">Naar stop 2</button>
@@ -356,11 +356,11 @@ Registreer snel dagelijkse uitgaven en verplaatsingskosten.
 
 <label>Categorie</label>
 <div id="costCategoryCards" class="travel-cost-category-grid">
-  <button type="button" class="travel-cost-category-card" data-category="Boodschappen" onclick="selectTravelCostCategory('Boodschappen')"><span>Boodschappen</span><span class="check">✓</span></button>
-  <button type="button" class="travel-cost-category-card" data-category="Eten & drinken" onclick="selectTravelCostCategory('Eten & drinken')"><span>Eten & drinken</span><span class="check">✓</span></button>
-  <button type="button" class="travel-cost-category-card" data-category="Overnachting" onclick="selectTravelCostCategory('Overnachting')"><span>Overnachting</span><span class="check">✓</span></button>
-  <button type="button" class="travel-cost-category-card" data-category="Verplaatsing" onclick="selectTravelCostCategory('Verplaatsing')"><span>Verplaatsing</span><span class="check">✓</span></button>
-  <button type="button" class="travel-cost-category-card" data-category="Overig" onclick="selectTravelCostCategory('Overig')"><span>Overig</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Boodschappen" onclick="selectTravelCostCategory('Boodschappen')"><span>Boodschappen</span><span class="check">OK</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Eten & drinken" onclick="selectTravelCostCategory('Eten & drinken')"><span>Eten & drinken</span><span class="check">OK</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Overnachting" onclick="selectTravelCostCategory('Overnachting')"><span>Overnachting</span><span class="check">OK</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Verplaatsing" onclick="selectTravelCostCategory('Verplaatsing')"><span>Verplaatsing</span><span class="check">OK</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Overig" onclick="selectTravelCostCategory('Overig')"><span>Overig</span><span class="check">OK</span></button>
 </div>
 
 <br>
@@ -569,14 +569,14 @@ Reiskosten laden...
 <br><br>
 
 <button id="saveMaintenanceBtn" class="primary">
-💾 Onderhoud opslaan
+Onderhoud opslaan
 </button>
 <button id="cancelMaintenanceEditBtn" class="secondary hidden" onclick="cancelMaintenanceEdit()">
 Annuleren bewerken
 </button>
   <hr>
 
-<h3>🔧 Onderhoudshistorie</h3>
+<h3>Onderhoudshistorie</h3>
 
 <div id="maintenanceHistory">
 Nog geen onderhoud geregistreerd.
@@ -716,7 +716,7 @@ Nog geen onderhoud geregistreerd.
   );
 -->
 <div class="card">
-<h3>🧭 Rollenoverzicht</h3>
+<h3>Rollenoverzicht</h3>
 <div id="currentRoleSummary">Rollen laden...</div>
 <div id="camperRoleStatus" class="status hidden"></div>
 </div>
@@ -765,18 +765,18 @@ Nog geen onderhoud geregistreerd.
 <div><label>Referentie kilometerstand</label><input id="camperReferenceKm" type="number" placeholder="bijv. 58240"></div>
 </div>
 <div style="margin-top:12px">
-<button onclick="saveCamperProfile()">💾 Opslaan</button>
+<button onclick="saveCamperProfile()">Opslaan</button>
 <span id="camperProfileStatus" class="status hidden"></span>
 </div>
 </div>
 
 <div class="card">
-<h3>👥 Camperleden</h3>
+<h3>Camperleden</h3>
 <div id="camperMembersList">Leden laden...</div>
 </div>
 
 <div id="camperInviteCard" class="card hidden">
-<h3>📨 Uitnodigen</h3>
+<h3>Uitnodigen</h3>
 <div id="camperInviteStatus" class="status hidden"></div>
 <div class="inline-form">
   <div>
@@ -816,12 +816,12 @@ Nog geen onderhoud geregistreerd.
 </div>
 
 <div class="card">
-<h3>🧭 Rollenmodel & invite-analyse</h3>
+<h3>Rollenmodel & invite-analyse</h3>
 <div id="roleAnalysisReport">Analyse laden...</div>
 </div>
 
 <div class="card">
-<h3>👥 Uitnodigingen</h3>
+<h3>Uitnodigingen</h3>
 <div id="inviteStatus" class="status hidden"></div>
 <div class="inline-form">
   <div>
@@ -839,17 +839,17 @@ Nog geen onderhoud geregistreerd.
 </div>
 
 <div class="card">
-<h3>🚐 Campers</h3>
+<h3>Campers</h3>
 <div id="adminCampersList">Campers laden...</div>
 </div>
 
 <div class="card">
-<h3>👤 Gebruikers</h3>
+<h3>Gebruikers</h3>
 <div id="adminUsersList">Gebruikers laden...</div>
 </div>
 
 <div class="card">
-<h3>📊 Platform statistieken</h3>
+<h3>Platform statistieken</h3>
 <div id="adminStatsStatus" class="status hidden"></div>
 <div class="grid">
   <div class="card"><div class="muted">Aantal gebruikers</div><div class="big" id="adminUserCount">0</div></div>
@@ -929,17 +929,17 @@ Nog geen onderhoud geregistreerd.
 <label>Rol</label>
 <div class="role-cards" id="ledenBeheerRoleCards">
   <div class="role-card selected" data-role="viewer" onclick="selectLedenBeheerRole('viewer')">
-    <div class="role-card-header"><span class="role-card-title">Viewer</span><span class="role-card-check">✓</span></div>
+    <div class="role-card-header"><span class="role-card-title">Viewer</span><span class="role-card-check">OK</span></div>
     <ul class="role-card-desc"><li>Kan camper bekijken</li><li>Kan logboeken lezen</li></ul>
   </div>
   <div class="role-card" data-role="editor" onclick="selectLedenBeheerRole('editor')">
-    <div class="role-card-header"><span class="role-card-title">Editor</span><span class="role-card-check">✓</span></div>
+    <div class="role-card-header"><span class="role-card-title">Editor</span><span class="role-card-check">OK</span></div>
     <ul class="role-card-desc"><li>Kan logboeken aanpassen</li><li>Kan gegevens toevoegen</li></ul>
   </div>
 </div>
 <input type="hidden" id="ledenBeheerRoleValue" value="viewer">
 <br>
-<button class="primary" onclick="sendLedenBeheerInvitation()">📨 Uitnodiging verzenden</button>
+<button class="primary" onclick="sendLedenBeheerInvitation()">Uitnodiging verzenden</button>
 </div>
 
 <div class="card">
@@ -958,7 +958,7 @@ Nog geen onderhoud geregistreerd.
 <!-- Stop detail modal -->
 <div id="stopDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;overflow:auto" onclick="closeStopDetail(event)">
   <div style="background:white;max-width:600px;margin:30px auto;border-radius:14px;padding:20px" onclick="event.stopPropagation()">
-    <button class="secondary" style="margin-bottom:14px" onclick="closeStopDetail()">✕ Sluiten</button>
+    <button class="secondary" style="margin-bottom:14px" onclick="closeStopDetail()">Sluiten</button>
     <div id="stopDetailBody"></div>
   </div>
 </div>
@@ -1117,13 +1117,6 @@ function populateCountrySelects(){
 }
 
 const TRAVEL_COST_CATEGORIES=['Boodschappen','Eten & drinken','Overnachting','Verplaatsing','Overig'];
-const TRAVEL_COST_CATEGORY_EMOJI={
-  'Boodschappen':'🛒',
-  'Eten & drinken':'🍽️',
-  'Overnachting':'🏕️',
-  'Verplaatsing':'🛣️',
-  'Overig':'📦'
-};
 const LEGACY_TRAVEL_COST_TYPE_TO_CATEGORY={
   'Péage':'Verplaatsing',
   'Ferry':'Verplaatsing',
@@ -1143,8 +1136,7 @@ function mapTravelCostTypeToCategory(type){
 
 function getTravelCostCategoryLabel(type){
   const category=mapTravelCostTypeToCategory(type||'');
-  const emoji=TRAVEL_COST_CATEGORY_EMOJI[category]||'📦';
-  return `${emoji} ${category}`;
+  return category;
 }
 
 function updateTravelCostCategoryCards(){
@@ -2184,7 +2176,7 @@ window.saveTripEdit=async function(){
     showStatus('Reis bijwerken mislukt: geen record aangepast (mogelijk geen update-recht via RLS).',false);
     return;
   }
-  showStatus('✓ Reis bijgewerkt.',true);
+  showStatus('Reis bijgewerkt.',true);
   editingTripId=null;
   updateTripFormMode();
   await loadTrips();
@@ -2206,7 +2198,7 @@ const s=v('tStartKm'),
       el=document.getElementById('kmResult');
 if(s===''||e===''){el.textContent='KM gereden: —';return}
 const diff=Number(e)-Number(s);
-if(diff<0){el.textContent='⚠️ Eind KM is lager dan Start KM';return}
+if(diff<0){el.textContent='Eind KM is lager dan Start KM';return}
 el.textContent='KM gereden: '+diff.toLocaleString('nl-BE')+' km';
 }
 
@@ -2347,11 +2339,11 @@ for(const foto of uploads){
 
 currentStopSaved=true;
 if(editingStopId){
-  showStatus('✓ Stop bijgewerkt.',true);
+  showStatus('Stop bijgewerkt.',true);
   document.getElementById('activeTripInfo').textContent='Stop bijgewerkt.';
   resetStopEditState();
 }else{
-  showStatus('✓ Stop '+stopNumber+' opgeslagen.',true);
+  showStatus('Stop '+stopNumber+' opgeslagen.',true);
   document.getElementById('saveStopBtn').classList.add('hidden');
   const nextBtn=document.getElementById('nextStopBtn');
   nextBtn.textContent='Naar stop '+(stopNumber+1);
@@ -2500,7 +2492,7 @@ return;
 }
 
 const gereden=endKm-startKm;
-showStatus('✓ Reis afgesloten · '+gereden.toLocaleString('nl-BE')+' km gereden.',true);
+showStatus('Reis afgesloten · '+gereden.toLocaleString('nl-BE')+' km gereden.',true);
 activeTripId=null;stopNumber=1;currentStopSaved=false;
 resetStopEditState();
 document.getElementById('tripForm').classList.add('hidden');
@@ -2625,10 +2617,10 @@ document.getElementById('tripChooser').classList.add('hidden');
 document.getElementById('tripForm').classList.remove('hidden');
 
 document.getElementById('tripTitle').textContent =
-  '🚐 Reis actief';
+  'Reis actief';
 
 document.getElementById('stopHeading').textContent =
-  '📍 Stop ' + stopNumber;
+  'Stop ' + stopNumber;
 
 document.getElementById('activeTripInfo').textContent =
   'Actieve reis gevonden · verder met stop ' + stopNumber;
@@ -2675,9 +2667,9 @@ const ts=(stops||[]).filter(s=>s.reis_id===t.id);
 const closed=t.einddatum!=null;
 const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
 return `<div class="item">
-<b>${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</b> · ${esc(t.datum)}${closed?' → '+esc(t.einddatum):' · 🟢 actief'}
+<b>${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</b> · ${esc(t.datum)}${closed?' → '+esc(t.einddatum):' · actief'}
 <div class="muted">${ts.length} stop${ts.length===1?'':'s'}${km!=null?' · '+km.toLocaleString('nl-BE')+' km':''}</div>
-${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
+${ts.slice(0,5).map(s=>`<div class="trip-stop"><b>${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
 <div class="edit-actions">
  <button class="secondary" onclick="showTripDetail(${t.id})">Bekijk reis</button>
@@ -2707,11 +2699,11 @@ logItems.sort((a,b)=>a.datum<b.datum?-1:a.datum>b.datum?1:a.volgorde-b.volgorde)
 
 const detail=document.getElementById('tripDetail');
 detail.classList.remove('hidden');
-detail.innerHTML=`<h2>📖 Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</h2>
-<div class="muted">${esc(t.datum)}${t.einddatum?' → '+esc(t.einddatum):' · 🟢 nog actief'}</div>
+detail.innerHTML=`<h2>Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</h2>
+<div class="muted">${esc(t.datum)}${t.einddatum?' → '+esc(t.einddatum):' · nog actief'}</div>
 
 <hr>
-<h3>📊 Reissamenvatting</h3>
+<h3>Reissamenvatting</h3>
 <div class="item">
   <div><b>Bestuurder:</b> ${esc(t.bestuurder||t.crew||'—')}</div>
   <div><b>Passagier:</b> ${esc(t.passagier||'—')}</div>
@@ -2724,35 +2716,35 @@ detail.innerHTML=`<h2>📖 Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagie
 </div>
 
 <hr>
-<h3>💶 Kostenoverzicht</h3>
+<h3>Kostenoverzicht</h3>
 
-<h4>🏕️ Overnachtingskosten</h4>
+<h4>Overnachtingskosten</h4>
 <div class="item">
   ${stops.filter(s=>s.prijs_per_nacht!=null).map(s=>`<div>${esc(s.datum)} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${formatCurrency(s.prijs_per_nacht)}/nacht</div>`).join('')||'<div class="muted">Geen overnachtingskosten geregistreerd.</div>'}
   <div style="margin-top:6px"><b>Totaal overnachtingen:</b> ${formatCurrency(summary.overnightTotal)}</div>
 </div>
 
-<h4>🛣️ Reiskosten</h4>
+<h4>Reiskosten</h4>
 <div class="item">
   ${kostenTypes.map(type=>summary.travelCostByType[type]?`<div><b>${esc(getTravelCostCategoryLabel(type))}:</b> ${formatCurrency(summary.travelCostByType[type])}</div>`:``).join('')||'<div class="muted">Geen reiskosten geregistreerd.</div>'}
   <div style="margin-top:6px"><b>Totaal reiskosten:</b> ${formatCurrency(summary.travelCostTotal)}</div>
 </div>
 
-<h4>⛽ Brandstofkosten</h4>
+<h4>Brandstofkosten</h4>
 <div class="item">
   ${brandstofTypes.filter(bt=>summary.fuelByType[bt].count>0).map(bt=>`<div><b>${esc(bt)}:</b> ${formatLiters(summary.fuelByType[bt].liters)} · ${formatCurrency(summary.fuelByType[bt].cost)} (${summary.fuelByType[bt].count} tankbeurt${summary.fuelByType[bt].count===1?'':'en'})</div>`).join('')||'<div class="muted">Geen brandstofregistraties in deze reisperiode.</div>'}
   <div style="margin-top:6px"><b>Totaal liters:</b> ${formatLiters(summary.fuelTotalLiters)}</div>
   <div><b>Totale brandstofkost:</b> ${formatCurrency(summary.fuelTotalCost)}</div>
 </div>
 
-<h4>💰 Reistotaal</h4>
+<h4>Reistotaal</h4>
 <div class="item" style="font-size:1.1em">
   <div>${formatCurrency(summary.overnightTotal)} overnachtingen + ${formatCurrency(summary.travelCostTotal)} reiskosten + ${formatCurrency(summary.fuelTotalCost)} brandstof</div>
   <div style="margin-top:6px"><b>Totaal: ${formatCurrency(summary.grandTotal)}</b></div>
 </div>
 ${t.einddatum?`
 <div id="tripReportPanel" class="trip-report-panel">
-  <h3 style="margin-top:0">📄 Reisrapport</h3>
+  <h3 style="margin-top:0">Reisrapport</h3>
   <p class="muted">Download deze afgesloten reis als PDF of Excel.</p>
   <div class="edit-actions">
     <button class="primary" onclick="exportTripPdf(${id})">PDF downloaden</button>
@@ -2762,7 +2754,7 @@ ${t.einddatum?`
 </div>`:''}
  
 <hr>
-<h3>🗓️ Chronologische reislog</h3>
+<h3>Chronologische reislog</h3>
 ${logItems.length?logItems.map(item=>{
   if(item.type==='stop'){
     const s=item.data;
@@ -2771,8 +2763,8 @@ ${logItems.length?logItems.map(item=>{
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div>
 ${s.voorzieningen?`<div>${esc(s.voorzieningen)}</div>`:''}
 ${s.ervaring?`<p>${esc(s.ervaring)}</p>`:''}
-${s.prijs_per_nacht!=null?`<div class="muted">💶 ${formatCurrency(s.prijs_per_nacht)} / nacht</div>`:''}
-${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+''+stopFotos.map(f=>`<div style="margin-top:10px"><img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;"></div>`).join(''):''}
+${s.prijs_per_nacht!=null?`<div class="muted">Prijs per nacht: ${formatCurrency(s.prijs_per_nacht)} / nacht</div>`:''}
+${stopFotos.length?`<div class="muted">Foto's: ${stopFotos.length}</div>`+''+stopFotos.map(f=>`<div style="margin-top:10px"><img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;"></div>`).join(''):''}
 <div class="edit-actions"><button class="secondary" onclick="startStopEdit(${s.id},${id})">Bewerken</button></div>
 </div>`;
   }
@@ -2780,14 +2772,14 @@ ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+'
     const k=item.data;
     return `<div class="trip-stop" style="border-left-color:#e0a800"><b>${esc(getTravelCostCategoryLabel(k.type_kost))}</b>${k.land?' · '+esc(k.land):''}
 <div class="muted">${esc(k.datum)}${k.opmerking?' · '+esc(k.opmerking):''}</div>
-<div>💶 ${formatCurrency(k.bedrag)}</div>
+<div>Bedrag: ${formatCurrency(k.bedrag)}</div>
 <div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${k.id})">Bewerken</button></div></div>`;
   }
   if(item.type==='tank'){
     const x=item.data;
     const liters=Number(x.liters||0);
     const kost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*Number(x.prijs_per_liter||0);
-    return `<div class="trip-stop" style="border-left-color:#2e7d32"><b>⛽ Tanken${x.brandstof_type?' ('+esc(x.brandstof_type)+')':''}</b>${x.locatie?' · '+esc(x.locatie):''}${x.land?' · '+esc(x.land):''}
+    return `<div class="trip-stop" style="border-left-color:#2e7d32"><b>Tanken${x.brandstof_type?' ('+esc(x.brandstof_type)+')':''}</b>${x.locatie?' · '+esc(x.locatie):''}${x.land?' · '+esc(x.land):''}
 <div class="muted">${esc(x.datum)}</div>
 <div>${liters.toFixed(2).replace('.',',')} l · ${formatCurrency(kost)}</div>
 <div class="edit-actions"><button class="secondary" onclick="startFuelEdit(${x.id})">Bewerken</button></div></div>`;
@@ -3202,7 +3194,7 @@ window.addFuel=async()=>{
   if(wasEditing){
     editingFuelId=null;
   }
-  status.textContent=wasEditing?'✅ Tankbeurt bijgewerkt':'✅ Nieuwe tankbeurt opgeslagen';
+  status.textContent=wasEditing?'Tankbeurt bijgewerkt':'Nieuwe tankbeurt opgeslagen';
   status.className='status ok';
   cancelFuelEdit(false);
   await loadFuel();
@@ -3284,7 +3276,7 @@ async function loadFuel(){
 
     let totalLiters=0,totalCost=0;
     const rows=result.data||[];
-    const fuelIcon={Diesel:'⛽',AdBlue:'💧',Gas:'🔥'};
+    
 
     list.innerHTML=rows.length?rows.map((x,i)=>{
       const liters=Number(x.liters||0);
@@ -3293,13 +3285,13 @@ async function loadFuel(){
       const btype=x.brandstof_type||'Diesel';
       const isDiesel=btype==='Diesel';
       if(isDiesel){totalLiters+=liters;totalCost+=cost;}else{totalCost+=cost;}
-      const icon=fuelIcon[btype]||'⛽';
+      
       const prev=isDiesel?rows.slice(0,i).filter(r=>(!r.brandstof_type||r.brandstof_type==='Diesel')).pop():null;
       const distance=prev?Number(x.kmstand)-Number(prev.kmstand):null;
       const consumption=(isDiesel&&distance>0&&liters>0)?liters/distance*100:null;
 
       return `<div class="item">
-        <b>${icon} ${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}${btype!=='Diesel'?' · '+esc(btype):''}
+        <b>${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}${btype!=='Diesel'?' · '+esc(btype):''}
         <div class="muted">${x.locatie?esc(x.locatie)+' · ':''}${x.land?esc(x.land):''}</div>
         <div>${liters.toFixed(2).replace('.',',')} liter · € ${price.toFixed(3).replace('.',',')}/l · <b>€ ${cost.toFixed(2).replace('.',',')}</b></div>
         ${isDiesel?(consumption!=null
@@ -3308,7 +3300,7 @@ async function loadFuel(){
             ?`<div class="muted">${distance.toLocaleString('nl-BE')} km sinds vorige tankbeurt · verbruik niet berekend (liters ontbreken of zijn 0)</div>`
             :'<div class="muted">Eerste geregistreerde tankbeurt — vanaf de volgende tankbeurt wordt het verbruik berekend.</div>')
           :''}
-        <div class="edit-actions"><button class="secondary" onclick="startFuelEdit(${x.id})">✏️ Bewerken</button></div>
+        <div class="edit-actions"><button class="secondary" onclick="startFuelEdit(${x.id})">Bewerken</button></div>
       </div>`;
     }).join(''):'Nog geen tankbeurten opgeslagen.';
 
@@ -3688,7 +3680,7 @@ async function loadInviteCodes(){
     return;
   }
   list.innerHTML=data.map(invite=>{
-    const statusLabel=invite.used?'🟢 Gebruikt':'🟡 Openstaand';
+    const statusLabel=invite.used?'Gebruikt':'Openstaand';
     const link=getInviteLink(invite.invite_code);
     return `<div class="item">
       <div><b>${esc(invite.email||'—')}</b></div>
@@ -3876,7 +3868,7 @@ window.createInviteCode=async function(){
   }
   emailField.value='';
   renderGeneratedInvite(result.data);
-  status.textContent='✓ Uitnodiging opgeslagen.';
+  status.textContent='Uitnodiging opgeslagen.';
   status.className='status ok';
   await loadInviteCodes();
 };
@@ -3972,7 +3964,7 @@ function renderPhotoList(photos){
     return;
   }
   photoList.innerHTML=photos
-    .map(photo=>`<div>📸 ${esc(photo.name)}</div>`)
+    .map(photo=>`<div>Foto: ${esc(photo.name)}</div>`)
     .join('');
 }
 
@@ -3987,7 +3979,7 @@ function renderExistingStopPhotos(){
   box.innerHTML=visiblePhotos.map(photo=>`
     <div class="existing-photo-item">
       <img src="${esc(photo.url)}" alt="${esc(photo.bestandsnaam||'stopfoto')}">
-      <button class="secondary" onclick="markStopPhotoForDeletion(${photo.id})">🗑️ Verwijderen</button>
+      <button class="secondary" onclick="markStopPhotoForDeletion(${photo.id})">Verwijderen</button>
     </div>
   `).join('');
 }
@@ -4260,7 +4252,7 @@ function resetMaintenanceForm(){
   const overig=document.getElementById('otherMaintenanceText');
   if(overig)overig.value='';
   loadMaintenanceOptions([]);
-  document.getElementById('saveMaintenanceBtn').textContent='💾 Onderhoud opslaan';
+  document.getElementById('saveMaintenanceBtn').textContent='Onderhoud opslaan';
   document.getElementById('cancelMaintenanceEditBtn').classList.add('hidden');
 }
 
@@ -4277,7 +4269,7 @@ window.startMaintenanceEdit=function(item){
   document.getElementById('mPerformer').value=item.uitvoerder||'';
   document.getElementById('mNotes').value=item.opmerkingen||'';
   document.getElementById('otherMaintenanceText').value=item.omschrijving_overig||'';
-  document.getElementById('saveMaintenanceBtn').textContent='💾 Onderhoud wijzigen';
+  document.getElementById('saveMaintenanceBtn').textContent='Onderhoud wijzigen';
   document.getElementById('cancelMaintenanceEditBtn').classList.remove('hidden');
   setMaintenanceStatus('',false);
   document.getElementById('maintenance').scrollIntoView({behavior:'smooth',block:'start'});
@@ -4337,7 +4329,7 @@ document.getElementById('saveMaintenanceBtn').addEventListener('click', async fu
     console.error(error);
     return;
   }
-  setMaintenanceStatus(isEdit?'✅ Onderhoud bijgewerkt':'✅ Onderhoud opgeslagen',true);
+  setMaintenanceStatus(isEdit?'Onderhoud bijgewerkt':'Onderhoud opgeslagen',true);
   resetMaintenanceForm();
   await loadMaintenance();
 });
@@ -4373,13 +4365,13 @@ async function loadMaintenance(){
       </div>
 
       ${x.uitvoerder
-        ? `<div>🔧 ${x.uitvoerder}</div>`
+        ? `<div>Uitvoerder: ${x.uitvoerder}</div>`
         : ''}
 
       ${x.kosten
-        ? `<div>💶 € ${x.kosten}</div>`
+        ? `<div>Kosten: € ${x.kosten}</div>`
         : ''}
-      <div class="edit-actions"><button class="secondary" onclick="startMaintenanceEditById(${x.id})">✏️ Bewerken</button></div>
+      <div class="edit-actions"><button class="secondary" onclick="startMaintenanceEditById(${x.id})">Bewerken</button></div>
     </div>
   `).join('');
 
@@ -4422,12 +4414,12 @@ box.innerHTML = data.map(x => `
 
     ${x.land || ''}<br>
 
-    💶 € ${Number(x.bedrag).toFixed(2)}
+    € ${Number(x.bedrag).toFixed(2)}
 
     ${x.opmerking
       ? `<div class="muted">${x.opmerking}</div>`
       : ''}
-    <div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${x.id})">✏️ Bewerken</button></div>
+    <div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${x.id})">Bewerken</button></div>
 
   </div>
 `).join('');
@@ -4561,7 +4553,7 @@ await loadTravelCosts();
   if(editingTripId){
     await showTripDetail(editingTripId);
   }
-alert(isEdit?'✅ Reiskost bijgewerkt':'✅ Reiskosten opgeslagen');
+alert(isEdit?'Reiskost bijgewerkt':'Reiskosten opgeslagen');
 
 };
 
@@ -4583,11 +4575,11 @@ async function loadPersonen(){
     <div class="item" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div>
         <b>${esc(p.naam)}</b>
-        <span class="muted" style="margin-left:8px">${p.actief?'✅ actief':'⛔ inactief'}</span>
+        <span class="muted" style="margin-left:8px">${p.actief?'actief':'inactief'}</span>
       </div>
       <div style="display:flex;gap:6px">
         <button class="secondary" onclick="togglePersoon(${p.id},${p.actief})">${p.actief?'Deactiveren':'Activeren'}</button>
-        <button class="secondary" onclick="deletePersoon(${p.id})">🗑️</button>
+        <button class="secondary" onclick="deletePersoon(${p.id})">Verwijderen</button>
       </div>
     </div>`).join('');
 }
@@ -4599,7 +4591,7 @@ window.addPersoon=async function(){
   if(!naam){box.textContent='Vul een naam in.';box.className='status err';return;}
   const {error}=await supabase.from('personen').insert({camper_id:activeCamperId,naam});
   if(error){box.textContent='Opslaan mislukt: '+error.message;box.className='status err';return;}
-  box.textContent='✓ '+naam+' toegevoegd.';box.className='status ok';
+  box.textContent=''+naam+' toegevoegd.';box.className='status ok';
   document.getElementById('persoonNaam').value='';
   await loadPersonen();
   await loadPersonOptions();
@@ -4717,7 +4709,7 @@ window.createCamperInvite=async function(){
   if(!invite)return;
   emailField.value='';
   renderCamperInviteGenerated(invite);
-  status.textContent='✓ Uitnodiging opgeslagen.';
+  status.textContent='Uitnodiging opgeslagen.';
   status.className='status ok';
   await loadCamperInvites();
 };
@@ -4800,7 +4792,7 @@ window.saveCamperProfile=async function(){
     .eq('id', activeCamperId)
     .select();
   if(result.error){status.textContent='Opslaan mislukt: '+result.error.message;status.className='status err';return;}
-  status.textContent='✓ Camperprofiel opgeslagen';status.className='status ok';
+  status.textContent='Camperprofiel opgeslagen';status.className='status ok';
   updateDashboardCamperInfo(payload);
 };
 
@@ -4904,8 +4896,8 @@ async function loadVriendVerzoeken(){
           <div class="muted" style="font-size:12px">Ontvangen: ${esc(formatDate(req.created_at))}</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="primary" onclick="approveVriendVerzoek(${req.id})">✓ Accepteren</button>
-          <button class="secondary" onclick="rejectVriendVerzoek(${req.id})">✕ Afwijzen</button>
+          <button class="primary" onclick="approveVriendVerzoek(${req.id})">Accepteren</button>
+          <button class="secondary" onclick="rejectVriendVerzoek(${req.id})">Afwijzen</button>
         </div>
       </div>`;
     }).join('');
@@ -4976,7 +4968,7 @@ async function loadVrienden(){
         <b>${esc(label)}</b>
         <div class="muted" style="font-size:12px">Toegevoegd: ${esc((f.created_at||'').slice(0,10))}</div>
       </div>
-      <button class="secondary" onclick="removeVriend(${f.id})">🗑️ Verwijderen</button>
+      <button class="secondary" onclick="removeVriend(${f.id})">Verwijderen</button>
     </div>`;
   }).join('');
 }
@@ -5053,7 +5045,7 @@ window.addVriend=async function(){
       status.className='status err';
       return;
     }
-    status.textContent='✓ Bestaande vriendschap wederzijds bevestigd.';
+    status.textContent='Bestaande vriendschap wederzijds bevestigd.';
     status.className='status ok';
     document.getElementById('vriendenEmail').value='';
     await loadVriendVerzoeken();
@@ -5067,7 +5059,7 @@ window.addVriend=async function(){
       status.className='status err';
       return;
     }
-    status.textContent='✓ Geaccepteerde aanvraag gesynchroniseerd.';
+    status.textContent='Geaccepteerde aanvraag gesynchroniseerd.';
     status.className='status ok';
     document.getElementById('vriendenEmail').value='';
     await loadVriendVerzoeken();
@@ -5101,7 +5093,7 @@ window.addVriend=async function(){
     reqErr=insertRequestError||null;
   }
   if(reqErr){status.textContent='Verzoek versturen mislukt: '+esc(reqErr.message);status.className='status err';return;}
-  status.textContent='✓ Vriendenverzoek verstuurd. De ontvanger moet dit eerst accepteren.';
+  status.textContent='Vriendenverzoek verstuurd. De ontvanger moet dit eerst accepteren.';
   status.className='status ok';
   document.getElementById('vriendenEmail').value='';
   await loadVriendVerzoeken();
@@ -5145,7 +5137,7 @@ window.approveVriendVerzoek=async function(requestId){
     status.textContent='Vriendschap aangemaakt, maar verzoekstatus bijwerken mislukt: '+esc(updateError.message);
     status.className='status err';
   }else{
-    status.textContent='✓ Vriendenverzoek geaccepteerd.';
+    status.textContent='Vriendenverzoek geaccepteerd.';
     status.className='status ok';
   }
   await loadVriendVerzoeken();
@@ -5168,7 +5160,7 @@ window.rejectVriendVerzoek=async function(requestId){
     status.className='status err';
     return;
   }
-  status.textContent='✓ Vriendenverzoek afgewezen.';
+  status.textContent='Vriendenverzoek afgewezen.';
   status.className='status ok';
   await loadVriendVerzoeken();
   await loadVrienden();
@@ -5204,17 +5196,17 @@ function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
     const eigenaar=eigenaarMap[s.reis_id]||'Onbekend';
     const fotoHtml=stopFotos.map(f=>`<img src="${esc(f.url)}" style="max-width:80px;max-height:80px;border-radius:6px;margin:4px;cursor:pointer" onclick="event.stopPropagation();openFotoLightbox('${esc(f.url)}')">`).join('');
     return `<div class="card" style="cursor:pointer;margin-bottom:14px" onclick="showStopDetail(${s.id})">
-      <div><b>📍 ${esc(s.camperplaats||'Onbenoemde stop')}</b></div>
-      <div>🏙️ ${esc(s.camperplaats||'—')}</div>
-      <div>🏳️ ${esc(s.land||'—')}${s.regio?' · 📌 '+esc(s.regio):''}</div>
-      <div>${'⭐'.repeat(Number(s.beoordeling||0))}</div>
-      <div>🏕️ ${esc(s.type_stop||'—')}</div>
-      ${s.prijs_per_nacht!=null?`<div>💶 ${fmt(s.prijs_per_nacht)}/nacht</div>`:''}
-      ${s.referentie?`<div class="muted">🔖 ${esc(s.referentie)}</div>`:''}
-      ${s.ervaring?`<div>📝 ${esc(s.ervaring)}</div>`:''}
-      <div class="muted">📸 ${stopFotos.length} foto(s)</div>
+      <div><b>${esc(s.camperplaats||'Onbenoemde stop')}</b></div>
+      <div>Plaats: ${esc(s.camperplaats||'—')}</div>
+      <div>Land: ${esc(s.land||'—')}${s.regio?' · Regio: '+esc(s.regio):''}</div>
+      <div>${'★'.repeat(Number(s.beoordeling||0))}</div>
+      <div>Type stop: ${esc(s.type_stop||'—')}</div>
+      ${s.prijs_per_nacht!=null?`<div>Prijs per nacht: ${fmt(s.prijs_per_nacht)}</div>`:''}
+      ${s.referentie?`<div class="muted">Referentie: ${esc(s.referentie)}</div>`:''}
+      ${s.ervaring?`<div>Ervaring: ${esc(s.ervaring)}</div>`:''}
+      <div class="muted">Foto's: ${stopFotos.length}</div>
       ${fotoHtml}
-      <div class="muted" style="margin-top:8px">👤 Gedeeld door: ${esc(eigenaar)}</div>
+      <div class="muted" style="margin-top:8px">Gedeeld door: ${esc(eigenaar)}</div>
     </div>`;
   }).join('');
 }
@@ -5241,18 +5233,18 @@ window.showStopDetail=function(stopId){
   const eigenaar=_ontdektePlaatsenData.eigenaarMap[s.reis_id]||'Onbekend';
   const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
   document.getElementById('stopDetailBody').innerHTML=`
-    <h2>📍 ${esc(s.camperplaats||'Onbenoemde stop')}</h2>
-    <div><b>🏙️ Plaats:</b> ${esc(s.camperplaats||'—')}</div>
-    <div><b>🏳️ Land:</b> ${esc(s.land||'—')}</div>
-    ${s.regio?`<div><b>📌 Regio:</b> ${esc(s.regio)}</div>`:''}
-    <div><b>🏕️ Type stop:</b> ${esc(s.type_stop||'—')}</div>
+    <h2>${esc(s.camperplaats||'Onbenoemde stop')}</h2>
+    <div><b>Plaats:</b> ${esc(s.camperplaats||'—')}</div>
+    <div><b>Land:</b> ${esc(s.land||'—')}</div>
+    ${s.regio?`<div><b>Regio:</b> ${esc(s.regio)}</div>`:''}
+    <div><b>Type stop:</b> ${esc(s.type_stop||'—')}</div>
     ${s.voorzieningen?`<div><b>Voorzieningen:</b> ${esc(s.voorzieningen)}</div>`:''}
-    <div><b>⭐ Beoordeling:</b> ${'★'.repeat(Number(s.beoordeling||0))}</div>
-    ${s.prijs_per_nacht!=null?`<div><b>💶 Prijs per nacht:</b> ${fmt(s.prijs_per_nacht)}</div>`:''}
-    ${s.referentie?`<div><b>🔖 Referentie:</b> ${esc(s.referentie)}</div>`:''}
-    ${s.ervaring?`<div style="margin-top:10px"><b>📝 Ervaring:</b><p>${esc(s.ervaring)}</p></div>`:''}
-    ${fotos.length?'<div><b>📸 Foto\'s:</b></div>'+fotos.map(f=>`<img src="${esc(f.url)}" style="max-width:150px;max-height:150px;border-radius:8px;margin:4px;cursor:pointer" onclick="openFotoLightbox('${esc(f.url)}')">`).join(''):''}
-    <div class="muted" style="margin-top:12px">👤 Gedeeld door: ${esc(eigenaar)}</div>`;
+    <div><b>Beoordeling:</b> ${'★'.repeat(Number(s.beoordeling||0))}</div>
+    ${s.prijs_per_nacht!=null?`<div><b>Prijs per nacht:</b> ${fmt(s.prijs_per_nacht)}</div>`:''}
+    ${s.referentie?`<div><b>Referentie:</b> ${esc(s.referentie)}</div>`:''}
+    ${s.ervaring?`<div style="margin-top:10px"><b>Ervaring:</b><p>${esc(s.ervaring)}</p></div>`:''}
+    ${fotos.length?'<div><b>Foto's:</b></div>'+fotos.map(f=>`<img src="${esc(f.url)}" style="max-width:150px;max-height:150px;border-radius:8px;margin:4px;cursor:pointer" onclick="openFotoLightbox('${esc(f.url)}')">`).join(''):''}
+    <div class="muted" style="margin-top:12px">Gedeeld door: ${esc(eigenaar)}</div>`;
   document.getElementById('stopDetailModal').style.display='block';
 };
 
@@ -5442,7 +5434,7 @@ async function loadMembersForLedenBeheren(){
         <option value="viewer"${role==='viewer'?' selected':''}>Viewer</option>
         <option value="editor"${role==='editor'?' selected':''}>Editor</option>
       </select>`;
-    const deleteBtn=isCurrentUser||isAdmin?'':`<button class="secondary" style="padding:6px 10px;margin-left:4px" onclick="removeMemberLedenBeheren('${esc(m.user_id)}')">🗑️ Verwijderen</button>`;
+    const deleteBtn=isCurrentUser||isAdmin?'':`<button class="secondary" style="padding:6px 10px;margin-left:4px" onclick="removeMemberLedenBeheren('${esc(m.user_id)}')">Verwijderen</button>`;
     return `<tr style="border-bottom:1px solid #eee">
       <td style="padding:8px 6px">${naam}</td>
       <td style="padding:8px 6px">${email}</td>
@@ -5473,8 +5465,8 @@ async function loadInvitationsForLedenBeheren(){
     <td style="padding:8px 6px"><span class="badge">In afwachting</span></td>
     <td style="padding:8px 6px">${esc(formatDate(inv.created_at))}</td>
     <td style="padding:8px 6px;white-space:nowrap">
-      <button class="secondary" style="padding:6px 10px" onclick="resendInvitationLedenBeheren('${esc(inv.id)}','${esc(inv.email)}','${esc(inv.role||'viewer')}')">🔄 Opnieuw</button>
-      <button class="secondary" style="padding:6px 10px;margin-left:4px" onclick="revokeInvitationLedenBeheren('${esc(inv.id)}')">✕ Intrekken</button>
+      <button class="secondary" style="padding:6px 10px" onclick="resendInvitationLedenBeheren('${esc(inv.id)}','${esc(inv.email)}','${esc(inv.role||'viewer')}')">Opnieuw</button>
+      <button class="secondary" style="padding:6px 10px;margin-left:4px" onclick="revokeInvitationLedenBeheren('${esc(inv.id)}')">Intrekken</button>
     </td>
   </tr>`).join('');
   list.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead>${headerRow}</thead><tbody>${rows}</tbody></table>`;
@@ -5522,7 +5514,7 @@ window.sendLedenBeheerInvitation=async function(){
   if(result?.error){status.textContent='Uitnodiging maken mislukt: '+result.error.message;status.className='status err';return;}
   emailField.value='';
   const link=getCamperInviteLink(result.data.invitation_token);
-  status.innerHTML='✓ Uitnodiging opgeslagen. Stuur deze link naar de ontvanger:<br><div class="code" style="margin-top:6px"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link)+'</a></div>';
+  status.innerHTML='Uitnodiging opgeslagen. Stuur deze link naar de ontvanger:<br><div class="code" style="margin-top:6px"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link)+'</a></div>';
   status.className='status ok';
   await loadInvitationsForLedenBeheren();
 };
@@ -5536,7 +5528,7 @@ window.revokeInvitationLedenBeheren=async function(invId){
     .eq('id',invId)
     .eq('camper_id',activeCamperId);
   if(error){if(status){status.textContent='Intrekken mislukt: '+error.message;status.className='status err';}return;}
-  if(status){status.textContent='✓ Uitnodiging ingetrokken.';status.className='status ok';}
+  if(status){status.textContent='Uitnodiging ingetrokken.';status.className='status ok';}
   await loadInvitationsForLedenBeheren();
 };
 
@@ -5559,7 +5551,7 @@ window.resendInvitationLedenBeheren=async function(invId,email,role){
   if(result?.error){if(status){status.textContent='Opnieuw versturen mislukt: '+result.error.message;status.className='status err';}return;}
   const link=getCamperInviteLink(result.data.invitation_token);
   if(status){
-    status.innerHTML='✓ Uitnodiging opnieuw verstuurd. Deel de nieuwe link:<br><div class="code" style="margin-top:6px"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link)+'</a></div>';
+    status.innerHTML='Uitnodiging opnieuw verstuurd. Deel de nieuwe link:<br><div class="code" style="margin-top:6px"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link)+'</a></div>';
     status.className='status ok';
   }
   await loadInvitationsForLedenBeheren();
@@ -5575,7 +5567,7 @@ window.removeMemberLedenBeheren=async function(userId){
     .eq('camper_id',activeCamperId)
     .eq('user_id',userId);
   if(error){if(status){status.textContent='Verwijderen mislukt: '+error.message;status.className='status err';}return;}
-  if(status){status.textContent='✓ Lid verwijderd.';status.className='status ok';}
+  if(status){status.textContent='Lid verwijderd.';status.className='status ok';}
   await loadMembersForLedenBeheren();
 };
 
@@ -5588,7 +5580,7 @@ window.changeMemberRoleLedenBeheren=async function(userId,newRole){
     .eq('camper_id',activeCamperId)
     .eq('user_id',userId);
   if(error){if(status){status.textContent='Rol wijzigen mislukt: '+error.message;status.className='status err';}return;}
-  if(status){status.textContent='✓ Rol gewijzigd.';status.className='status ok';}
+  if(status){status.textContent='Rol gewijzigd.';status.className='status ok';}
 };
 
 init();
