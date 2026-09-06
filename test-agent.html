@@ -83,6 +83,8 @@ button{font:inherit}
 .fuel-number{font-size:24px;font-weight:800}
 .inline-form{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
 .inline-form>div{flex:1 1 260px}
+.password-toggle{margin-top:8px;font-weight:400;display:flex;align-items:center;gap:8px}
+.password-toggle input[type="checkbox"]{width:auto;flex:0 0 auto;margin:0}
 .code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;word-break:break-all}
 .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2f7;color:#20252b;font-size:12px;font-weight:700;margin:0 6px 6px 0}
 .note-list{margin:8px 0 0 18px;padding:0}
@@ -154,12 +156,22 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="inviteRouteForms" class="hidden">
   <h3>Nieuw account aanmaken</h3>
   <label>E-mailadres</label><input id="inviteRegEmail" type="email"><br><br>
-  <label>Wachtwoord</label><input id="inviteRegPassword" type="password"><br><br>
+  <label>Wachtwoord</label><input id="inviteRegPassword" type="password">
+  <label class="password-toggle">
+    <input id="inviteRegShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['inviteRegPassword'],'inviteRegShowPassword')">
+    👁 Wachtwoord tonen/verbergen
+  </label>
+  <br>
   <button class="primary" onclick="inviteRegister()">Registreren</button>
   <br><br><hr><br>
   <h3>Al een account? Inloggen</h3>
   <label>E-mailadres</label><input id="inviteLoginEmail" type="email"><br><br>
-  <label>Wachtwoord</label><input id="inviteLoginPassword" type="password"><br><br>
+  <label>Wachtwoord</label><input id="inviteLoginPassword" type="password">
+  <label class="password-toggle">
+    <input id="inviteLoginShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['inviteLoginPassword'],'inviteLoginShowPassword')">
+    👁 Wachtwoord tonen/verbergen
+  </label>
+  <br>
   <button class="primary" onclick="inviteLogin()">Inloggen</button>
 </div>
 </div>
@@ -169,7 +181,12 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <p class="muted">Log in om jullie gezamenlijke reislogboek te gebruiken.</p>
 <div id="loginError" class="status err hidden"></div>
 <label>E-mailadres</label><input id="email" type="email"><br><br>
-<label>Wachtwoord</label><input id="password" type="password"><br><br>
+<label>Wachtwoord</label><input id="password" type="password">
+<label class="password-toggle">
+  <input id="loginShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['password'],'loginShowPassword')">
+  👁 Wachtwoord tonen/verbergen
+</label>
+<br>
 <button class="primary" onclick="login()">Inloggen</button>
 <br><a href="#" onclick="toggleForgot(event)" style="font-size:13px;color:#66717d;margin-top:10px;display:inline-block;">Wachtwoord vergeten?</a>
 <div id="forgotSection" class="hidden" style="margin-top:12px;">
@@ -182,7 +199,12 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="resetPasswordView" class="card login hidden">
 <h2>Nieuw wachtwoord instellen</h2>
 <div id="resetMsg" class="status hidden"></div>
-<label>Nieuw wachtwoord</label><input id="newPassword" type="password"><br><br>
+<label>Nieuw wachtwoord</label><input id="newPassword" type="password">
+<label class="password-toggle">
+  <input id="resetShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['newPassword'],'resetShowPassword')">
+  👁 Wachtwoord tonen/verbergen
+</label>
+<br>
 <button class="primary" onclick="updatePassword()">Wachtwoord opslaan</button>
 </div>
 
@@ -519,8 +541,39 @@ Reiskosten laden...
 <div class="card">
   <h3>App</h3>
   <div class="section-link-grid">
+    <button type="button" class="section-link-card" onclick="openSection('profiel','more')"><span class="section-link-title">Mijn Profiel</span><span class="section-link-copy">Wijzig alleen je eigen wachtwoord.</span></button>
     <button type="button" class="section-link-card" onclick="openSection('home','home')"><span class="section-link-title">Start</span><span class="section-link-copy">Terug naar het startscherm.</span></button>
     <button type="button" class="section-link-card" onclick="logout()"><span class="section-link-title">Uitloggen</span><span class="section-link-copy">Meld je af op dit toestel.</span></button>
+  </div>
+</div>
+</section>
+
+<section id="profiel">
+<div class="card">
+  <h2>Mijn Profiel</h2>
+  <p id="profileIdentity" class="muted">Account laden...</p>
+</div>
+
+<div class="card">
+  <h3>Wachtwoord wijzigen</h3>
+  <p class="muted">Alleen je eigen wachtwoord kan hier aangepast worden.</p>
+  <div id="changePasswordMsg" class="status hidden"></div>
+  <div class="grid">
+    <div>
+      <label>Huidig wachtwoord</label>
+      <input id="changePasswordCurrent" type="password" autocomplete="current-password">
+    </div>
+    <div>
+      <label>Nieuw wachtwoord</label>
+      <input id="changePasswordNew" type="password" autocomplete="new-password">
+    </div>
+  </div>
+  <label class="password-toggle">
+    <input id="changePasswordShow" type="checkbox" onchange="togglePasswordFieldsVisibility(['changePasswordCurrent','changePasswordNew'],'changePasswordShow')">
+    👁 Wachtwoord tonen/verbergen
+  </label>
+  <div style="margin-top:12px">
+    <button class="primary" onclick="changeOwnPassword()">Wachtwoord wijzigen</button>
   </div>
 </div>
 </section>
@@ -868,8 +921,8 @@ Nog geen onderhoud geregistreerd.
   <div>
     <label>Wachtwoord</label>
     <input id="newOwnerPassword" type="password" placeholder="Kies een wachtwoord">
-    <label style="margin-top:8px;font-weight:normal;display:flex;align-items:center;gap:8px">
-      <input id="newOwnerShowPassword" type="checkbox" onchange="toggleNewOwnerPasswordVisibility()">
+    <label class="password-toggle">
+      <input id="newOwnerShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['newOwnerPassword'],'newOwnerShowPassword')">
       👁 Wachtwoord tonen/verbergen
     </label>
   </div>
@@ -1012,6 +1065,11 @@ import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2
 const supabase=createClient(
 'https://hktczewqpevvgxqcswov.supabase.co',
 'sb_publishable_YmfLKfk25pED0oqoTbSYPA_LWhZIuZC'
+);
+const passwordCheckClient=createClient(
+'https://hktczewqpevvgxqcswov.supabase.co',
+'sb_publishable_YmfLKfk25pED0oqoTbSYPA_LWhZIuZC',
+{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
 );
 
 let activeTripId=null;
@@ -1456,6 +1514,60 @@ function getProfileProvisionErrorMessage(error){
   return 'Profielrecord aanmaken mislukt: '+(error?.message||'Onbekende fout')+'. Probeer opnieuw.';
 }
 
+function getPasswordValidationError(password){
+  if(!password||password.length<6){
+    return 'Wachtwoord moet minimaal 6 tekens bevatten.';
+  }
+  return '';
+}
+
+window.togglePasswordFieldsVisibility=function(inputIds,toggleId){
+  const toggle=document.getElementById(toggleId);
+  if(!toggle||!Array.isArray(inputIds))return;
+  inputIds.forEach(id=>{
+    const input=document.getElementById(id);
+    if(input)input.type=toggle.checked?'text':'password';
+  });
+};
+
+function resetPasswordVisibilityToggle(toggleId,inputIds){
+  const toggle=document.getElementById(toggleId);
+  if(!toggle)return;
+  toggle.checked=false;
+  window.togglePasswordFieldsVisibility(inputIds,toggleId);
+}
+
+function renderProfileIdentity(user=null){
+  const profileIdentity=document.getElementById('profileIdentity');
+  if(!profileIdentity)return;
+  const authUser=user||currentUser;
+  if(!authUser?.email){
+    profileIdentity.textContent='Geen accountgegevens beschikbaar.';
+    return;
+  }
+  profileIdentity.textContent='Ingelogd als '+authUser.email+'. Andere campergebruikers kunnen dit wachtwoord niet wijzigen.';
+}
+
+function resetChangePasswordForm(){
+  const currentField=document.getElementById('changePasswordCurrent');
+  const newField=document.getElementById('changePasswordNew');
+  const box=document.getElementById('changePasswordMsg');
+  if(currentField)currentField.value='';
+  if(newField)newField.value='';
+  if(box){
+    box.textContent='';
+    box.className='status hidden';
+  }
+  resetPasswordVisibilityToggle('changePasswordShow',['changePasswordCurrent','changePasswordNew']);
+}
+
+async function canChangeOwnPassword(userId){
+  if(!userId)return false;
+  const {data,error}=await supabase.rpc('can_change_own_password',{p_user_id:userId});
+  if(error)throw error;
+  return Boolean(data);
+}
+
 async function ensureProfileRecordForUser(user){
   const userId=user?.id||null;
   const email=(user?.email||'').trim().toLowerCase();
@@ -1809,6 +1921,7 @@ if(isInviteRoute){
 }
 function showLogin(){
   resetRoleContext();
+  resetChangePasswordForm();
   updateBeheerVisibility();
   updateCamperRoleUI();
   loginView.classList.remove('hidden');
@@ -1833,6 +1946,7 @@ if(profileUser){
     return;
   }
 }
+renderProfileIdentity(profileUser||currentUser);
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
 populateCountrySelects();
@@ -1876,16 +1990,81 @@ window.forgotPassword=async function(){
 window.updatePassword=async function(){
   const box=document.getElementById('resetMsg');
   const pw=document.getElementById('newPassword').value;
-  if(!pw||pw.length<6){box.textContent='Wachtwoord moet minimaal 6 tekens bevatten.';box.className='status err';return;}
+  const validationError=getPasswordValidationError(pw);
+  if(validationError){box.textContent=validationError;box.className='status err';return;}
   const {error}=await supabase.auth.updateUser({password:pw});
   if(error){box.textContent='Opslaan mislukt: '+error.message;box.className='status err';}
   else{
     box.textContent='Wachtwoord opgeslagen! Je wordt ingelogd...';box.className='status ok';
     inPasswordRecovery=false;
     document.getElementById('resetPasswordView').classList.add('hidden');
+    resetPasswordVisibilityToggle('resetShowPassword',['newPassword']);
     const {data:{session:s}}=await supabase.auth.getSession();
     showApp(s?.user??null);
   }
+};
+window.changeOwnPassword=async function(){
+  const box=document.getElementById('changePasswordMsg');
+  const currentPw=document.getElementById('changePasswordCurrent')?.value||'';
+  const newPw=document.getElementById('changePasswordNew')?.value||'';
+  if(!box)return;
+  box.className='status hidden';
+  if(!currentPw){
+    box.textContent='Vul je huidige wachtwoord in.';
+    box.className='status err';
+    return;
+  }
+  const validationError=getPasswordValidationError(newPw);
+  if(validationError){
+    box.textContent=validationError;
+    box.className='status err';
+    return;
+  }
+  const {data:{user:authUser},error:userError}=await supabase.auth.getUser();
+  if(userError||!authUser?.id||!authUser.email){
+    box.textContent='Je sessie kon niet worden gecontroleerd. Log opnieuw in en probeer opnieuw.';
+    box.className='status err';
+    return;
+  }
+  let canChange=false;
+  try{
+    canChange=await canChangeOwnPassword(authUser.id);
+  }catch(error){
+    console.error('Wachtwoord-guard controleren mislukt:',error);
+    box.textContent='Beveiligingscontrole mislukt. Probeer het opnieuw.';
+    box.className='status err';
+    return;
+  }
+  if(!canChange){
+    box.textContent='Geen toegang: je kunt alleen je eigen wachtwoord wijzigen.';
+    box.className='status err';
+    return;
+  }
+  const {data:signInData,error:signInError}=await passwordCheckClient.auth.signInWithPassword({
+    email:authUser.email.trim(),
+    password:currentPw
+  });
+  if(signInError){
+    box.textContent='Huidig wachtwoord is onjuist.';
+    box.className='status err';
+    return;
+  }
+  if(signInData?.user?.id!==authUser.id){
+    box.textContent='Geen toegang: je kunt alleen je eigen wachtwoord wijzigen.';
+    box.className='status err';
+    await passwordCheckClient.auth.signOut();
+    return;
+  }
+  const {error:updateError}=await supabase.auth.updateUser({password:newPw});
+  await passwordCheckClient.auth.signOut();
+  if(updateError){
+    box.textContent='Wachtwoord wijzigen mislukt: '+updateError.message;
+    box.className='status err';
+    return;
+  }
+  resetChangePasswordForm();
+  box.textContent='Wachtwoord succesvol gewijzigd.';
+  box.className='status ok';
 };
 window.login=async()=>{
 const box=document.getElementById('loginError');box.classList.add('hidden');
@@ -3947,13 +4126,6 @@ async function loadBeheer(){
   ]);
 }
 
-window.toggleNewOwnerPasswordVisibility=function(){
-  const pw=document.getElementById('newOwnerPassword');
-  const toggle=document.getElementById('newOwnerShowPassword');
-  if(!pw||!toggle)return;
-  pw.type=toggle.checked?'text':'password';
-};
-
 window.generateTemporaryOwnerPassword=function(){
   const pw=document.getElementById('newOwnerPassword');
   const status=document.getElementById('newOwnerStatus');
@@ -4013,8 +4185,7 @@ window.createDirectCamperOwner=async function(){
   passwordField.value='';
   const toggle=document.getElementById('newOwnerShowPassword');
   if(toggle){
-    toggle.checked=false;
-    window.toggleNewOwnerPasswordVisibility();
+    resetPasswordVisibilityToggle('newOwnerShowPassword',['newOwnerPassword']);
   }
   const generatedPw=result?.data?.generated_password||null;
   status.textContent=generatedPw
@@ -4083,6 +4254,7 @@ const SECTION_NAV_GROUPS={
   more:'more',
   fuel:'home',
   reiskosten:'home',
+  profiel:'more',
   maintenance:'more',
   personen:'more',
   vrienden:'more',
@@ -4119,6 +4291,9 @@ async function openSection(sectionId,navKey=SECTION_NAV_GROUPS[sectionId]||'home
   }
   if(sectionId==='camper'){
     await loadCamperTab();
+  }
+  if(sectionId==='profiel'){
+    renderProfileIdentity();
   }
   if(sectionId==='leden-beheren'){
     await loadLedenBeheren();
