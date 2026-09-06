@@ -13,23 +13,6 @@
 <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 <style>
 body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f5f8ff;color:#20252b}
-body::before{
-  content:"TESTVERSIE";
-  position:fixed;
-  top:calc(env(safe-area-inset-top,0px) + 8px);
-  right:10px;
-  z-index:2001;
-  background:#fff3bf;
-  color:#5c4500;
-  border:1px solid #f1dd7b;
-  border-radius:999px;
-  padding:5px 10px;
-  font-size:12px;
-  font-weight:800;
-  letter-spacing:.02em;
-  box-shadow:0 2px 6px rgba(0,0,0,.15);
-  pointer-events:none;
-}
 header{background:#20252b;color:white;padding:20px}
 header h1{margin:0}
 nav{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:0;z-index:2;overflow:auto}
@@ -554,7 +537,7 @@ Reiskosten laden...
 <section id="wat-is-nieuw">
 <div class="card">
   <h2>Wat is nieuw?</h2>
-  <p class="muted">Versie-informatie komt automatisch uit goedgekeurde TEST-AGENT-synchronisaties.</p>
+  <p class="muted">Versie-informatie komt automatisch uit goedgekeurde synchronisaties.</p>
   <div class="grid" style="margin-top:8px">
     <div>
       <label>Huidige versie</label>
@@ -903,7 +886,7 @@ Nog geen onderhoud geregistreerd.
     used_at     timestamptz
   );
 
-  -- TEST-omgeving: gebruik Edge Function `create-camper-owner` als enige ingang.
+  -- Gebruik Edge Function `create-camper-owner` als enige ingang.
   -- Deze functie doet:
   -- 1) auth.admin.createUser() via service role
   -- 2) interne SECURITY DEFINER RPC `provision_camper_owner_data(...)`
@@ -1053,7 +1036,7 @@ Nog geen onderhoud geregistreerd.
 
 <section id="leden-beheren">
 <!--
-  SQL – maak de invitations tabel aan in Supabase (TEST-omgeving):
+  SQL – maak de invitations tabel aan in Supabase:
 
   CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -4958,16 +4941,6 @@ async function uploadPhotos() {
 
  return uploadedUrls;
 }
-window.testUpload = async function(){
-
- const uploads = await uploadPhotos();
-
- if(!uploads.length && selectedPhotos?.length){
-   return;
- }
- setPhotoStatus(uploads.length + ' foto(s) geüpload');
-};
-
 const maintenanceCategoryLabels = {
   onderhoud:'Onderhoud',
   schade:'Schade',
