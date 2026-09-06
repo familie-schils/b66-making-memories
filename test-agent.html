@@ -534,6 +534,7 @@ Reiskosten laden...
   <h3>Beheer</h3>
   <div class="section-link-grid">
     <button id="moreBeheerEntry" type="button" class="section-link-card hidden" onclick="openSection('beheer','more')"><span class="section-link-title">Beheer</span><span class="section-link-copy">Platformbeheer en uitnodigingen.</span></button>
+    <button id="moreSystemInfoEntry" type="button" class="section-link-card hidden" onclick="openSection('systeeminformatie','more')"><span class="section-link-title">Systeeminformatie</span><span class="section-link-copy">Opslaglimieten, gebruik en platformcijfers.</span></button>
     <button id="moreLedenBeheerEntry" type="button" class="section-link-card hidden" onclick="openSection('leden-beheren','more')"><span class="section-link-title">Leden beheren</span><span class="section-link-copy">Toegang en rollen voor camperleden.</span></button>
   </div>
 </div>
@@ -987,6 +988,116 @@ Nog geen onderhoud geregistreerd.
 </div>
 </section>
 
+<section id="systeeminformatie">
+<div class="card">
+<h2>Systeeminformatie</h2>
+<p class="muted">Alleen zichtbaar voor de hoofdbeheerder van het platform.</p>
+<div id="systemInfoStatus" class="status hidden"></div>
+<div style="margin-top:10px">
+  <button class="secondary" onclick="refreshSystemInfo()">Vernieuwen</button>
+</div>
+</div>
+
+<div class="card">
+  <h3>Opslaglimieten</h3>
+  <div class="grid">
+    <div>
+      <label>Database limiet (MB)</label>
+      <input id="systemDbLimitInput" type="number" min="0.01" step="0.01" placeholder="Bijv. 500">
+    </div>
+    <div>
+      <label>Storage limiet (GB)</label>
+      <input id="systemStorageLimitInput" type="number" min="0.01" step="0.01" placeholder="Bijv. 5">
+    </div>
+  </div>
+  <div style="margin-top:12px">
+    <button class="primary" onclick="saveSystemInfoLimits()">Opslaan</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Systeemgegevens</h3>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="text-align:left;border-bottom:2px solid #ddd">
+        <th style="padding:8px 6px">Onderdeel</th>
+        <th style="padding:8px 6px">Waarde</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Gebruikers</td><td style="padding:8px 6px" id="systemUserCount">0</td></tr>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Campers</td><td style="padding:8px 6px" id="systemCamperCount">0</td></tr>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Reizen</td><td style="padding:8px 6px" id="systemTripCount">0</td></tr>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Actieve reizen</td><td style="padding:8px 6px" id="systemTripActiveCount">0</td></tr>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Afgesloten reizen</td><td style="padding:8px 6px" id="systemTripClosedCount">0</td></tr>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Stops</td><td style="padding:8px 6px" id="systemStopCount">0</td></tr>
+      <tr><td style="padding:8px 6px">Foto's</td><td style="padding:8px 6px" id="systemPhotoCount">0</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Opslag</h3>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="text-align:left;border-bottom:2px solid #ddd">
+        <th style="padding:8px 6px">Onderdeel</th>
+        <th style="padding:8px 6px">Gebruikt</th>
+        <th style="padding:8px 6px">Maximum</th>
+        <th style="padding:8px 6px">Beschikbaar</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #eee">
+        <td style="padding:8px 6px">Database</td>
+        <td style="padding:8px 6px" id="systemDbUsed">Onbekend</td>
+        <td style="padding:8px 6px" id="systemDbMax">Onbekend</td>
+        <td style="padding:8px 6px" id="systemDbAvailable">Onbekend</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 6px">Foto-opslag</td>
+        <td style="padding:8px 6px" id="systemPhotoStorageUsed">Onbekend</td>
+        <td style="padding:8px 6px" id="systemPhotoStorageMax">Onbekend</td>
+        <td style="padding:8px 6px" id="systemPhotoStorageAvailable">Onbekend</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Status</h3>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="text-align:left;border-bottom:2px solid #ddd">
+        <th style="padding:8px 6px">Onderdeel</th>
+        <th style="padding:8px 6px">Waarde</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Laatste foto-upload</td><td style="padding:8px 6px" id="systemLastPhotoUpload">—</td></tr>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Laatste camper</td><td style="padding:8px 6px" id="systemLastCamper">—</td></tr>
+      <tr><td style="padding:8px 6px">Algemene systeemstatus</td><td style="padding:8px 6px" id="systemOverallStatus">Onbekend</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Versie</h3>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="text-align:left;border-bottom:2px solid #ddd">
+        <th style="padding:8px 6px">Onderdeel</th>
+        <th style="padding:8px 6px">Waarde</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Actuele versie</td><td style="padding:8px 6px" id="systemAppVersion">Onbekend</td></tr>
+      <tr><td style="padding:8px 6px">Datum laatste release</td><td style="padding:8px 6px" id="systemLastReleaseDate">Onbekend</td></tr>
+    </tbody>
+  </table>
+</div>
+</section>
+
 <section id="leden-beheren">
 <!--
   SQL – maak de invitations tabel aan in Supabase (TEST-omgeving):
@@ -1133,6 +1244,7 @@ let stopPhotosToDelete=[];
   });
   let currentRoleContext = createEmptyRoleContext();
   let platformAdminCandidateCountGlobal = null;
+  let latestReleaseMetadata = null;
   const PHOTO_UPLOAD_ALLOWED_TYPES=['image/jpeg','image/png','image/webp'];
   const PHOTO_UPLOAD_MAX_SOURCE_FILE_SIZE_BYTES=20*1024*1024;
   const PHOTO_UPLOAD_TARGET_FILE_SIZE_BYTES=3*1024*1024;
@@ -1154,6 +1266,7 @@ const appView=document.getElementById('appView');
 
 async function refreshReleaseMetadata(){
   const metadata=await loadReleaseMetadata();
+  latestReleaseMetadata=metadata||null;
   renderReleaseInfo(metadata,{
     versionText:document.getElementById('versionText'),
     currentVersionText:document.getElementById('whatsNewCurrentVersion'),
@@ -1824,13 +1937,17 @@ function updateBeheerVisibility(){
   const beheerVisible=isHeadAdmin();
   const ledenVisible=isCamperAdmin;
   const beheerSection=document.getElementById('beheer');
+  const systemInfoSection=document.getElementById('systeeminformatie');
   const ledenSection=document.getElementById('leden-beheren');
   const beheerEntry=document.getElementById('moreBeheerEntry');
+  const systemInfoEntry=document.getElementById('moreSystemInfoEntry');
   const ledenEntry=document.getElementById('moreLedenBeheerEntry');
   const beheerGroup=document.getElementById('moreBeheerGroup');
   if(beheerSection)beheerSection.classList.toggle('hidden',!beheerVisible);
+  if(systemInfoSection)systemInfoSection.classList.toggle('hidden',!beheerVisible);
   if(ledenSection)ledenSection.classList.toggle('hidden',!ledenVisible);
   if(beheerEntry)beheerEntry.classList.toggle('hidden',!beheerVisible);
+  if(systemInfoEntry)systemInfoEntry.classList.toggle('hidden',!beheerVisible);
   if(ledenEntry)ledenEntry.classList.toggle('hidden',!ledenVisible);
   if(beheerGroup)beheerGroup.classList.toggle('hidden',!beheerVisible&&!ledenVisible);
 }
@@ -4283,6 +4400,201 @@ async function loadBeheer(){
   ]);
 }
 
+function parsePositiveNumberInput(rawValue){
+  const normalized=String(rawValue??'').trim().replace(',','.');
+  if(!normalized)return null;
+  const value=Number(normalized);
+  if(!Number.isFinite(value)||value<=0)return null;
+  return value;
+}
+
+function formatNumberWithUnit(value,unit,decimals=2){
+  if(value==null||!Number.isFinite(Number(value)))return 'Onbekend';
+  return Number(value).toLocaleString('nl-BE',{
+    minimumFractionDigits:decimals,
+    maximumFractionDigits:decimals
+  })+' '+unit;
+}
+
+function bytesToMb(bytes){
+  if(bytes==null||!Number.isFinite(Number(bytes)))return null;
+  return Number(bytes)/(1024*1024);
+}
+
+function bytesToGb(bytes){
+  if(bytes==null||!Number.isFinite(Number(bytes)))return null;
+  return Number(bytes)/(1024*1024*1024);
+}
+
+function setSystemInfoValue(id,value){
+  const el=document.getElementById(id);
+  if(el)el.textContent=value;
+}
+
+function setSystemInfoStatus(message,type='hidden'){
+  const box=document.getElementById('systemInfoStatus');
+  if(!box)return;
+  if(!message){
+    box.textContent='';
+    box.className='status hidden';
+    return;
+  }
+  box.textContent=message;
+  box.className='status '+type;
+}
+
+function getMetricCount(result){
+  if(result?.error)return null;
+  return Number.isFinite(result?.count)?result.count:0;
+}
+
+async function loadSystemInfo(){
+  if(!canAccessBeheer)return;
+  setSystemInfoStatus('Systeeminformatie laden...','ok');
+  const requests=[
+    supabase.from('profiles').select('*',{count:'exact',head:true}),
+    supabase.from('campers').select('*',{count:'exact',head:true}),
+    supabase.from('reizen').select('*',{count:'exact',head:true}),
+    supabase.from('reizen').select('*',{count:'exact',head:true}).is('einddatum',null),
+    supabase.from('reizen').select('*',{count:'exact',head:true}).not('einddatum','is',null),
+    supabase.from('reis_stops').select('*',{count:'exact',head:true}),
+    supabase.from('fotos').select('*',{count:'exact',head:true}),
+    supabase.from('fotos').select('created_at').order('created_at',{ascending:false}).limit(1).maybeSingle(),
+    supabase.from('campers').select('created_at').order('created_at',{ascending:false}).limit(1).maybeSingle(),
+    supabase.from('system_settings').select('id,db_limit_mb,storage_limit_gb').eq('id',1).maybeSingle(),
+    supabase.rpc('get_system_storage_metrics')
+  ];
+  const [
+    usersResult,
+    campersResult,
+    tripsResult,
+    activeTripsResult,
+    closedTripsResult,
+    stopsResult,
+    photosResult,
+    lastPhotoResult,
+    lastCamperResult,
+    settingsResult,
+    storageResult
+  ]=await Promise.all(requests);
+
+  const errors=[
+    usersResult.error,
+    campersResult.error,
+    tripsResult.error,
+    activeTripsResult.error,
+    closedTripsResult.error,
+    stopsResult.error,
+    photosResult.error,
+    lastPhotoResult.error,
+    lastCamperResult.error,
+    settingsResult.error,
+    storageResult.error
+  ].filter(Boolean);
+
+  const settings=settingsResult?.data||{};
+  const dbLimitMbRaw=Number(settings.db_limit_mb);
+  const storageLimitGbRaw=Number(settings.storage_limit_gb);
+  const dbLimitMb=Number.isFinite(dbLimitMbRaw)&&dbLimitMbRaw>0?dbLimitMbRaw:500;
+  const storageLimitGb=Number.isFinite(storageLimitGbRaw)&&storageLimitGbRaw>0?storageLimitGbRaw:5;
+  const settingsAvailable=Number.isFinite(dbLimitMb)&&dbLimitMb>0&&Number.isFinite(storageLimitGb)&&storageLimitGb>0;
+
+  const storageRow=Array.isArray(storageResult?.data)?(storageResult.data[0]||{}):(storageResult?.data||{});
+  const dbUsedMb=bytesToMb(storageRow.db_used_bytes);
+  const photoUsedGb=bytesToGb(storageRow.photo_used_bytes);
+  const dbAvailableMb=settingsAvailable&&dbUsedMb!=null?Math.max(0,dbLimitMb-dbUsedMb):null;
+  const photoAvailableGb=settingsAvailable&&photoUsedGb!=null?Math.max(0,storageLimitGb-photoUsedGb):null;
+
+  setSystemInfoValue('systemUserCount',String(getMetricCount(usersResult)??'Onbekend'));
+  setSystemInfoValue('systemCamperCount',String(getMetricCount(campersResult)??'Onbekend'));
+  setSystemInfoValue('systemTripCount',String(getMetricCount(tripsResult)??'Onbekend'));
+  setSystemInfoValue('systemTripActiveCount',String(getMetricCount(activeTripsResult)??'Onbekend'));
+  setSystemInfoValue('systemTripClosedCount',String(getMetricCount(closedTripsResult)??'Onbekend'));
+  setSystemInfoValue('systemStopCount',String(getMetricCount(stopsResult)??'Onbekend'));
+  setSystemInfoValue('systemPhotoCount',String(getMetricCount(photosResult)??'Onbekend'));
+
+  setSystemInfoValue('systemDbUsed',formatNumberWithUnit(dbUsedMb,'MB'));
+  setSystemInfoValue('systemDbMax',formatNumberWithUnit(dbLimitMb,'MB'));
+  setSystemInfoValue('systemDbAvailable',formatNumberWithUnit(dbAvailableMb,'MB'));
+  setSystemInfoValue('systemPhotoStorageUsed',formatNumberWithUnit(photoUsedGb,'GB'));
+  setSystemInfoValue('systemPhotoStorageMax',formatNumberWithUnit(storageLimitGb,'GB'));
+  setSystemInfoValue('systemPhotoStorageAvailable',formatNumberWithUnit(photoAvailableGb,'GB'));
+
+  const photoDate=lastPhotoResult?.data?.created_at||null;
+  const camperDate=lastCamperResult?.data?.created_at||null;
+  setSystemInfoValue('systemLastPhotoUpload',photoDate?formatDate(photoDate):'—');
+  setSystemInfoValue('systemLastCamper',camperDate?formatDate(camperDate):'—');
+
+  let releaseMetadata=latestReleaseMetadata;
+  if(!releaseMetadata){
+    try{
+      releaseMetadata=await loadReleaseMetadata();
+      latestReleaseMetadata=releaseMetadata;
+    }catch{
+      releaseMetadata=null;
+    }
+  }
+  const versionValue=releaseMetadata?.currentVersion&&releaseMetadata.currentVersion!=='unknown'
+    ? releaseMetadata.currentVersion
+    : 'Versie onbekend';
+  const releaseDateValue=releaseMetadata?.releasedAt?formatDate(releaseMetadata.releasedAt):'Onbekend';
+  setSystemInfoValue('systemAppVersion',versionValue);
+  setSystemInfoValue('systemLastReleaseDate',releaseDateValue);
+
+  const dbOverLimit=settingsAvailable&&dbUsedMb!=null&&dbUsedMb>dbLimitMb;
+  const storageOverLimit=settingsAvailable&&photoUsedGb!=null&&photoUsedGb>storageLimitGb;
+  const overallStatus=errors.length
+    ? 'Kritiek'
+    : (dbOverLimit||storageOverLimit?'Waarschuwing':'OK');
+  setSystemInfoValue('systemOverallStatus',overallStatus);
+
+  const dbInput=document.getElementById('systemDbLimitInput');
+  const storageInput=document.getElementById('systemStorageLimitInput');
+  if(dbInput)dbInput.value=String(dbLimitMb);
+  if(storageInput)storageInput.value=String(storageLimitGb);
+
+  if(errors.length){
+    setSystemInfoStatus('Systeeminformatie deels geladen: '+(errors[0]?.message||'onbekende fout'),'err');
+    return;
+  }
+  if(dbOverLimit||storageOverLimit){
+    setSystemInfoStatus('Systeeminformatie geladen. Eén of meer opslaglimieten zijn bereikt of overschreden.','err');
+    return;
+  }
+  setSystemInfoStatus('Systeeminformatie geladen.','ok');
+}
+
+window.refreshSystemInfo=async function(){
+  if(!canAccessBeheer)return;
+  await loadSystemInfo();
+};
+
+window.saveSystemInfoLimits=async function(){
+  const dbInput=document.getElementById('systemDbLimitInput');
+  const storageInput=document.getElementById('systemStorageLimitInput');
+  if(!dbInput||!storageInput)return;
+  if(!canAccessBeheer){
+    setSystemInfoStatus('Geen toegang tot systeeminformatie.','err');
+    return;
+  }
+  const dbLimit=parsePositiveNumberInput(dbInput.value);
+  const storageLimit=parsePositiveNumberInput(storageInput.value);
+  if(dbLimit==null||storageLimit==null){
+    setSystemInfoStatus('Vul geldige limieten in groter dan 0.','err');
+    return;
+  }
+  setSystemInfoStatus('Opslaglimieten opslaan...','ok');
+  const {error}=await supabase.rpc('upsert_system_settings',{
+    p_db_limit_mb:dbLimit,
+    p_storage_limit_gb:storageLimit
+  });
+  if(error){
+    setSystemInfoStatus('Opslaan mislukt: '+error.message,'err');
+    return;
+  }
+  await loadSystemInfo();
+};
+
 window.generateTemporaryOwnerPassword=function(){
   const pw=document.getElementById('newOwnerPassword');
   const status=document.getElementById('newOwnerStatus');
@@ -4419,6 +4731,7 @@ const SECTION_NAV_GROUPS={
   camper:'more',
   'wat-is-nieuw':'more',
   beheer:'more',
+  systeeminformatie:'more',
   'leden-beheren':'more'
 };
 
@@ -4446,6 +4759,9 @@ async function openSection(sectionId,navKey=SECTION_NAV_GROUPS[sectionId]||'home
   }
   if(sectionId==='beheer'){
     await loadBeheer();
+  }
+  if(sectionId==='systeeminformatie'){
+    await loadSystemInfo();
   }
   if(sectionId==='camper'){
     await loadCamperTab();
