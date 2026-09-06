@@ -534,7 +534,6 @@ Reiskosten laden...
   <h3>Beheer</h3>
   <div class="section-link-grid">
     <button id="moreBeheerEntry" type="button" class="section-link-card hidden" onclick="openSection('beheer','more')"><span class="section-link-title">Beheer</span><span class="section-link-copy">Platformbeheer en uitnodigingen.</span></button>
-    <button id="moreSystemInfoEntry" type="button" class="section-link-card hidden" onclick="openSection('systeeminformatie','more')"><span class="section-link-title">Systeeminformatie</span><span class="section-link-copy">Platformcijfers, foto-opslag en versie-info.</span></button>
     <button id="moreLedenBeheerEntry" type="button" class="section-link-card hidden" onclick="openSection('leden-beheren','more')"><span class="section-link-title">Leden beheren</span><span class="section-link-copy">Toegang en rollen voor camperleden.</span></button>
   </div>
 </div>
@@ -985,69 +984,6 @@ Nog geen onderhoud geregistreerd.
   <div class="card"><div class="muted">Aantal tankbeurten</div><div class="big" id="adminFuelCount">0</div></div>
   <div class="card"><div class="muted">Aantal reiskosten</div><div class="big" id="adminCostCount">0</div></div>
 </div>
-</div>
-</section>
-
-<section id="systeeminformatie">
-<div class="card">
-<h2>Systeeminformatie</h2>
-<p class="muted">Alleen zichtbaar voor de hoofdbeheerder van het platform.</p>
-<div id="systemInfoStatus" class="status hidden"></div>
-<div style="margin-top:10px">
-  <button class="secondary" onclick="refreshSystemInfo()">Vernieuwen</button>
-</div>
-</div>
-
-<div class="card">
-  <h3>Platformoverzicht</h3>
-  <table style="width:100%;border-collapse:collapse">
-    <thead>
-      <tr style="text-align:left;border-bottom:2px solid #ddd">
-        <th style="padding:8px 6px">Onderdeel</th>
-        <th style="padding:8px 6px">Waarde</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Aantal gebruikers</td><td style="padding:8px 6px" id="systemUserCount">0</td></tr>
-      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Aantal campers</td><td style="padding:8px 6px" id="systemCamperCount">0</td></tr>
-      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Aantal reizen</td><td style="padding:8px 6px" id="systemTripCount">0</td></tr>
-      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Aantal stops</td><td style="padding:8px 6px" id="systemStopCount">0</td></tr>
-      <tr><td style="padding:8px 6px">Laatste aangemaakte camper</td><td style="padding:8px 6px" id="systemLatestCamper">Onbekend</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="card">
-  <h3>Foto-opslag</h3>
-  <table style="width:100%;border-collapse:collapse">
-    <thead>
-      <tr style="text-align:left;border-bottom:2px solid #ddd">
-        <th style="padding:8px 6px">Onderdeel</th>
-        <th style="padding:8px 6px">Waarde</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Foto's</td><td style="padding:8px 6px" id="systemPhotoCount">0</td></tr>
-      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Laatste foto-upload</td><td style="padding:8px 6px" id="systemLastPhotoUpload">Onbekend</td></tr>
-      <tr><td style="padding:8px 6px">Opslag gebruikt</td><td style="padding:8px 6px" id="systemPhotoStorageUsed">Onbekend</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="card">
-  <h3>Versie-informatie</h3>
-  <table style="width:100%;border-collapse:collapse">
-    <thead>
-      <tr style="text-align:left;border-bottom:2px solid #ddd">
-        <th style="padding:8px 6px">Onderdeel</th>
-        <th style="padding:8px 6px">Waarde</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 6px">Huidige versie</td><td style="padding:8px 6px" id="systemCurrentVersion">Versie onbekend</td></tr>
-      <tr><td style="padding:8px 6px">Releasedatum</td><td style="padding:8px 6px" id="systemCurrentVersionDate">Onbekend</td></tr>
-    </tbody>
-  </table>
 </div>
 </section>
 
@@ -1896,17 +1832,13 @@ function updateBeheerVisibility(){
   const beheerVisible=isHeadAdmin();
   const ledenVisible=isCamperAdmin;
   const beheerSection=document.getElementById('beheer');
-  const systemInfoSection=document.getElementById('systeeminformatie');
   const ledenSection=document.getElementById('leden-beheren');
   const beheerEntry=document.getElementById('moreBeheerEntry');
-  const systemInfoEntry=document.getElementById('moreSystemInfoEntry');
   const ledenEntry=document.getElementById('moreLedenBeheerEntry');
   const beheerGroup=document.getElementById('moreBeheerGroup');
   if(beheerSection)beheerSection.classList.toggle('hidden',!beheerVisible);
-  if(systemInfoSection)systemInfoSection.classList.toggle('hidden',!beheerVisible);
   if(ledenSection)ledenSection.classList.toggle('hidden',!ledenVisible);
   if(beheerEntry)beheerEntry.classList.toggle('hidden',!beheerVisible);
-  if(systemInfoEntry)systemInfoEntry.classList.toggle('hidden',!beheerVisible);
   if(ledenEntry)ledenEntry.classList.toggle('hidden',!ledenVisible);
   if(beheerGroup)beheerGroup.classList.toggle('hidden',!beheerVisible&&!ledenVisible);
 }
@@ -4364,48 +4296,9 @@ async function loadBeheer(){
   ]);
 }
 
-function formatNumberWithUnit(value,unit,decimals=2){
-  if(value==null||!Number.isFinite(Number(value)))return 'Onbekend';
-  return Number(value).toLocaleString('nl-BE',{
-    minimumFractionDigits:decimals,
-    maximumFractionDigits:decimals
-  })+' '+unit;
-}
-
-function bytesToMb(bytes){
-  if(bytes==null||!Number.isFinite(Number(bytes)))return null;
-  return Number(bytes)/(1024*1024);
-}
-
-function bytesToGb(bytes){
-  if(bytes==null||!Number.isFinite(Number(bytes)))return null;
-  return Number(bytes)/(1024*1024*1024);
-}
-
-function formatPhotoStorage(bytes){
-  const mbValue=bytesToMb(bytes);
-  if(mbValue==null)return 'Onbekend';
-  if(mbValue<1024){
-    return formatNumberWithUnit(mbValue,'MB');
-  }
-  return formatNumberWithUnit(bytesToGb(bytes),'GB');
-}
-
 function setSystemInfoValue(id,value){
   const el=document.getElementById(id);
   if(el)el.textContent=value;
-}
-
-function setSystemInfoStatus(message,type='hidden'){
-  const box=document.getElementById('systemInfoStatus');
-  if(!box)return;
-  if(!message){
-    box.textContent='';
-    box.className='status hidden';
-    return;
-  }
-  box.textContent=message;
-  box.className='status '+type;
 }
 
 function getPlatformOverviewCount(value){
@@ -4417,65 +4310,6 @@ async function fetchPlatformOverview(){
   const row=Array.isArray(data)?(data[0]||null):(data||null);
   return {data:row,error};
 }
-
-function formatLatestCamperValue(camper){
-  if(!camper||(!camper?.naam&&!camper?.merk&&!camper?.model&&!camper?.created_at))return 'Nog geen campers';
-  const camperName=String(
-    camper?.naam
-    ||[camper?.merk,camper?.model].filter(Boolean).join(' ')
-    ||'Camper zonder naam'
-  ).trim();
-  return `${camperName} · ${formatDateTime(camper.created_at)}`;
-}
-
-function formatVersionLabel(version){
-  const normalized=String(version||'').trim();
-  if(!normalized||normalized.toLowerCase()==='unknown')return 'Versie onbekend';
-  return normalized;
-}
-
-function formatLatestPhotoUploadValue(timestamp){
-  return timestamp?formatDateTime(timestamp):'Nog geen foto\'s';
-}
-
-async function loadSystemInfo(){
-  if(!canAccessBeheer)return;
-  setSystemInfoStatus('Systeeminformatie laden...','ok');
-  const releaseMetadataPromise=latestReleaseMetadata
-    ? Promise.resolve(latestReleaseMetadata)
-    : refreshReleaseMetadata().catch(()=>null);
-  const [{data:overview,error:overviewError},releaseMetadata]=await Promise.all([
-    fetchPlatformOverview(),
-    releaseMetadataPromise
-  ]);
-
-  setSystemInfoValue('systemUserCount',String(getPlatformOverviewCount(overview?.total_users)));
-  setSystemInfoValue('systemCamperCount',String(getPlatformOverviewCount(overview?.total_campers)));
-  setSystemInfoValue('systemTripCount',String(getPlatformOverviewCount(overview?.total_trips)));
-  setSystemInfoValue('systemStopCount',String(getPlatformOverviewCount(overview?.total_stops)));
-  setSystemInfoValue('systemPhotoCount',String(getPlatformOverviewCount(overview?.total_photos)));
-  setSystemInfoValue('systemLastPhotoUpload',formatLatestPhotoUploadValue(overview?.latest_photo_uploaded_at));
-  setSystemInfoValue('systemPhotoStorageUsed',formatPhotoStorage(overview?.total_photo_bytes));
-  setSystemInfoValue('systemLatestCamper',formatLatestCamperValue(overview ? {
-    naam:overview.latest_camper_name,
-    merk:overview.latest_camper_brand,
-    model:overview.latest_camper_model,
-    created_at:overview.latest_camper_created_at
-  } : null));
-  setSystemInfoValue('systemCurrentVersion',formatVersionLabel(releaseMetadata?.currentVersion));
-  setSystemInfoValue('systemCurrentVersionDate',formatDate(releaseMetadata?.releasedAt));
-
-  if(overviewError){
-    setSystemInfoStatus('Systeeminformatie deels geladen: '+(overviewError?.message||'onbekende fout'),'err');
-    return;
-  }
-  setSystemInfoStatus('Systeeminformatie geladen.','ok');
-}
-
-window.refreshSystemInfo=async function(){
-  if(!canAccessBeheer)return;
-  await loadSystemInfo();
-};
 
 window.generateTemporaryOwnerPassword=function(){
   const pw=document.getElementById('newOwnerPassword');
@@ -4613,7 +4447,6 @@ const SECTION_NAV_GROUPS={
   camper:'more',
   'wat-is-nieuw':'more',
   beheer:'more',
-  systeeminformatie:'more',
   'leden-beheren':'more'
 };
 
@@ -4641,9 +4474,6 @@ async function openSection(sectionId,navKey=SECTION_NAV_GROUPS[sectionId]||'home
   }
   if(sectionId==='beheer'){
     await loadBeheer();
-  }
-  if(sectionId==='systeeminformatie'){
-    await loadSystemInfo();
   }
   if(sectionId==='camper'){
     await loadCamperTab();
