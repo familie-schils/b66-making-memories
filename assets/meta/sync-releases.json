@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.7",
-  "releasedAt": "2026-09-06T17:23:06.559Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Finalize platform dashboard totals\n- Wire platform overview RPC",
+  "currentVersion": "1.0.8",
+  "releasedAt": "2026-09-06T17:32:25.767Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Verwijder systeeminformatie uit test-agent beheer",
   "latest5": [
+    {
+      "version": "1.0.8",
+      "releasedAt": "2026-09-06T17:32:25.767Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Verwijder systeeminformatie uit test-agent beheer"
+    },
     {
       "version": "1.0.7",
       "releasedAt": "2026-09-06T17:23:06.559Z",
@@ -23,14 +28,14 @@
       "version": "1.0.4",
       "releasedAt": "2026-09-06T15:31:33.956Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix systeeminformatie foto-datumkolom"
-    },
-    {
-      "version": "1.0.3",
-      "releasedAt": "2026-09-06T15:27:25.458Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: phase out overnight travel cost input"
     }
   ],
   "history": [
+    {
+      "version": "1.0.8",
+      "releasedAt": "2026-09-06T17:32:25.767Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Verwijder systeeminformatie uit test-agent beheer"
+    },
     {
       "version": "1.0.7",
       "releasedAt": "2026-09-06T17:23:06.559Z",
@@ -72,5 +77,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "b044ef7f0f9d8c7ac49ef070b86661ee963573ae"
+  "lastSyncedTestAgentSha": "f9baf55c86ed3e37318a0a30d1795456db70bcac"
 }
