@@ -1,0 +1,72 @@
+name: Publish release metadata
+
+on:
+  release:
+    types: [published, edited, deleted, unpublished]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-release-json:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build assets/meta/releases.json from GitHub Releases
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'assets/meta/releases.json';
+            const { owner, repo } = context.repo;
+
+            const allReleases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+
+            const normalized = allReleases
+              .filter((release) => !release.draft)
+              .map((release) => ({
+                version: release.tag_name,
+                releasedAt: release.published_at || release.created_at || null,
+                notes: (release.body || '').trim() || 'Geen release-opmerkingen.',
+              }))
+              .sort((a, b) => {
+                const aTime = a.releasedAt ? new Date(a.releasedAt).getTime() : 0;
+                const bTime = b.releasedAt ? new Date(b.releasedAt).getTime() : 0;
+                return bTime - aTime;
+              });
+
+            const current = normalized[0] || {
+              version: 'onbekend',
+              releasedAt: null,
+              notes: 'Versiegegevens zijn momenteel niet beschikbaar.',
+            };
+
+            const payload = {
+              currentVersion: current.version,
+              releasedAt: current.releasedAt,
+              notes: current.notes,
+              latest5: normalized.slice(0, 5),
+            };
+
+            fs.mkdirSync('assets/meta', { recursive: true });
+            fs.writeFileSync(path, `${JSON.stringify(payload, null, 2)}
+`);
+
+      - name: Commit metadata update
+        run: |
+          if git diff --quiet -- assets/meta/releases.json; then
+            echo "No release metadata changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/meta/releases.json
+          git commit -m "chore: update release metadata"
+          git push

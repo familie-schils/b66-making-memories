@@ -357,6 +357,7 @@ Nog geen onderhoud geregistreerd.
 
 <script type="module">
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { loadReleaseMetadata, renderReleaseInfo } from './assets/js/release-info.js';
 
 const supabase=createClient(
 'https://hktczewqpevvgxqcswov.supabase.co',
@@ -367,14 +368,18 @@ let activeTripId=null;
 let stopNumber=1;
   let selectedPhotos = [];
   let activeCamperId = null;
-  const APP_VERSION =
-  new Date(document.lastModified)
-    .toLocaleString('nl-BE');
-
-console.log('🚐 Making Memories', APP_VERSION);
 
 const loginView=document.getElementById('loginView');
 const appView=document.getElementById('appView');
+
+async function refreshReleaseMetadata(){
+  const metadata=await loadReleaseMetadata();
+  renderReleaseInfo(metadata,{versionText:document.getElementById('versionText')});
+}
+refreshReleaseMetadata().catch(()=>{
+  const versionEl=document.getElementById('versionText');
+  if(versionEl)versionEl.textContent='Versie: onbekend';
+});
 
   async function loadCurrentCamper(){
 
@@ -409,8 +414,6 @@ supabase.auth.onAuthStateChange((_e,s)=>s?showApp():showLogin());
 }
 function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
 async function showApp(){
-  document.getElementById('versionText').textContent =
-  'Build: ' + APP_VERSION;
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
 
