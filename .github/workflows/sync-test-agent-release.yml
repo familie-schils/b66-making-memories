@@ -1,0 +1,110 @@
+name: Sync TEST-AGENT release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - test-agent.html
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-test-agent:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync test-agent to production and bump version
+        env:
+          TEST_AGENT_SHA: ${{ github.sha }}
+        run: |
+          cp test-agent.html index.html
+
+          node <<'NODE'
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+
+          const metadataPath = 'assets/meta/sync-releases.json';
+          const defaultNote = 'Synchronisatie van TEST-AGENT naar productie.';
+
+          function loadMetadata() {
+            if (!fs.existsSync(metadataPath)) {
+              return {
+                currentVersion: '1.0.0',
+                releasedAt: null,
+                notes: defaultNote,
+                latest5: [],
+                history: [],
+                lastSyncedTestAgentSha: null,
+              };
+            }
+
+            return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+          }
+
+          function bumpPatchVersion(version) {
+            const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(version || '1.0.0').trim());
+            if (!match) return '1.0.1';
+            const [, major, minor, patch] = match;
+            return `${major}.${minor}.${Number(patch) + 1}`;
+          }
+
+          function readCommitSubjects(previousSha, currentSha) {
+            const range = previousSha ? `${previousSha}..${currentSha}` : currentSha;
+
+            try {
+              const output = execSync(`git log --format=%s ${range} -- test-agent.html`, { encoding: 'utf8' }).trim();
+              const uniqueLines = [...new Set(output.split('\n').map((line) => line.trim()).filter(Boolean))];
+              return uniqueLines;
+            } catch {
+              return [];
+            }
+          }
+
+          function buildNotes(subjects) {
+            if (!subjects.length) return defaultNote;
+            return `Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n${subjects.map((subject) => `- ${subject}`).join('\n')}`;
+          }
+
+          const metadata = loadMetadata();
+          const currentSha = process.env.TEST_AGENT_SHA || execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+          const subjects = readCommitSubjects(metadata.lastSyncedTestAgentSha, currentSha);
+          const releasedAt = new Date().toISOString();
+          const version = bumpPatchVersion(metadata.currentVersion);
+          const notes = buildNotes(subjects);
+          const entry = { version, releasedAt, notes };
+          const history = [entry, ...(Array.isArray(metadata.history) ? metadata.history : metadata.latest5 || [])];
+
+          const payload = {
+            source: 'test-agent-sync',
+            currentVersion: version,
+            releasedAt,
+            notes,
+            latest5: history.slice(0, 5),
+            history,
+            lastSyncedTestAgentSha: currentSha,
+          };
+
+          fs.mkdirSync('assets/meta', { recursive: true });
+          fs.writeFileSync(metadataPath, `${JSON.stringify(payload, null, 2)}\n`);
+          NODE
+
+      - name: Commit sync release
+        run: |
+          if git diff --quiet -- index.html assets/meta/sync-releases.json; then
+            echo "No sync changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html assets/meta/sync-releases.json
+          git commit -m "chore: sync TEST-AGENT to production"
+          git push
