@@ -19,6 +19,30 @@ nav{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:0;z-i
 nav button{padding:10px;border:0;border-radius:8px;white-space:nowrap}
 nav .active{background:#20252b;color:white}
 main{max-width:900px;margin:auto;padding:18px}
+.primary-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.98);position:fixed;left:0;right:0;bottom:0;top:auto;z-index:20;border-top:1px solid #d8dde3;box-shadow:0 -10px 30px rgba(32,37,43,.08)}
+.primary-nav button{padding:12px 10px;border:1px solid #d8dde3;border-radius:12px;white-space:nowrap;background:#f7f8fa;color:#20252b;font-weight:700}
+.primary-nav .active{background:#20252b;color:white;border-color:#20252b}
+main{max-width:900px;margin:auto;padding:18px 18px calc(110px + env(safe-area-inset-bottom,0px))}
+.home-hero{padding:20px}
+.home-eyebrow,.home-section-label{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#66717d}
+.home-title{margin:8px 0 4px;font-size:28px;line-height:1.15}
+.home-status-line{margin-top:12px;color:#42505c;font-size:14px}
+.home-section-title{margin:6px 0 8px;font-size:24px;line-height:1.2}
+.home-compact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
+.home-compact-item{background:#f7f8fa;border:1px solid #e4e7eb;border-radius:12px;padding:12px}
+.home-compact-label{font-size:12px;color:#66717d;font-weight:700}
+.home-compact-value{margin-top:6px;font-size:18px;font-weight:700;line-height:1.3}
+.home-primary-grid,.section-link-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px}
+.home-primary-card,.section-link-card{border:1px solid #d8dde3;border-radius:14px;background:white;padding:18px;text-align:left;cursor:pointer;color:inherit}
+.home-primary-card{display:flex;flex-direction:column;gap:8px}
+.home-primary-card strong{font-size:20px;line-height:1.2}
+.home-primary-label,.section-link-title{font-size:14px;font-weight:800;color:#20252b}
+.home-primary-meta,.section-link-copy{font-size:14px;color:#55616d;line-height:1.45}
+.section-link-card{display:flex;flex-direction:column;gap:6px;width:100%}
+.home-recent-list{display:grid;gap:12px;margin-top:14px}
+.home-recent-item{padding-top:12px;border-top:1px solid #e4e7eb}
+.home-recent-item:first-child{padding-top:0;border-top:0}
+
 section{display:none}.active{display:block}
 .card{background:white;border:1px solid #ddd;border-radius:14px;padding:16px;margin-bottom:14px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
@@ -80,7 +104,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </head>
 <body>
 <header>
-<h1>🚐 Making Memories</h1>
+<h1>Making Memories</h1>
 <p id="versionText">Versie laden...</p>
 </header>
 
@@ -124,23 +148,14 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </div>
 
 <div id="appView" class="hidden">
-<nav>
-<button data-tab="trips" class="active">Reizen</button>
-<button data-tab="fuel">⛽ Tanken</button>
-<button data-tab="home">Dashboard</button>
-<button data-tab="maintenance">Onderhoud</button>
-<button data-tab="camper">Mijn Camper</button>
-<button data-tab="reiskosten">🛣️ Reiskosten</button>
-<button data-tab="personen">👥 Personen</button>
-<button data-tab="vrienden">🤝 Vrienden</button>
-<button data-tab="ontdekte-plaatsen">🗺️ Ontdekte plaatsen</button>
-<button id="beheerTabButton" data-tab="beheer" class="hidden">👑 Beheer</button>
-<button id="ledenBeheerTabButton" data-tab="leden-beheren" class="hidden">👥 Leden beheren</button>
-<button onclick="logout()">Uitloggen</button>
+<nav class="primary-nav">
+<button id="navHome" data-nav="home" class="active">Start</button>
+<button id="navTrips" data-nav="trips">Reizen</button>
+<button id="navMore" data-nav="more">Meer</button>
 </nav>
 
 <main>
-<section id="trips" class="active">
+<section id="trips">
 
 <!--
   SQL-migratie voor reizen: voeg bestuurder en passagier kolommen toe.
@@ -157,7 +172,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
   -- alter table reizen drop column crew;
 -->
 <div id="tripChooser" class="card">
-<h2>🚐 Reizen</h2>
+<h2>Reizen</h2>
 <button class="primary" onclick="startNewTrip()">＋ Nieuwe reis starten</button>
 <div class="trip-toolbar">
   <div>
@@ -173,7 +188,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </div>
 
 <div id="tripForm" class="card hidden">
-<h2 id="tripTitle">🚐 Nieuwe reis</h2>
+<h2 id="tripTitle">Nieuwe reis</h2>
 <div id="tripStatus" class="status hidden"></div>
 
 <div class="trip-header">
@@ -181,12 +196,12 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div class="grid">
 <div><label>Start KM van deze reis</label><input id="tStartKm" type="number" min="0" step="1" readonly></div>
 
-<div><div id="kmResult" class="km-result">🚐 KM gereden: —</div></div>
+<div><div id="kmResult" class="km-result">KM gereden: —</div></div>
 </div>
 </div>
 
 <div id="tripStartFields">
-<h3>🚐 Start van de reis</h3>
+<h3>Start van de reis</h3>
 <div class="grid">
 <div><label>Bestuurder</label><select id="tBestuurder"></select></div>
 <div><label>Passagier</label><select id="tPassagier"><option value="">— geen —</option></select></div>
@@ -194,13 +209,13 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </div>
 </div>
 <div id="tripEditActions" class="edit-actions hidden">
-  <button id="saveTripEditBtn" class="primary" onclick="saveTripEdit()">💾 Reiswijziging opslaan</button>
+  <button id="saveTripEditBtn" class="primary" onclick="saveTripEdit()">Reiswijziging opslaan</button>
   <button class="secondary" onclick="cancelTripEdit()">Annuleren bewerken</button>
 </div>
 
 <hr>
 
-<h3 id="stopHeading">📍 Eerste stop</h3>
+<h3 id="stopHeading">Eerste stop</h3>
 <div class="grid">
 <div><label>Datum stop</label><input id="sDate" type="date"></div>
 <div><label>Type stop</label><select id="sType">
@@ -246,9 +261,9 @@ Nog geen foto geselecteerd.
 <label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin-bottom:12px">
   <input id="shareWithFriends" type="checkbox"> ☑ Deze stop niet delen met vrienden
 </label>
-<button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">💾 Stop opslaan</button>
-<button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">➡️ Naar stop 2</button>
-<button class="secondary" onclick="showEndTrip()">🏁 Einde reis</button>
+<button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">Stop opslaan</button>
+<button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">Naar stop 2</button>
+<button class="secondary" onclick="showEndTrip()">Einde reis</button>
 <button class="secondary" onclick="cancelTrip()">Annuleren</button>
 
 <div id="activeTripStopsPanel" class="card hidden" style="margin-top:14px">
@@ -257,13 +272,13 @@ Nog geen foto geselecteerd.
 </div>
 
 <div id="endBox" class="end-box hidden">
-<h3>🏁 Einde reis</h3>
+<h3>Einde reis</h3>
 <div class="grid">
 <div><label>Einddatum</label><input id="tEndDate" type="date"></div>
 <div><label>Eind KM</label><input id="tEndKmEndBox" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Bij thuiskomst"></div>
 </div>
 <p class="muted">De Eind KM is de kilometerstand bij thuiskomst / einde van deze reis.</p>
-<button class="primary" onclick="finishTrip()">✓ Reis afsluiten</button>
+<button class="primary" onclick="finishTrip()">Reis afsluiten</button>
 <button class="secondary" onclick="hideEndTrip()">Terug</button>
 </div>
 </div>
@@ -274,7 +289,7 @@ Nog geen foto geselecteerd.
 
 <section id="fuel">
 <div class="card">
-<h2>⛽ Tanken</h2>
+<h2>Tanken</h2>
 <p class="muted">Houd alle tankbeurten van de B66 bij. De app berekent automatisch de kilometers sinds de vorige tankbeurt en het verbruik.</p>
 <div class="fuel-summary">
 <div class="grid">
@@ -298,8 +313,8 @@ Nog geen foto geselecteerd.
 <br>
 <div id="fuelCalc" class="muted">Totaalbedrag: € 0,00 · KM sinds vorige tankbeurt: — · Verbruik: —</div>
 <br>
-<button id="saveFuelBtn" class="primary" onclick="addFuel()">⛽ Tankbeurt opslaan</button>
-<button id="newFuelEntryBtn" class="secondary hidden" onclick="startNewFuelEntry()">➕ Nieuwe tankbeurt</button>
+<button id="saveFuelBtn" class="primary" onclick="addFuel()">Tankbeurt opslaan</button>
+<button id="newFuelEntryBtn" class="secondary hidden" onclick="startNewFuelEntry()">Nieuwe tankbeurt</button>
 <button id="cancelFuelEditBtn" class="secondary hidden" onclick="cancelFuelEdit()">Annuleren bewerken</button>
 </div>
 <div class="card"><h2>Tankhistorie</h2><div id="fuelList">Tankbeurten laden...</div></div>
@@ -308,7 +323,7 @@ Nog geen foto geselecteerd.
 
 <div class="card">
 
-<h2>🛣️ Reiskosten</h2>
+<h2>Reisuitgaven</h2>
 
 <p class="muted">
 Registreer snel dagelijkse uitgaven en verplaatsingskosten.
@@ -341,11 +356,11 @@ Registreer snel dagelijkse uitgaven en verplaatsingskosten.
 
 <label>Categorie</label>
 <div id="costCategoryCards" class="travel-cost-category-grid">
-  <button type="button" class="travel-cost-category-card" data-category="Boodschappen" onclick="selectTravelCostCategory('Boodschappen')"><span class="emoji">🛒</span><span>Boodschappen</span><span class="check">✓</span></button>
-  <button type="button" class="travel-cost-category-card" data-category="Eten & drinken" onclick="selectTravelCostCategory('Eten & drinken')"><span class="emoji">🍽️</span><span>Eten & drinken</span><span class="check">✓</span></button>
-  <button type="button" class="travel-cost-category-card" data-category="Overnachting" onclick="selectTravelCostCategory('Overnachting')"><span class="emoji">🏕️</span><span>Overnachting</span><span class="check">✓</span></button>
-  <button type="button" class="travel-cost-category-card" data-category="Verplaatsing" onclick="selectTravelCostCategory('Verplaatsing')"><span class="emoji">🛣️</span><span>Verplaatsing</span><span class="check">✓</span></button>
-  <button type="button" class="travel-cost-category-card" data-category="Overig" onclick="selectTravelCostCategory('Overig')"><span class="emoji">📦</span><span>Overig</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Boodschappen" onclick="selectTravelCostCategory('Boodschappen')"><span>Boodschappen</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Eten & drinken" onclick="selectTravelCostCategory('Eten & drinken')"><span>Eten & drinken</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Overnachting" onclick="selectTravelCostCategory('Overnachting')"><span>Overnachting</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Verplaatsing" onclick="selectTravelCostCategory('Verplaatsing')"><span>Verplaatsing</span><span class="check">✓</span></button>
+  <button type="button" class="travel-cost-category-card" data-category="Overig" onclick="selectTravelCostCategory('Overig')"><span>Overig</span><span class="check">✓</span></button>
 </div>
 
 <br>
@@ -356,7 +371,7 @@ Registreer snel dagelijkse uitgaven en verplaatsingskosten.
 <br><br>
 
 <button id="saveTravelCostBtn" class="primary" onclick="saveTravelCost()">
-💾 Reiskosten opslaan
+Reisuitgave opslaan
 </button>
 <button id="cancelTravelCostEditBtn" class="secondary hidden" onclick="cancelTravelCostEdit()">
 Annuleren bewerken
@@ -370,33 +385,110 @@ Reiskosten laden...
 
 </section>
   
-<section id="home">
+<section id="home" class="active">
+<div class="card home-hero">
+  <div class="home-eyebrow">Start</div>
+  <h2 id="dashboardCamperNaam" class="home-title">—</h2>
+  <div id="dashboardCamperSpecs" class="muted">—</div>
+  <div id="homeStatusLine" class="home-status-line">Jouw belangrijkste acties staan hieronder.</div>
+</div>
+
 <div class="card">
-<div class="muted">Camper</div><div class="big" id="dashboardCamperNaam">—</div>
-<div id="dashboardCamperSpecs" class="muted">—</div>
+  <div class="home-section-label">Actieve reis</div>
+  <h2 id="homeActiveTripTitle" class="home-section-title">Geen actieve reis</h2>
+  <div id="homeActiveTripMeta" class="muted">Start een nieuwe reis om stops, tankbeurten en uitgaven te registreren.</div>
+  <div class="home-compact-grid">
+    <div class="home-compact-item"><div class="home-compact-label">Bestuurder</div><div id="homeTripDriver" class="home-compact-value">—</div></div>
+    <div class="home-compact-item"><div class="home-compact-label">Stops</div><div id="homeTripStopCount" class="home-compact-value">0</div></div>
+    <div class="home-compact-item"><div class="home-compact-label">Laatste stop</div><div id="homeTripLastStop" class="home-compact-value">—</div></div>
+  </div>
+  <div class="edit-actions">
+    <button id="homeTripPrimaryAction" class="primary" onclick="openHomeTripFlow()">Stop toevoegen</button>
+    <button id="homeTripSecondaryAction" class="secondary" onclick="openHomeTripOverview()">Reis openen</button>
+  </div>
 </div>
 
-<div class="grid">
-<div class="card"><div class="muted">Huidige KM-stand</div><div class="big" id="odometer">—</div></div>
-<div class="card"><div class="muted">KM geregistreerd</div><div class="big" id="totalKm">—</div></div>
-<div class="card"><div class="muted">Gemiddeld verbruik</div><div class="big" id="avgConsumption">—</div></div>
-<div class="card"><div class="muted">Dieselkosten</div><div class="big" id="fuelCost">€ 0,00</div></div>
+<div class="home-primary-grid">
+  <button type="button" class="home-primary-card" onclick="openSection('trips','trips')">
+    <span class="home-primary-label">Reizen</span>
+    <strong id="homeTripsCardTitle">Open actieve reis</strong>
+    <span class="home-primary-meta">Bekijk de huidige reis of start een nieuwe reis.</span>
+  </button>
+  <button type="button" class="home-primary-card" onclick="openSection('fuel','home')">
+    <span class="home-primary-label">Tanken</span>
+    <strong>Nieuwe tankbeurt</strong>
+    <span class="home-primary-meta">Registreer snel een tankbeurt met kilometerstand en locatie.</span>
+  </button>
+  <button type="button" class="home-primary-card" onclick="openSection('reiskosten','home')">
+    <span class="home-primary-label">Reisuitgaven</span>
+    <strong>Nieuwe uitgave</strong>
+    <span class="home-primary-meta">Voeg dagelijkse uitgaven direct toe aan een reis.</span>
+  </button>
 </div>
 
-<div class="grid">
-<div class="card"><div class="muted">Afgeronde reizen</div><div class="big" id="tripCount">0</div></div>
-<div class="card"><div class="muted">Stops</div><div class="big" id="stopCount">0</div></div>
-<div class="card"><div class="muted">Diesel getankt</div><div class="big" id="dashboardLiters">0,00 l</div></div>
-<div class="card"><div class="muted">Tankbeurten</div><div class="big" id="dashboardFuelCount">0</div></div>
+<div class="card">
+  <div class="home-section-label">Overzicht</div>
+  <div class="home-compact-grid">
+    <div class="home-compact-item"><div class="home-compact-label">Huidige kilometerstand</div><div id="odometer" class="home-compact-value">—</div></div>
+    <div class="home-compact-item"><div class="home-compact-label">Kilometers geregistreerd</div><div id="totalKm" class="home-compact-value">—</div></div>
+    <div class="home-compact-item"><div class="home-compact-label">Gemiddeld verbruik</div><div id="avgConsumption" class="home-compact-value">—</div></div>
+    <div class="home-compact-item"><div class="home-compact-label">Brandstofkosten</div><div id="fuelCost" class="home-compact-value">€ 0,00</div></div>
+    <div class="home-compact-item"><div class="home-compact-label">Afgeronde reizen</div><div id="tripCount" class="home-compact-value">0</div></div>
+    <div class="home-compact-item"><div class="home-compact-label">Totaal stops</div><div id="stopCount" class="home-compact-value">0</div></div>
+  </div>
 </div>
 
-<div class="card"><h2>Laatste herinneringen</h2><div id="recent">Laden...</div></div>
+<div class="card">
+  <div class="home-section-label">Laatste activiteit</div>
+  <div id="homeRecentList" class="home-recent-list">Laden...</div>
+</div>
+</section>
+
+<section id="more">
+<div class="card home-hero">
+  <div class="home-eyebrow">Meer</div>
+  <h2 class="home-section-title">Extra onderdelen</h2>
+  <p class="muted">Minder gebruikte schermen en beheerfuncties blijven hier rustig gegroepeerd bereikbaar.</p>
+</div>
+
+<div class="card">
+  <h3>Mijn camper</h3>
+  <div class="section-link-grid">
+    <button type="button" class="section-link-card" onclick="openSection('camper','more')"><span class="section-link-title">Mijn Camper</span><span class="section-link-copy">Profiel, leden en uitnodigingen.</span></button>
+    <button type="button" class="section-link-card" onclick="openSection('personen','more')"><span class="section-link-title">Personen</span><span class="section-link-copy">Bestuurders en passagiers beheren.</span></button>
+    <button type="button" class="section-link-card" onclick="openSection('maintenance','more')"><span class="section-link-title">Onderhoud</span><span class="section-link-copy">Onderhoud en historiek van de camper.</span></button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Sociaal</h3>
+  <div class="section-link-grid">
+    <button type="button" class="section-link-card" onclick="openSection('vrienden','more')"><span class="section-link-title">Vrienden</span><span class="section-link-copy">Vrienden en gedeelde reisstops.</span></button>
+    <button type="button" class="section-link-card" onclick="openSection('ontdekte-plaatsen','more')"><span class="section-link-title">Ontdekte plaatsen</span><span class="section-link-copy">Eigen stops en gedeelde plekken terugvinden.</span></button>
+  </div>
+</div>
+
+<div id="moreBeheerGroup" class="card hidden">
+  <h3>Beheer</h3>
+  <div class="section-link-grid">
+    <button id="moreBeheerEntry" type="button" class="section-link-card hidden" onclick="openSection('beheer','more')"><span class="section-link-title">Beheer</span><span class="section-link-copy">Platformbeheer en uitnodigingen.</span></button>
+    <button id="moreLedenBeheerEntry" type="button" class="section-link-card hidden" onclick="openSection('leden-beheren','more')"><span class="section-link-title">Leden beheren</span><span class="section-link-copy">Toegang en rollen voor camperleden.</span></button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>App</h3>
+  <div class="section-link-grid">
+    <button type="button" class="section-link-card" onclick="openSection('home','home')"><span class="section-link-title">Start</span><span class="section-link-copy">Terug naar het startscherm.</span></button>
+    <button type="button" class="section-link-card" onclick="logout()"><span class="section-link-title">Uitloggen</span><span class="section-link-copy">Meld je af op dit toestel.</span></button>
+  </div>
+</div>
 </section>
 
 <section id="maintenance">
 
 <div class="card">
-<h2>🔧 Onderhoud</h2>
+<h2>Onderhoud</h2>
 <div id="maintenanceStatus" class="status hidden"></div>
 
 <div class="grid">
@@ -469,7 +561,7 @@ Nog geen onderhoud geregistreerd.
 
 <section id="personen">
 <div class="card">
-<h2>👥 Personen</h2>
+<h2>Personen</h2>
 <p class="muted">Beheer de bestuurders en passagiers die aan deze camper gekoppeld zijn.</p>
 
 <!--
@@ -528,7 +620,7 @@ Nog geen onderhoud geregistreerd.
 
 <section id="vrienden">
 <div class="card">
-<h2>🤝 Vrienden</h2>
+<h2>Vrienden</h2>
 <p class="muted">Voeg vrienden toe op basis van hun e-mailadres. De ontvanger moet jouw verzoek eerst accepteren voordat jullie elkaars gedeelde stops zien.</p>
 <div id="vriendenStatus" class="status hidden"></div>
 <div class="grid">
@@ -550,7 +642,7 @@ Nog geen onderhoud geregistreerd.
 
 <section id="ontdekte-plaatsen">
 <div class="card">
-<h2>🗺️ Ontdekte plaatsen</h2>
+<h2>Ontdekte plaatsen</h2>
 <p class="muted">Jouw eigen stops en stops die vrienden met je hebben gedeeld.</p>
 
 <div class="grid">
@@ -691,7 +783,7 @@ Nog geen onderhoud geregistreerd.
 -->
 
 <div class="card">
-<h2>👑 Beheer</h2>
+<h2>Beheer</h2>
 <p class="muted">Alleen zichtbaar voor de hoofdbeheerder van het platform.</p>
 </div>
 
@@ -786,7 +878,7 @@ Nog geen onderhoud geregistreerd.
 -->
 
 <div class="card">
-<h2>👥 Leden beheren</h2>
+<h2>Leden beheren</h2>
 <p class="muted">Beheer de leden van jouw camperlogboek. Alleen zichtbaar voor de Camper Admin.</p>
 <div id="ledenBeheerStatus" class="status hidden"></div>
 </div>
@@ -1465,12 +1557,18 @@ async function handleInviteRoute(){
 }
 
 function updateBeheerVisibility(){
-  const tab=document.getElementById('beheerTabButton');
-  const section=document.getElementById('beheer');
-  if(tab)tab.classList.toggle('hidden',!isHeadAdmin());
-  if(section)section.classList.toggle('hidden',!isHeadAdmin());
-  const ledenTab=document.getElementById('ledenBeheerTabButton');
-  if(ledenTab)ledenTab.classList.toggle('hidden',!isCamperAdmin);
+  const beheerVisible=isHeadAdmin();
+  const ledenVisible=isCamperAdmin;
+  const beheerSection=document.getElementById('beheer');
+  const ledenSection=document.getElementById('leden-beheren');
+  const beheerEntry=document.getElementById('moreBeheerEntry');
+  const ledenEntry=document.getElementById('moreLedenBeheerEntry');
+  const beheerGroup=document.getElementById('moreBeheerGroup');
+  if(beheerSection)beheerSection.classList.toggle('hidden',!beheerVisible);
+  if(ledenSection)ledenSection.classList.toggle('hidden',!ledenVisible);
+  if(beheerEntry)beheerEntry.classList.toggle('hidden',!beheerVisible);
+  if(ledenEntry)ledenEntry.classList.toggle('hidden',!ledenVisible);
+  if(beheerGroup)beheerGroup.classList.toggle('hidden',!beheerVisible&&!ledenVisible);
 }
 
  async function loadCurrentCamper(sessionUser = null){
@@ -1659,6 +1757,7 @@ await loadFuel();
   await loadPersonen();
   await loadCamperProfile();
   await loadCamperMembers();
+  await openSection('home','home');
 }
 
 window.toggleForgot=function(e){e.preventDefault();document.getElementById('forgotSection').classList.toggle('hidden');};
@@ -1883,7 +1982,7 @@ function updateTripFormMode(){
   const nextStopBtn=document.getElementById('nextStopBtn');
   const tripEditActions=document.getElementById('tripEditActions');
   if(saveStopBtn){
-    saveStopBtn.textContent=editingStopId?'💾 Stopwijziging opslaan':'💾 Stop opslaan';
+    saveStopBtn.textContent=editingStopId?'Stopwijziging opslaan':'Stop opslaan';
   }
   if(nextStopBtn&&editingStopId){
     nextStopBtn.classList.add('hidden');
@@ -1934,7 +2033,7 @@ async function loadActiveTripStopsPanel(){
       <b>${Number(stop.volgorde||0)}. ${esc(stop.camperplaats||'Onbenoemde stop')}</b> · ${esc(stop.land||'')}
       <div class="muted">${esc(stop.datum||'')}</div>
       <div class="edit-actions">
-        <button class="secondary" onclick="startStopEdit(${stop.id},${stop.reis_id})">✏️ Bewerken</button>
+        <button class="secondary" onclick="startStopEdit(${stop.id},${stop.reis_id})">Bewerken</button>
       </div>
     </div>
   `).join('');
@@ -1947,8 +2046,8 @@ resetStopEditState();
 document.getElementById('tripChooser').classList.add('hidden');
 document.getElementById('tripDetail').classList.add('hidden');
 document.getElementById('tripForm').classList.remove('hidden');
-document.getElementById('tripTitle').textContent='🚐 Nieuwe reis';
-document.getElementById('stopHeading').textContent='📍 Eerste stop';
+document.getElementById('tripTitle').textContent='Nieuwe reis';
+document.getElementById('stopHeading').textContent='Eerste stop';
 document.getElementById('tripStartFields').classList.remove('hidden');
 document.getElementById('endBox').classList.add('hidden');
 document.getElementById('tStartDate').value=today();
@@ -1956,7 +2055,7 @@ document.getElementById('sDate').value=today();
 document.getElementById('tStartKm').value='';
 
 document.getElementById('tEndKmEndBox').value='';
-document.getElementById('kmResult').textContent='🚐 KM gereden: —';
+document.getElementById('kmResult').textContent='KM gereden: —';
 document.getElementById('activeTripInfo').textContent='';
 document.getElementById('saveStopBtn').classList.remove('hidden');
 document.getElementById('nextStopBtn').classList.add('hidden');
@@ -1993,9 +2092,9 @@ window.startTripEdit=async function(tripId){
   document.getElementById('tripChooser').classList.add('hidden');
   document.getElementById('tripDetail').classList.add('hidden');
   document.getElementById('tripForm').classList.remove('hidden');
-  document.getElementById('tripTitle').textContent='🚐 Reis bewerken';
+  document.getElementById('tripTitle').textContent='Reis bewerken';
   document.getElementById('tripStartFields').classList.remove('hidden');
-  document.getElementById('stopHeading').textContent='📍 Stop toevoegen of bewerken';
+  document.getElementById('stopHeading').textContent='Stop toevoegen of bewerken';
   document.getElementById('endBox').classList.add('hidden');
   document.getElementById('saveStopBtn').classList.remove('hidden');
   document.getElementById('nextStopBtn').classList.add('hidden');
@@ -2064,10 +2163,10 @@ function updateKm(){
 const s=v('tStartKm'),
       e=v('tEndKmEndBox'),
       el=document.getElementById('kmResult');
-if(s===''||e===''){el.textContent='🚐 KM gereden: —';return}
+if(s===''||e===''){el.textContent='KM gereden: —';return}
 const diff=Number(e)-Number(s);
 if(diff<0){el.textContent='⚠️ Eind KM is lager dan Start KM';return}
-el.textContent='🚐 KM gereden: '+diff.toLocaleString('nl-BE')+' km';
+el.textContent='KM gereden: '+diff.toLocaleString('nl-BE')+' km';
 }
 
 document.getElementById('tEndKmEndBox').addEventListener('input',function(){
@@ -2214,7 +2313,7 @@ if(editingStopId){
   showStatus('✓ Stop '+stopNumber+' opgeslagen.',true);
   document.getElementById('saveStopBtn').classList.add('hidden');
   const nextBtn=document.getElementById('nextStopBtn');
-  nextBtn.textContent='➡️ Naar stop '+(stopNumber+1);
+  nextBtn.textContent='Naar stop '+(stopNumber+1);
   nextBtn.classList.remove('hidden');
   document.getElementById('activeTripInfo').textContent=
     'Reis actief · '+stopNumber+' stop'+(stopNumber===1?'':'s')+' opgeslagen';
@@ -2248,9 +2347,9 @@ window.startStopEdit=async function(stopId,tripId){
   document.getElementById('tripChooser').classList.add('hidden');
   document.getElementById('tripDetail').classList.add('hidden');
   document.getElementById('tripForm').classList.remove('hidden');
-  document.getElementById('tripTitle').textContent='🚐 Reis bewerken';
+  document.getElementById('tripTitle').textContent='Reis bewerken';
   document.getElementById('tripStartFields').classList.remove('hidden');
-  document.getElementById('stopHeading').textContent='📍 Stop '+stopNumber+' bewerken';
+  document.getElementById('stopHeading').textContent='Stop '+stopNumber+' bewerken';
   document.getElementById('saveStopBtn').classList.remove('hidden');
   document.getElementById('nextStopBtn').classList.add('hidden');
   document.getElementById('tStartDate').value=asDateInputValue(trip.datum);
@@ -2297,8 +2396,8 @@ stopNumber++;
 currentStopSaved=false;
 
 document.getElementById('tripStartFields').classList.add('hidden');
-document.getElementById('tripTitle').textContent='🚐 Reis actief';
-document.getElementById('stopHeading').textContent='📍 Stop '+stopNumber;
+document.getElementById('tripTitle').textContent='Reis actief';
+document.getElementById('stopHeading').textContent='Stop '+stopNumber;
 document.getElementById('activeTripInfo').textContent=
   'Reis actief · vul de gegevens van stop '+stopNumber+' in';
 
@@ -2524,7 +2623,7 @@ if(!filteredTrips.length){
   return;
 }
 setTripFilterHint(filterValue==='closed'
-  ?'Afgesloten reizen tonen de knop 📄 Reisrapport.'
+  ?'Afgesloten reizen tonen de knop Reisrapport.'
   :'Toon de huidige actieve reis. Afgesloten reizen blijven beschikbaar via het filter.');
  
 const ids=filteredTrips.map(t=>t.id);
@@ -2541,8 +2640,8 @@ ${ts.slice(0,5).map(s=>`<div class="trip-stop">📍 <b>${esc(s.camperplaats||'On
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
 <div class="edit-actions">
  <button class="secondary" onclick="showTripDetail(${t.id})">Bekijk reis</button>
- ${closed?`<button class="primary" onclick="showTripDetail(${t.id},true)">📄 Reisrapport</button>`:''}
- <button class="secondary" onclick="startTripEdit(${t.id})">✏️ Bewerken</button>
+ ${closed?`<button class="primary" onclick="showTripDetail(${t.id},true)">Reisrapport</button>`:''}
+ <button class="secondary" onclick="startTripEdit(${t.id})">Bewerken</button>
 </div>
 </div>`;
 }).join('');
@@ -2633,7 +2732,7 @@ ${s.voorzieningen?`<div>${esc(s.voorzieningen)}</div>`:''}
 ${s.ervaring?`<p>${esc(s.ervaring)}</p>`:''}
 ${s.prijs_per_nacht!=null?`<div class="muted">💶 ${formatCurrency(s.prijs_per_nacht)} / nacht</div>`:''}
 ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+''+stopFotos.map(f=>`<div style="margin-top:10px"><img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;"></div>`).join(''):''}
-<div class="edit-actions"><button class="secondary" onclick="startStopEdit(${s.id},${id})">✏️ Bewerken</button></div>
+<div class="edit-actions"><button class="secondary" onclick="startStopEdit(${s.id},${id})">Bewerken</button></div>
 </div>`;
   }
   if(item.type==='kost'){
@@ -2641,7 +2740,7 @@ ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+'
     return `<div class="trip-stop" style="border-left-color:#e0a800"><b>${esc(getTravelCostCategoryLabel(k.type_kost))}</b>${k.land?' · '+esc(k.land):''}
 <div class="muted">${esc(k.datum)}${k.opmerking?' · '+esc(k.opmerking):''}</div>
 <div>💶 ${formatCurrency(k.bedrag)}</div>
-<div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${k.id})">✏️ Bewerken</button></div></div>`;
+<div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${k.id})">Bewerken</button></div></div>`;
   }
   if(item.type==='tank'){
     const x=item.data;
@@ -2650,7 +2749,7 @@ ${stopFotos.length?`<div class="muted">📸 ${stopFotos.length} foto(s)</div>`+'
     return `<div class="trip-stop" style="border-left-color:#2e7d32"><b>⛽ Tanken${x.brandstof_type?' ('+esc(x.brandstof_type)+')':''}</b>${x.locatie?' · '+esc(x.locatie):''}${x.land?' · '+esc(x.land):''}
 <div class="muted">${esc(x.datum)}</div>
 <div>${liters.toFixed(2).replace('.',',')} l · ${formatCurrency(kost)}</div>
-<div class="edit-actions"><button class="secondary" onclick="startFuelEdit(${x.id})">✏️ Bewerken</button></div></div>`;
+<div class="edit-actions"><button class="secondary" onclick="startFuelEdit(${x.id})">Bewerken</button></div></div>`;
   }
   return '';
 }).join(''):'<div class="muted">Geen activiteiten.</div>'}
@@ -2985,13 +3084,13 @@ async function updateFuelCalcAsync(km,liters){
 
 function updateFuelFormMode(){
   const isEditing=Boolean(editingFuelId);
-  document.getElementById('fuelFormTitle').textContent=isEditing?'✏️ Tankbeurt bewerken':'Nieuwe tankbeurt';
-  document.getElementById('saveFuelBtn').textContent=isEditing?'💾 Tankbeurt wijzigen':'⛽ Tankbeurt opslaan';
+  document.getElementById('fuelFormTitle').textContent=isEditing?'Tankbeurt bewerken':'Nieuwe tankbeurt';
+  document.getElementById('saveFuelBtn').textContent=isEditing?'Tankbeurt wijzigen':'Tankbeurt opslaan';
   document.getElementById('cancelFuelEditBtn').classList.toggle('hidden',!isEditing);
   document.getElementById('newFuelEntryBtn').classList.toggle('hidden',!isEditing);
   const notice=document.getElementById('fuelEditNotice');
   if(isEditing){
-    notice.textContent='Je bewerkt een bestaande tankbeurt. Kies "➕ Nieuwe tankbeurt" om een extra record toe te voegen.';
+    notice.textContent='Je bewerkt een bestaande tankbeurt. Kies "Nieuwe tankbeurt" om een extra record toe te voegen.';
     notice.className='status ok';
   }else{
     notice.textContent='';
@@ -3181,28 +3280,97 @@ async function loadFuel(){
   }
 }
 
-async function loadStats(){
- const [{data:trips},{data:tanks}]=await Promise.all([
-  supabase
-    .from('reizen')
-    .select('id,start_km,eind_km,einddatum')
-    .eq('camper_id', activeCamperId),
+function setTextIfPresent(id,text){
+  const el=document.getElementById(id);
+  if(el)el.textContent=text;
+}
 
-  supabase
-    .from('tankbeurten')
-    .select('kmstand,liters,totaalbedrag')
-    .eq('camper_id', activeCamperId)
-]);
+function renderHomeRecentList(items){
+  const list=document.getElementById('homeRecentList');
+  if(!list)return;
+  list.innerHTML=items.map(item=>`<div class="home-recent-item"><div class="home-compact-label">${esc(item.label)}</div><div class="home-compact-value">${esc(item.title)}</div><div class="muted">${esc(item.meta)}</div></div>`).join('');
+}
 
-  const tripRows=trips||[], tankRows=tanks||[];
-  const tripIds=tripRows.map(x=>x.id);
-  let stopRows=[];
-  if(tripIds.length){
-    const {data:stops}=await supabase.from('reis_stops').select('id').in('reis_id',tripIds);
-    stopRows=stops||[];
+function renderHomeTripSummary(activeTrip,stops,recentFuel,recentCost){
+  const titleEl=document.getElementById('homeActiveTripTitle');
+  const metaEl=document.getElementById('homeActiveTripMeta');
+  const statusEl=document.getElementById('homeStatusLine');
+  const primaryBtn=document.getElementById('homeTripPrimaryAction');
+  const secondaryBtn=document.getElementById('homeTripSecondaryAction');
+  const tripsCardTitle=document.getElementById('homeTripsCardTitle');
+  if(!titleEl||!metaEl||!statusEl||!primaryBtn||!secondaryBtn)return;
+
+  if(!activeTrip){
+    titleEl.textContent='Geen actieve reis';
+    metaEl.textContent='Start een nieuwe reis om stops, tankbeurten en uitgaven te registreren.';
+    statusEl.textContent='Geen actieve reis. Gebruik hieronder de snelste acties.';
+    setTextIfPresent('homeTripDriver','—');
+    setTextIfPresent('homeTripStopCount','0');
+    setTextIfPresent('homeTripLastStop','—');
+    primaryBtn.textContent='Nieuwe reis starten';
+    secondaryBtn.textContent='Reizen bekijken';
+    if(tripsCardTitle)tripsCardTitle.textContent='Nieuwe reis starten';
+    return;
   }
-  document.getElementById('tripCount').textContent=tripRows.filter(x=>x.einddatum).length;
-  document.getElementById('stopCount').textContent=stopRows.length;
+
+  const driver=[activeTrip.bestuurder,activeTrip.passagier].filter(Boolean).join(' · ')||activeTrip.crew||'Actieve reis';
+  const lastStop=stops[0]||null;
+  titleEl.textContent=driver;
+  metaEl.textContent=[formatDate(activeTrip.datum),lastStop?.camperplaats?`Laatste stop: ${lastStop.camperplaats}`:'Reis is actief'].filter(Boolean).join(' · ');
+  statusEl.textContent='Actieve reis beschikbaar. Voeg direct een stop, tankbeurt of reisuitgave toe.';
+  setTextIfPresent('homeTripDriver',activeTrip.bestuurder||activeTrip.crew||'—');
+  setTextIfPresent('homeTripStopCount',String(stops.length));
+  setTextIfPresent('homeTripLastStop',lastStop?.camperplaats||'Nog geen stop');
+  primaryBtn.textContent='Stop toevoegen';
+  secondaryBtn.textContent='Reis openen';
+  if(tripsCardTitle)tripsCardTitle.textContent='Open actieve reis';
+
+  renderHomeRecentList([
+    {
+      label:'Laatste stop',
+      title:lastStop?.camperplaats||'Nog geen stops',
+      meta:lastStop?[lastStop.land||'Onbekend land',formatDate(lastStop.datum)].filter(Boolean).join(' · '):'Voeg een eerste stop toe in Reizen.'
+    },
+    {
+      label:'Laatste tankbeurt',
+      title:recentFuel?.locatie||'Nog geen tankbeurt',
+      meta:recentFuel?[formatDate(recentFuel.datum),recentFuel.land||formatLiters(recentFuel.liters)].filter(Boolean).join(' · '):'Open Tanken om een eerste registratie toe te voegen.'
+    },
+    {
+      label:'Laatste reisuitgave',
+      title:recentCost?getTravelCostCategoryLabel(recentCost.type_kost||'Overig'):'Nog geen reisuitgave',
+      meta:recentCost?[formatDate(recentCost.datum),formatCurrency(recentCost.bedrag),recentCost.opmerking||''].filter(Boolean).join(' · '):'Open Reisuitgaven om een uitgave toe te voegen.'
+    }
+  ]);
+}
+
+async function loadStats(){
+  const [{data:trips},{data:tanks}]=await Promise.all([
+    supabase
+      .from('reizen')
+      .select('id,start_km,eind_km,einddatum,datum,bestuurder,passagier,crew')
+      .eq('camper_id', activeCamperId)
+      .order('datum',{ascending:false}),
+
+    supabase
+      .from('tankbeurten')
+      .select('kmstand,liters,totaalbedrag,prijs_per_liter,brandstof_type,datum,locatie,land')
+      .eq('camper_id', activeCamperId)
+  ]);
+
+  const tripRows=trips||[];
+  const tankRows=tanks||[];
+  const tripIds=tripRows.map(x=>x.id);
+  const emptyTripIds=tripIds.length?tripIds:[-1];
+  const [{data:stopRows},{data:recentFuel},{data:recentCost}]=await Promise.all([
+    supabase.from('reis_stops').select('id,reis_id,datum,camperplaats,land,volgorde').in('reis_id',emptyTripIds).order('datum',{ascending:false}),
+    supabase.from('tankbeurten').select('datum,locatie,land,liters').eq('camper_id',activeCamperId).order('datum',{ascending:false}).limit(1).maybeSingle(),
+    supabase.from('reiskosten').select('datum,bedrag,type_kost,opmerking').in('reis_id',emptyTripIds).order('datum',{ascending:false}).limit(1).maybeSingle()
+  ]);
+
+  const stops=stopRows||[];
+  setTextIfPresent('tripCount',String(tripRows.filter(x=>x.einddatum).length));
+  setTextIfPresent('stopCount',String(stops.length));
 
   const kms=[];
   tripRows.forEach(x=>{
@@ -3213,20 +3381,17 @@ async function loadStats(){
 
   const currentKm=kms.length?Math.max(...kms):null;
   const firstKm=kms.length?Math.min(...kms):null;
-  document.getElementById('odometer').textContent=
-    currentKm!=null?Number(currentKm).toLocaleString('nl-BE')+' km':'—';
-  document.getElementById('totalKm').textContent=
-    currentKm!=null&&firstKm!=null?(currentKm-firstKm).toLocaleString('nl-BE')+' km':'—';
+  setTextIfPresent('odometer',currentKm!=null?Number(currentKm).toLocaleString('nl-BE')+' km':'—');
+  setTextIfPresent('totalKm',currentKm!=null&&firstKm!=null?(currentKm-firstKm).toLocaleString('nl-BE')+' km':'—');
 
-  const sortedTanks=[...tankRows].sort((a,b)=>Number(a.kmstand)-Number(b.kmstand));
+  const sortedTanks=[...tankRows].filter(x=>x.kmstand!=null).sort((a,b)=>Number(a.kmstand)-Number(b.kmstand));
   const dieselTanks=sortedTanks.filter(x=>!x.brandstof_type||x.brandstof_type==='Diesel');
-  let intervalLiters=0,intervalKm=0,totalLiters=0,totalCost=0;
+  let intervalLiters=0,intervalKm=0,totalCost=0;
   sortedTanks.forEach((x)=>{
     const liters=Number(x.liters||0);
     const price=Number(x.prijs_per_liter||0);
     const cost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*price;
     totalCost+=cost;
-    if(!x.brandstof_type||x.brandstof_type==='Diesel') totalLiters+=liters;
   });
   dieselTanks.forEach((x,i)=>{
     if(i>0){
@@ -3236,22 +3401,31 @@ async function loadStats(){
   });
 
   const avg=intervalKm>0?(intervalLiters/intervalKm)*100:null;
-  document.getElementById('avgConsumption').textContent=
-    avg!=null?avg.toFixed(2).replace('.',',')+' l/100 km':'—';
-  document.getElementById('fuelCost').textContent=
-    '€ '+totalCost.toFixed(2).replace('.',',');
-  document.getElementById('dashboardLiters').textContent=
-    totalLiters.toFixed(2).replace('.',',')+' l';
-  document.getElementById('dashboardFuelCount').textContent=tankRows.length;
+  setTextIfPresent('avgConsumption',avg!=null?avg.toFixed(2).replace('.',',')+' l/100 km':'—');
+  setTextIfPresent('fuelCost','€ '+totalCost.toFixed(2).replace('.',','));
 
-  const recent=await supabase.from('reis_stops')
-    .select('camperplaats,datum,land')
-    .in('reis_id',tripIds.length?tripIds:[-1])
-    .order('datum',{ascending:false}).limit(3);
-
-  document.getElementById('recent').innerHTML=(recent.data||[]).map(x=>
-    `<div class="item"><b>${esc(x.camperplaats||'Onbenoemde stop')}</b><div class="muted">${esc(x.land||'')} · ${esc(x.datum)}</div></div>`
-  ).join('')||'Nog geen stops.';
+  const activeTrip=tripRows.find(x=>!x.einddatum)||null;
+  const activeTripStops=activeTrip?stops.filter(s=>s.reis_id===activeTrip.id).sort((a,b)=>String(b.datum).localeCompare(String(a.datum))||Number(b.volgorde||0)-Number(a.volgorde||0)):[];
+  if(!activeTrip){
+    renderHomeRecentList([
+      {
+        label:'Laatste stop',
+        title:stops[0]?.camperplaats||'Nog geen stops',
+        meta:stops[0]?[stops[0].land||'Onbekend land',formatDate(stops[0].datum)].filter(Boolean).join(' · '):'Voeg een eerste stop toe in Reizen.'
+      },
+      {
+        label:'Laatste tankbeurt',
+        title:recentFuel?.locatie||'Nog geen tankbeurt',
+        meta:recentFuel?[formatDate(recentFuel.datum),recentFuel.land||formatLiters(recentFuel.liters)].filter(Boolean).join(' · '):'Open Tanken om een eerste registratie toe te voegen.'
+      },
+      {
+        label:'Laatste reisuitgave',
+        title:recentCost?getTravelCostCategoryLabel(recentCost.type_kost||'Overig'):'Nog geen reisuitgave',
+        meta:recentCost?[formatDate(recentCost.datum),formatCurrency(recentCost.bedrag),recentCost.opmerking||''].filter(Boolean).join(' · '):'Open Reisuitgaven om een uitgave toe te voegen.'
+      }
+    ]);
+  }
+  renderHomeTripSummary(activeTrip,activeTripStops,recentFuel||null,recentCost||null);
 }
 
 function v(id){return document.getElementById(id).value.trim()}
@@ -3666,35 +3840,76 @@ window.createInviteCode=async function(){
   await loadInviteCodes();
 };
 
-document.querySelectorAll('nav button[data-tab]').forEach(b=>b.onclick=async()=>{
-document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
-b.classList.add('active');
-document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
-document.getElementById(b.dataset.tab).classList.add('active');
-if(b.dataset.tab==='fuel'){
-  await prepareFuelForm();
-  await loadFuel();
+const SECTION_NAV_GROUPS={
+  home:'home',
+  trips:'trips',
+  more:'more',
+  fuel:'home',
+  reiskosten:'home',
+  maintenance:'more',
+  personen:'more',
+  vrienden:'more',
+  'ontdekte-plaatsen':'more',
+  camper:'more',
+  beheer:'more',
+  'leden-beheren':'more'
+};
+
+async function openSection(sectionId,navKey=SECTION_NAV_GROUPS[sectionId]||'home'){
+  document.querySelectorAll('nav button[data-nav]').forEach(button=>{
+    button.classList.toggle('active',button.dataset.nav===navKey);
+  });
+  document.querySelectorAll('section').forEach(section=>section.classList.remove('active'));
+  const target=document.getElementById(sectionId);
+  if(target)target.classList.add('active');
+
+  if(sectionId==='fuel'){
+    await prepareFuelForm();
+    await loadFuel();
+  }
+  if(sectionId==='personen'){
+    await loadPersonen();
+  }
+  if(sectionId==='vrienden'){
+    await loadVriendVerzoeken();
+    await loadVrienden();
+  }
+  if(sectionId==='ontdekte-plaatsen'){
+    await loadOntdektePlaatsen();
+  }
+  if(sectionId==='beheer'){
+    await loadBeheer();
+  }
+  if(sectionId==='camper'){
+    await loadCamperTab();
+  }
+  if(sectionId==='leden-beheren'){
+    await loadLedenBeheren();
+  }
+
+  target?.scrollIntoView({behavior:'smooth',block:'start'});
 }
-if(b.dataset.tab==='personen'){
-  await loadPersonen();
-}
-if(b.dataset.tab==='vrienden'){
-  await loadVriendVerzoeken();
-  await loadVrienden();
-}
-if(b.dataset.tab==='ontdekte-plaatsen'){
-  await loadOntdektePlaatsen();
-}
-if(b.dataset.tab==='beheer'){
-  await loadBeheer();
-}
-if(b.dataset.tab==='camper'){
-  await loadCamperTab();
-}
-if(b.dataset.tab==='leden-beheren'){
-  await loadLedenBeheren();
-}
-});
+
+window.openSection=openSection;
+window.openHomeTripFlow=async function(){
+  await openSection('trips','trips');
+  if(activeTripId){
+    document.getElementById('tripForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+    return;
+  }
+  await startNewTrip();
+  document.getElementById('tripForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+};
+window.openHomeTripOverview=async function(){
+  await openSection('trips','trips');
+  if(activeTripId){
+    await showTripDetail(activeTripId);
+  }else{
+    document.getElementById('tripChooser')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+};
+
+document.querySelectorAll('nav button[data-nav]').forEach(button=>button.onclick=()=>openSection(button.dataset.nav,button.dataset.nav));
 const photoUpload = document.getElementById('photoUpload');
 
 function setPhotoStatus(message,isError=false){
@@ -4226,7 +4441,7 @@ window.startTravelCostEdit=async function(id){
   document.getElementById('costCountry').value=data.land||'';
   selectedTravelCostCategory=mapTravelCostTypeToCategory(data.type_kost||'');
   updateTravelCostCategoryCards();
-  document.getElementById('saveTravelCostBtn').textContent='💾 Reiskost wijzigen';
+  document.getElementById('saveTravelCostBtn').textContent='Reisuitgave wijzigen';
   document.getElementById('cancelTravelCostEditBtn').classList.remove('hidden');
   document.getElementById('reiskosten').scrollIntoView({behavior:'smooth',block:'start'});
 };
@@ -4240,7 +4455,7 @@ window.cancelTravelCostEdit=function(){
   document.getElementById('costCountry').selectedIndex=0;
   document.getElementById('costAmount').value='';
   document.getElementById('costNote').value='';
-  document.getElementById('saveTravelCostBtn').textContent='💾 Reiskosten opslaan';
+  document.getElementById('saveTravelCostBtn').textContent='Reisuitgave opslaan';
   document.getElementById('cancelTravelCostEditBtn').classList.add('hidden');
 };
 
