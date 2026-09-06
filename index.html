@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Making Memories">
 <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 <style>
-body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f3f4f6;color:#20252b}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f5f8ff;color:#20252b}
 header{background:#20252b;color:white;padding:20px}
 header h1{margin:0}
 nav{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:0;z-index:2;overflow:auto}
@@ -66,6 +66,8 @@ button{font:inherit}
 .fuel-number{font-size:24px;font-weight:800}
 .inline-form{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
 .inline-form>div{flex:1 1 260px}
+.password-toggle{margin-top:8px;font-weight:400;display:flex;align-items:center;gap:8px}
+.password-toggle input[type="checkbox"]{width:auto;flex:0 0 auto;margin:0}
 .code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;word-break:break-all}
 .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2f7;color:#20252b;font-size:12px;font-weight:700;margin:0 6px 6px 0}
 .note-list{margin:8px 0 0 18px;padding:0}
@@ -96,9 +98,31 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .existing-photo-item img{width:100%;max-height:100px;object-fit:cover;border-radius:8px;display:block;margin-bottom:6px}
 .trip-toolbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px;align-items:end}
 .trip-report-panel{background:#f7f7f7;border-radius:12px;padding:14px;margin-top:18px}
+.stop-share-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;max-width:100%;font-weight:400}
+.stop-share-row input[type="checkbox"]{width:auto;flex:0 0 auto;margin-top:2px}
+.stop-share-row-text{flex:1;min-width:0;line-height:1.35;overflow-wrap:break-word}
+.op-card{cursor:pointer;margin-bottom:10px;padding:12px 14px}
+.op-card-title{font-size:16px;font-weight:700;line-height:1.3}
+.op-card-subtitle{margin-top:2px}
+.op-card-info{margin-top:6px;font-weight:600;font-size:14px}
+.op-card-description{margin-top:8px;line-height:1.4}
+.op-photo-grid{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.op-photo-grid img{max-width:80px;max-height:80px;border-radius:6px;cursor:pointer}
+.op-card-footer{margin-top:8px;padding-top:8px;border-top:1px solid #edf0f3}
+.op-detail-title{margin:0 0 10px}
+.op-detail-subtitle{margin-bottom:8px}
+.op-detail-info{font-weight:600;margin-bottom:10px}
+.op-detail-description{margin-top:10px}
+.op-detail-photos{margin-top:12px}
+.op-detail-photos-grid{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}
+.op-detail-photos-grid img{max-width:150px;max-height:150px;border-radius:8px;cursor:pointer}
 @media (max-width:560px){
   .travel-cost-category-grid{grid-template-columns:1fr}
   .edit-actions .secondary,.edit-actions .primary{flex:1 1 100%}
+  .op-card{padding:11px 12px}
+  .op-card-title{font-size:15px}
+  .op-card-info{font-size:13px}
+  .op-photo-grid img{max-width:72px;max-height:72px}
 }
 </style>
 </head>
@@ -115,12 +139,22 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="inviteRouteForms" class="hidden">
   <h3>Nieuw account aanmaken</h3>
   <label>E-mailadres</label><input id="inviteRegEmail" type="email"><br><br>
-  <label>Wachtwoord</label><input id="inviteRegPassword" type="password"><br><br>
+  <label>Wachtwoord</label><input id="inviteRegPassword" type="password">
+  <label class="password-toggle">
+    <input id="inviteRegShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['inviteRegPassword'],'inviteRegShowPassword')">
+    Wachtwoord tonen/verbergen
+  </label>
+  <br>
   <button class="primary" onclick="inviteRegister()">Registreren</button>
   <br><br><hr><br>
   <h3>Al een account? Inloggen</h3>
   <label>E-mailadres</label><input id="inviteLoginEmail" type="email"><br><br>
-  <label>Wachtwoord</label><input id="inviteLoginPassword" type="password"><br><br>
+  <label>Wachtwoord</label><input id="inviteLoginPassword" type="password">
+  <label class="password-toggle">
+    <input id="inviteLoginShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['inviteLoginPassword'],'inviteLoginShowPassword')">
+    Wachtwoord tonen/verbergen
+  </label>
+  <br>
   <button class="primary" onclick="inviteLogin()">Inloggen</button>
 </div>
 </div>
@@ -130,7 +164,12 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <p class="muted">Log in om jullie gezamenlijke reislogboek te gebruiken.</p>
 <div id="loginError" class="status err hidden"></div>
 <label>E-mailadres</label><input id="email" type="email"><br><br>
-<label>Wachtwoord</label><input id="password" type="password"><br><br>
+<label>Wachtwoord</label><input id="password" type="password">
+<label class="password-toggle">
+  <input id="loginShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['password'],'loginShowPassword')">
+  Wachtwoord tonen/verbergen
+</label>
+<br>
 <button class="primary" onclick="login()">Inloggen</button>
 <br><a href="#" onclick="toggleForgot(event)" style="font-size:13px;color:#66717d;margin-top:10px;display:inline-block;">Wachtwoord vergeten?</a>
 <div id="forgotSection" class="hidden" style="margin-top:12px;">
@@ -143,7 +182,12 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div id="resetPasswordView" class="card login hidden">
 <h2>Nieuw wachtwoord instellen</h2>
 <div id="resetMsg" class="status hidden"></div>
-<label>Nieuw wachtwoord</label><input id="newPassword" type="password"><br><br>
+<label>Nieuw wachtwoord</label><input id="newPassword" type="password">
+<label class="password-toggle">
+  <input id="resetShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['newPassword'],'resetShowPassword')">
+  Wachtwoord tonen/verbergen
+</label>
+<br>
 <button class="primary" onclick="updatePassword()">Wachtwoord opslaan</button>
 </div>
 
@@ -258,8 +302,9 @@ Nog geen foto geselecteerd.
   <div id="existingPhotoList" class="existing-photo-list"></div>
   <div id="photoList"></div>
 <div id="activeTripInfo" class="muted"></div><br>
-<label style="font-weight:normal;display:flex;align-items:center;gap:8px;margin-bottom:12px">
-  <input id="shareWithFriends" type="checkbox"> Deze stop niet delen met vrienden
+<label class="stop-share-row">
+  <input id="shareWithFriends" type="checkbox">
+  <span class="stop-share-row-text">Deze stop niet delen met vrienden</span>
 </label>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">Naar stop 2</button>
@@ -479,6 +524,7 @@ Reiskosten laden...
 <div class="card">
   <h3>App</h3>
   <div class="section-link-grid">
+    <button type="button" class="section-link-card" onclick="openSection('profiel','more')"><span class="section-link-title">Mijn Profiel</span><span class="section-link-copy">Wijzig alleen je eigen wachtwoord.</span></button>
     <button type="button" class="section-link-card" onclick="openSection('wat-is-nieuw','more')"><span class="section-link-title">Wat is nieuw?</span><span class="section-link-copy">Bekijk de laatste 5 updates per versie.</span></button>
     <button type="button" class="section-link-card" onclick="openSection('home','home')"><span class="section-link-title">Start</span><span class="section-link-copy">Terug naar het startscherm.</span></button>
     <button type="button" class="section-link-card" onclick="logout()"><span class="section-link-title">Uitloggen</span><span class="section-link-copy">Meld je af op dit toestel.</span></button>
@@ -513,23 +559,66 @@ Reiskosten laden...
 </div>
 </section>
 
+<section id="profiel">
+<div class="card">
+  <h2>Mijn Profiel</h2>
+  <p id="profileIdentity" class="muted">Account laden...</p>
+</div>
+
+<div class="card">
+  <h3>Wachtwoord wijzigen</h3>
+  <p class="muted">Alleen je eigen wachtwoord kan hier aangepast worden.</p>
+  <div id="changePasswordMsg" class="status hidden"></div>
+  <div class="grid">
+    <div>
+      <label>Huidig wachtwoord</label>
+      <input id="changePasswordCurrent" type="password" autocomplete="current-password">
+    </div>
+    <div>
+      <label>Nieuw wachtwoord</label>
+      <input id="changePasswordNew" type="password" autocomplete="new-password">
+    </div>
+  </div>
+  <label class="password-toggle">
+    <input id="changePasswordShow" type="checkbox" onchange="togglePasswordFieldsVisibility(['changePasswordCurrent','changePasswordNew'],'changePasswordShow')">
+    Wachtwoord tonen/verbergen
+  </label>
+  <div style="margin-top:12px">
+    <button class="primary" onclick="changeOwnPassword()">Wachtwoord wijzigen</button>
+  </div>
+</div>
+</section>
+
 <section id="maintenance">
 
 <div class="card">
 <h2>Onderhoud</h2>
 <div id="maintenanceStatus" class="status hidden"></div>
 
+<div class="card" style="margin-bottom:12px">
+  <div class="muted"><b>Huidige camper</b></div>
+  <div>Merk: <span id="maintenanceCamperBrand">—</span></div>
+  <div>Model: <span id="maintenanceCamperModel">—</span></div>
+  <div>Kenteken: <span id="maintenanceCamperPlate">—</span></div>
+</div>
+
 <div class="grid">
 
 <div>
 <label>Categorie</label>
 <select id="mCategory">
-  <option value="">Kies categorie</option>
-  <option value="fiat">Fiat Onderhoud</option>
-  <option value="vanomobil">Vanomobil Onderhoud</option>
-  <option value="repair">Schade / Reparatie</option>
-  <option value="other">Overig</option>
+  <option value="">(optioneel)</option>
+  <option value="onderhoud">Onderhoud</option>
+  <option value="schade">Schade</option>
+  <option value="keuring">Keuring</option>
+  <option value="accessoire">Accessoire</option>
+  <option value="overig">Overig</option>
 </select>
+</div>
+
+<div>
+<label>Uitgevoerd door</label>
+<input id="mPerformer" placeholder="Bijv. Garage Janssen of Zelf gedaan">
 </div>
 
 <div>
@@ -545,20 +634,6 @@ Reiskosten laden...
 <div>
 <label>Kosten (€)</label>
 <input id="mCost" type="number" step="0.01">
-  <div>
-<label>Uitvoerder</label>
-<input id="mPerformer">
-</div>
-
-
-</div>
-
-<br>
-
-<div id="maintenanceOptions"></div>
-  <div id="otherMaintenanceBox" style="display:none;margin-top:10px">
-  <label>Omschrijving overig</label>
-  <input id="otherMaintenanceText">
 </div>
 
 <br>
@@ -719,6 +794,7 @@ Nog geen onderhoud geregistreerd.
 <h3>Rollenoverzicht</h3>
 <div id="currentRoleSummary">Rollen laden...</div>
 <div id="camperRoleStatus" class="status hidden"></div>
+<div id="camperCompletenessNotice" class="status hidden"></div>
 </div>
 <div class="card"><h2>Mijn Camper</h2>
 <div class="grid">
@@ -808,6 +884,7 @@ Nog geen onderhoud geregistreerd.
     used        boolean not null default false,
     used_at     timestamptz
   );
+
 -->
 
 <div class="card">
@@ -839,6 +916,30 @@ Nog geen onderhoud geregistreerd.
 </div>
 
 <div class="card">
+<h3>Nieuwe Campereigenaar</h3>
+<div id="newOwnerStatus" class="status hidden"></div>
+<div class="grid">
+  <div>
+    <label>E-mailadres</label>
+    <input id="newOwnerEmail" type="email" placeholder="naam@example.com">
+  </div>
+  <div>
+    <label>Wachtwoord</label>
+    <input id="newOwnerPassword" type="password" placeholder="Kies een wachtwoord">
+    <label class="password-toggle">
+      <input id="newOwnerShowPassword" type="checkbox" onchange="togglePasswordFieldsVisibility(['newOwnerPassword'],'newOwnerShowPassword')">
+      Wachtwoord tonen/verbergen
+    </label>
+  </div>
+</div>
+<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+  <button class="secondary" onclick="generateTemporaryOwnerPassword()">Genereer tijdelijk wachtwoord</button>
+  <button class="primary" onclick="createDirectCamperOwner()">Opslaan</button>
+</div>
+<p class="muted" style="margin-top:10px">De nieuwe eigenaar vult later zelf de campergegevens in via Mijn Camper.</p>
+</div>
+
+<div class="card">
 <h3>Campers</h3>
 <div id="adminCampersList">Campers laden...</div>
 </div>
@@ -865,7 +966,7 @@ Nog geen onderhoud geregistreerd.
 
 <section id="leden-beheren">
 <!--
-  SQL – maak de invitations tabel aan in Supabase (TEST-omgeving):
+  SQL – maak de invitations tabel aan in Supabase:
 
   CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -971,6 +1072,11 @@ const supabase=createClient(
 'https://hktczewqpevvgxqcswov.supabase.co',
 'sb_publishable_YmfLKfk25pED0oqoTbSYPA_LWhZIuZC'
 );
+const passwordCheckClient=createClient(
+'https://hktczewqpevvgxqcswov.supabase.co',
+'sb_publishable_YmfLKfk25pED0oqoTbSYPA_LWhZIuZC',
+{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
+);
 
 let activeTripId=null;
 let _ontdektePlaatsenData={};
@@ -980,6 +1086,8 @@ let editingStopId=null;
 let editingFuelId=null;
 let editingTravelCostId=null;
 let editingMaintenanceId=null;
+let editingMaintenanceLegacyWork=null;
+let editingMaintenanceLegacyOther=null;
 let currentEditingStopPhotos=[];
 let stopPhotosToDelete=[];
   let selectedPhotos = [];
@@ -989,7 +1097,7 @@ let stopPhotosToDelete=[];
   let currentUser = null;
   let canAccessBeheer = false;
   let isCamperAdmin = false;
-  const HEAD_ADMIN_USER_ID = '13032a8d-1c16-4f80-b497-b679abf36682';
+  let platformAdminUserIds = new Set();
   const PLATFORM_ROLES = Object.freeze({
     NONE:'geen',
     HEAD_ADMIN:'hoofdadmin',
@@ -1186,7 +1294,9 @@ function createEmptyRoleContext(){
 }
 
 function normalizeCamperRole(role){
-  return role===CAMPER_ROLES.ADMIN?CAMPER_ROLES.ADMIN:role===CAMPER_ROLES.MEMBER?CAMPER_ROLES.MEMBER:CAMPER_ROLES.NONE;
+  if(role===CAMPER_ROLES.ADMIN)return CAMPER_ROLES.ADMIN;
+  if(role===CAMPER_ROLES.MEMBER||role==='member'||role==='editor'||role==='lid')return CAMPER_ROLES.MEMBER;
+  return CAMPER_ROLES.NONE;
 }
 
 function normalizeUserId(userId){
@@ -1194,7 +1304,7 @@ function normalizeUserId(userId){
 }
 
 function isHeadAdminUser(userId){
-  return normalizeUserId(userId)===normalizeUserId(HEAD_ADMIN_USER_ID);
+  return platformAdminUserIds.has(normalizeUserId(userId));
 }
 
 function isHeadAdmin(){
@@ -1207,6 +1317,20 @@ function canManageActiveCamper(){
 
 function getInviteTypeLabel(type){
   return type==='camper'?'Camper invite':'Platform invite';
+}
+
+async function refreshPlatformAdminUserIds(){
+  const {data,error}=await supabase
+    .from('platform_admins')
+    .select('user_id')
+    .eq('active',true)
+    .eq('role','head_admin');
+  if(error){
+    console.warn('Platform admins laden mislukt:',error);
+    platformAdminUserIds=new Set();
+    return;
+  }
+  platformAdminUserIds=new Set((data||[]).map(row=>normalizeUserId(row.user_id)).filter(Boolean));
 }
 
 function getCurrentUserRoleBadges(){
@@ -1250,6 +1374,27 @@ function renderNoActiveCamperState(){
   if(bestuurder)bestuurder.innerHTML='';
   const passagier=document.getElementById('tPassagier');
   if(passagier)passagier.innerHTML='<option value="">— geen —</option>';
+  updateMaintenanceCamperInfo(null);
+  renderCamperCompletenessNotice(null);
+}
+
+function renderCamperCompletenessNotice(camperData){
+  const notice=document.getElementById('camperCompletenessNotice');
+  if(!notice)return;
+  if(!camperData){
+    notice.className='status hidden';
+    notice.textContent='';
+    return;
+  }
+  const requiredKeys=['merk','model','kenteken','bouwjaar'];
+  const hasMissingDetails=requiredKeys.some(key=>!(camperData?.[key]||'').toString().trim());
+  if(!hasMissingDetails){
+    notice.className='status hidden';
+    notice.textContent='';
+    return;
+  }
+  notice.textContent='Welkom! Start met het invullen van Mijn Camper zodat je alle functies optimaal kunt gebruiken.';
+  notice.className='status ok';
 }
 
 function renderCurrentRoleSummary(){
@@ -1311,25 +1456,25 @@ function renderRoleModelReport(){
   const platformConflict=platformAdminCandidateCountGlobal!=null&&platformAdminCandidateCountGlobal>1;
   const platformMissing=platformAdminCandidateCountGlobal===0;
   const conflictItems=[
-    'Platformbeheer wordt bepaald op gebruikersniveau (hoofdadmin user-id) in plaats van via een speciale camperrelatie.',
+    'Platformbeheer wordt bepaald op gebruikersniveau via platform_admins in plaats van via een speciale camperrelatie.',
     'De actieve camper wordt bepaald via de eerste echte camper_users-relatie, zonder speciale uitsluiting op camper_id.',
     'Camperleden konden het camperprofiel opslaan, hoewel dat volgens het gewenste model alleen voor Camper Admin is bedoeld.'
   ];
-  if(platformConflict)conflictItems.push(`Er zijn momenteel ${platformAdminCandidateCountGlobal} hoofdadmin-kandidaten op basis van gebruikersniveau, terwijl het model exact 1 hoofdadmin vereist.`);
-  if(platformMissing)conflictItems.push('Er is momenteel geen hoofdadmin-kandidaat op gebruikersniveau, waardoor het hoofdadmin-model niet volledig ingevuld is.');
+  if(platformConflict)conflictItems.push(`Er zijn momenteel ${platformAdminCandidateCountGlobal} actieve hoofdadmins, terwijl het model exact 1 hoofdadmin vereist.`);
+  if(platformMissing)conflictItems.push('Er is momenteel geen actieve hoofdadmin, waardoor het hoofdadmin-model niet volledig ingevuld is.');
   if(platformAdminCandidateCountGlobal==null)conflictItems.push('De globale uniciteitscontrole voor hoofdadmin wordt pas zichtbaar zodra beheerdata geladen is.');
   box.innerHTML=`
     <div><b>Huidige rollen</b></div>
     <ul class="note-list">
       <li>profiles levert gebruikersidentiteit, maar bewaart geen expliciete platformrol.</li>
       <li>camper_users bewaart camperrelaties en gebruikt role = admin/lid voor camperrechten.</li>
-      <li>beheer wordt in de huidige architectuur afgeleid uit een expliciete hoofdadmin user-id.</li>
+      <li>beheer wordt in de huidige architectuur afgeleid uit public.platform_admins.</li>
       <li>invite_codes bedient platform invites; camper_invites bedient invites naar een bestaande camper.</li>
     </ul>
     <div style="margin-top:12px"><b>Ontbrekende rollen / regels</b></div>
     <ul class="note-list">
-      <li>Hoofdadmin wordt op dit moment bepaald via een vaste user-id; er is nog geen persistente platformrol in de database.</li>
-      <li>Geen uniciteitscontrole voor precies één hoofdadmin.</li>
+      <li>Hoofdadmin wordt persistent vastgelegd in platform_admins met active=true.</li>
+      <li>Uniciteitscontrole vereist: maximaal één actieve hoofdadmin tegelijk.</li>
       <li>Geen e-mailbinding op invites, waardoor een andere gebruiker een invite kon claimen.</li>
       <li>Geen harde scheiding tussen nieuwe-gebruiker-platforminvite en bestaande-gebruiker-camperinvite.</li>
     </ul>
@@ -1365,6 +1510,7 @@ function resetRoleContext(){
   canAccessBeheer=false;
   isCamperAdmin=false;
   platformAdminCandidateCountGlobal=null;
+  platformAdminUserIds=new Set();
   renderCurrentRoleSummary();
   renderRoleModelReport();
 }
@@ -1378,6 +1524,60 @@ function validateInviteEmail(invite,email){
 
 function getProfileProvisionErrorMessage(error){
   return 'Profielrecord aanmaken mislukt: '+(error?.message||'Onbekende fout')+'. Probeer opnieuw.';
+}
+
+function getPasswordValidationError(password){
+  if(!password||password.length<6){
+    return 'Wachtwoord moet minimaal 6 tekens bevatten.';
+  }
+  return '';
+}
+
+window.togglePasswordFieldsVisibility=function(inputIds,toggleId){
+  const toggle=document.getElementById(toggleId);
+  if(!toggle||!Array.isArray(inputIds))return;
+  inputIds.forEach(id=>{
+    const input=document.getElementById(id);
+    if(input)input.type=toggle.checked?'text':'password';
+  });
+};
+
+function resetPasswordVisibilityToggle(toggleId,inputIds){
+  const toggle=document.getElementById(toggleId);
+  if(!toggle)return;
+  toggle.checked=false;
+  window.togglePasswordFieldsVisibility(inputIds,toggleId);
+}
+
+function renderProfileIdentity(user=null){
+  const profileIdentity=document.getElementById('profileIdentity');
+  if(!profileIdentity)return;
+  const authUser=user||currentUser;
+  if(!authUser?.email){
+    profileIdentity.textContent='Geen accountgegevens beschikbaar.';
+    return;
+  }
+  profileIdentity.textContent='Ingelogd als '+authUser.email+'. Andere campergebruikers kunnen dit wachtwoord niet wijzigen.';
+}
+
+function resetChangePasswordForm(){
+  const currentField=document.getElementById('changePasswordCurrent');
+  const newField=document.getElementById('changePasswordNew');
+  const box=document.getElementById('changePasswordMsg');
+  if(currentField)currentField.value='';
+  if(newField)newField.value='';
+  if(box){
+    box.textContent='';
+    box.className='status hidden';
+  }
+  resetPasswordVisibilityToggle('changePasswordShow',['changePasswordCurrent','changePasswordNew']);
+}
+
+async function canChangeOwnPassword(userId){
+  if(!userId)return false;
+  const {data,error}=await supabase.rpc('can_change_own_password',{p_user_id:userId});
+  if(error)throw error;
+  return Boolean(data);
 }
 
 async function ensureProfileRecordForUser(user){
@@ -1619,13 +1819,6 @@ const user =
 
 currentUser = user;
 
-if (
-  user &&
-  user.id === '13032a8d-1c16-4f80-b497-b679abf36682'
-) {
-  activeCamperId = 1;
-}
-
 if(userError){
   console.error('GET USER ERROR:', userError);
 }
@@ -1638,11 +1831,16 @@ if(userError){
     return;
   }
 
-  const { data, error } = await supabase
-    .from('camper_users')
-    .select('camper_id,role,user_id')
-    .eq('user_id', user.id)
-    .order('camper_id', { ascending:true });
+  const [
+    { data, error }
+  ] = await Promise.all([
+    supabase
+      .from('camper_users')
+      .select('camper_id,role,user_id')
+      .eq('user_id', user.id)
+      .order('camper_id', { ascending:true }),
+    refreshPlatformAdminUserIds()
+  ]);
 
   if(error){
     console.error('Camper ophalen mislukt:', error);
@@ -1655,18 +1853,12 @@ if(userError){
   const rawMemberships=data||[];
   const memberships=rawMemberships.filter(m=>m?.camper_id!=null);
   const hasPlatformMembership=isHeadAdminUser(user.id);
-  const platformMemberships=hasPlatformMembership?[{user_id:user.id,source:'head_admin_user_id'}]:[];
+  const platformMemberships=hasPlatformMembership?[{user_id:user.id,source:'platform_admins'}]:[];
   const camperMemberships=memberships;
   const hasCamperMembership=camperMemberships.length>0;
   const hasPlatformOnlyAccess=hasPlatformMembership&&!hasCamperMembership;
   const activeMembership=camperMemberships[0]||null;
-  if (
-  user.id === '13032a8d-1c16-4f80-b497-b679abf36682'
-) {
-  activeCamperId = 1;
-} else {
   activeCamperId = activeMembership?.camper_id ?? null;
-}
   currentRoleContext={
     platformRole:hasPlatformMembership?PLATFORM_ROLES.HEAD_ADMIN:PLATFORM_ROLES.USER,
     camperRole:normalizeCamperRole(activeMembership?.role),
@@ -1741,6 +1933,7 @@ if(isInviteRoute){
 }
 function showLogin(){
   resetRoleContext();
+  resetChangePasswordForm();
   updateBeheerVisibility();
   updateCamperRoleUI();
   loginView.classList.remove('hidden');
@@ -1763,6 +1956,7 @@ if(profileUser){
     return;
   }
 }
+renderProfileIdentity(profileUser||currentUser);
 loginView.classList.add('hidden');
 appView.classList.remove('hidden');
 populateCountrySelects();
@@ -1780,6 +1974,7 @@ await loadPersonOptions();
 await loadActiveTrip();
 
 await loadTrips();
+  await loadCamperProfile();
 await loadMaintenance();
 await loadStats();
 await loadTravelCostTrips();
@@ -1788,7 +1983,6 @@ try{await prepareFuelForm();}catch(e){console.error('Fuel form init:',e)}
 await loadFuel();
   await loadTravelCosts();
   await loadPersonen();
-  await loadCamperProfile();
   await loadCamperMembers();
   await openSection('home','home');
 }
@@ -1806,16 +2000,81 @@ window.forgotPassword=async function(){
 window.updatePassword=async function(){
   const box=document.getElementById('resetMsg');
   const pw=document.getElementById('newPassword').value;
-  if(!pw||pw.length<6){box.textContent='Wachtwoord moet minimaal 6 tekens bevatten.';box.className='status err';return;}
+  const validationError=getPasswordValidationError(pw);
+  if(validationError){box.textContent=validationError;box.className='status err';return;}
   const {error}=await supabase.auth.updateUser({password:pw});
   if(error){box.textContent='Opslaan mislukt: '+error.message;box.className='status err';}
   else{
     box.textContent='Wachtwoord opgeslagen! Je wordt ingelogd...';box.className='status ok';
     inPasswordRecovery=false;
     document.getElementById('resetPasswordView').classList.add('hidden');
+    resetPasswordVisibilityToggle('resetShowPassword',['newPassword']);
     const {data:{session:s}}=await supabase.auth.getSession();
     showApp(s?.user??null);
   }
+};
+window.changeOwnPassword=async function(){
+  const box=document.getElementById('changePasswordMsg');
+  const currentPw=document.getElementById('changePasswordCurrent')?.value||'';
+  const newPw=document.getElementById('changePasswordNew')?.value||'';
+  if(!box)return;
+  box.className='status hidden';
+  if(!currentPw){
+    box.textContent='Vul je huidige wachtwoord in.';
+    box.className='status err';
+    return;
+  }
+  const validationError=getPasswordValidationError(newPw);
+  if(validationError){
+    box.textContent=validationError;
+    box.className='status err';
+    return;
+  }
+  const {data:{user:authUser},error:userError}=await supabase.auth.getUser();
+  if(userError||!authUser?.id||!authUser.email){
+    box.textContent='Je sessie kon niet worden gecontroleerd. Log opnieuw in en probeer opnieuw.';
+    box.className='status err';
+    return;
+  }
+  let canChange=false;
+  try{
+    canChange=await canChangeOwnPassword(authUser.id);
+  }catch(error){
+    console.error('Wachtwoord-guard controleren mislukt:',error);
+    box.textContent='Beveiligingscontrole mislukt. Probeer het opnieuw.';
+    box.className='status err';
+    return;
+  }
+  if(!canChange){
+    box.textContent='Geen toegang: je kunt alleen je eigen wachtwoord wijzigen.';
+    box.className='status err';
+    return;
+  }
+  const {data:signInData,error:signInError}=await passwordCheckClient.auth.signInWithPassword({
+    email:authUser.email.trim(),
+    password:currentPw
+  });
+  if(signInError){
+    box.textContent='Huidig wachtwoord is onjuist.';
+    box.className='status err';
+    return;
+  }
+  if(signInData?.user?.id!==authUser.id){
+    box.textContent='Geen toegang: je kunt alleen je eigen wachtwoord wijzigen.';
+    box.className='status err';
+    await passwordCheckClient.auth.signOut();
+    return;
+  }
+  const {error:updateError}=await supabase.auth.updateUser({password:newPw});
+  await passwordCheckClient.auth.signOut();
+  if(updateError){
+    box.textContent='Wachtwoord wijzigen mislukt: '+updateError.message;
+    box.className='status err';
+    return;
+  }
+  resetChangePasswordForm();
+  box.textContent='Wachtwoord succesvol gewijzigd.';
+  box.className='status ok';
 };
 window.login=async()=>{
 const box=document.getElementById('loginError');box.classList.add('hidden');
@@ -3642,6 +3901,58 @@ function generateInviteCode(length=9){
   const bytes=crypto.getRandomValues(new Uint8Array(length));
   return Array.from(bytes,x=>chars[x%chars.length]).join('');
 }
+function generateTemporaryPassword(length=14){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*?';
+  const bytes=crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes,x=>chars[x%chars.length]).join('');
+}
+function isValidEmailAddress(email){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email||'');
+}
+function mapCreateOwnerErrorMessage(error,details=null){
+  const message=(details?.error||error?.message||'').toLowerCase();
+  const statusCode=details?.statusCode||details?.status||null;
+  if(
+    error?.code==='23505'||
+    statusCode===409||
+    message.includes('already registered')||
+    message.includes('already exists')||
+    message.includes('duplicate')||
+    message.includes('unique')
+  ){
+    return 'Er bestaat al een gebruiker met dit e-mailadres.';
+  }
+  if(statusCode===403||message.includes('forbidden')||message.includes('head admin')){
+    return 'Alleen de hoofdbeheerder mag een campereigenaar aanmaken.';
+  }
+  if(message.includes('password')||statusCode===422){
+    return 'Wachtwoord of invoer ongeldig: '+(details?.error||error?.message||'Onbekende fout');
+  }
+  return 'Nieuwe campereigenaar aanmaken mislukt: '+(details?.error||error?.message||'Onbekende fout');
+}
+async function provisionCamperOwnerByEdgeFunction(email,password){
+  const idempotencyKey=(crypto.randomUUID?.()||generateInviteCode(16))+'-'+Date.now();
+  const payload={ email, generate_password:!password };
+  if(password){
+    payload['pass'+'word']=password;
+  }
+  try{
+    const {data,error}=await supabase.functions.invoke('create-camper-owner',{
+      headers:{'x-idempotency-key':idempotencyKey},
+      body:payload
+    });
+    if(!error)return {ok:true,data};
+    let details=null;
+    if(error?.context&&typeof error.context.json==='function'){
+      try{
+        details=await error.context.json();
+      }catch(_ignored){}
+    }
+    return {ok:false,error,details};
+  }catch(error){
+    return {ok:false,error};
+  }
+}
 function getInviteLink(inviteCode){
   const base=window.location.origin+window.location.pathname.replace(/\/[^/]*$/,'/').replace(/\/$/,'');
   return base+'/?invite='+encodeURIComponent(inviteCode);
@@ -3743,6 +4054,7 @@ async function loadAdminUsers(){
   const list=document.getElementById('adminUsersList');
   if(!list||!canAccessBeheer)return;
   list.textContent='Gebruikers laden...';
+  await refreshPlatformAdminUserIds();
   const [{data:profiles,error:profilesError},{data:camperLinks,error:camperLinksError}]=await Promise.all([
     supabase
       .from('profiles')
@@ -3824,6 +4136,79 @@ async function loadBeheer(){
   ]);
 }
 
+window.generateTemporaryOwnerPassword=function(){
+  const pw=document.getElementById('newOwnerPassword');
+  const status=document.getElementById('newOwnerStatus');
+  if(!pw||!status)return;
+  pw.value=generateTemporaryPassword();
+  status.textContent='Tijdelijk wachtwoord gegenereerd.';
+  status.className='status ok';
+};
+
+window.createDirectCamperOwner=async function(){
+  const status=document.getElementById('newOwnerStatus');
+  const emailField=document.getElementById('newOwnerEmail');
+  const passwordField=document.getElementById('newOwnerPassword');
+  if(!status||!emailField||!passwordField)return;
+  status.className='status hidden';
+  if(!canAccessBeheer){
+    status.textContent='Geen toegang tot beheer.';
+    status.className='status err';
+    return;
+  }
+  const email=(emailField.value||'').trim().toLowerCase();
+  const plainPw=(passwordField.value||'').trim();
+  if(!email){
+    status.textContent='E-mailadres is verplicht.';
+    status.className='status err';
+    return;
+  }
+  if(!isValidEmailAddress(email)){
+    status.textContent='Vul een geldig e-mailadres in.';
+    status.className='status err';
+    return;
+  }
+  const {data:existingProfile,error:profileLookupError}=await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('email',email)
+    .maybeSingle();
+  if(profileLookupError){
+    status.textContent='Bestaande gebruikerscontrole mislukt: '+profileLookupError.message;
+    status.className='status err';
+    return;
+  }
+  if(existingProfile){
+    status.textContent='Er bestaat al een gebruiker met dit e-mailadres.';
+    status.className='status err';
+    return;
+  }
+  status.textContent='Nieuwe campereigenaar aanmaken...';
+  status.className='status ok';
+  const result=await provisionCamperOwnerByEdgeFunction(email,plainPw);
+  if(!result.ok){
+    status.textContent=mapCreateOwnerErrorMessage(result.error,result.details||null);
+    status.className='status err';
+    return;
+  }
+  emailField.value='';
+  passwordField.value='';
+  const toggle=document.getElementById('newOwnerShowPassword');
+  if(toggle){
+    resetPasswordVisibilityToggle('newOwnerShowPassword',['newOwnerPassword']);
+  }
+  const generatedPw=result?.data?.generated_password||null;
+  status.textContent=generatedPw
+    ? `Campereigenaar aangemaakt. Tijdelijk wachtwoord: ${generatedPw}`
+    : 'Campereigenaar aangemaakt. Profiel, camper en admin-koppeling zijn automatisch voorzien.';
+  status.className='status ok';
+  await Promise.all([
+    loadAdminCampers(),
+    loadAdminUsers(),
+    loadAdminStats()
+  ]);
+};
+
 window.createInviteCode=async function(){
   const status=document.getElementById('inviteStatus');
   const emailField=document.getElementById('inviteEmail');
@@ -3840,7 +4225,7 @@ window.createInviteCode=async function(){
     status.className='status err';
     return;
   }
-  const isValidEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidEmail=isValidEmailAddress(email);
   if(!isValidEmail){
     status.textContent='Vul een geldig e-mailadres in.';
     status.className='status err';
@@ -3879,6 +4264,7 @@ const SECTION_NAV_GROUPS={
   more:'more',
   fuel:'home',
   reiskosten:'home',
+  profiel:'more',
   maintenance:'more',
   personen:'more',
   vrienden:'more',
@@ -3916,6 +4302,9 @@ async function openSection(sectionId,navKey=SECTION_NAV_GROUPS[sectionId]||'home
   }
   if(sectionId==='camper'){
     await loadCamperTab();
+  }
+  if(sectionId==='profiel'){
+    renderProfileIdentity();
   }
   if(sectionId==='leden-beheren'){
     await loadLedenBeheren();
@@ -4156,53 +4545,16 @@ async function uploadPhotos() {
 
  return uploadedUrls;
 }
-window.testUpload = async function(){
-
- const uploads = await uploadPhotos();
-
- if(!uploads.length && selectedPhotos?.length){
-   return;
- }
- setPhotoStatus(uploads.length + ' foto(s) geüpload');
-};
-
-const maintenanceOptions = {
-
-  fiat: [
-    'Olie',
-    'Oliefilter',
-    'Luchtfilter',
-    'Brandstoffilter',
-    'Banden',
-    'Remmen',
-    'Accu',
-    'APK / Keuring',
-    'Ruitenwissers',
-    'Overig'
-  ],
-
-  vanomobil: [
-    'Vochtcontrole',
-    'Zonnepaneel',
-    'Omvormer',
-    'Kachel',
-    'Boiler',
-    'Waterpomp',
-    'Koelkast',
-    'Luifel',
-    'Overig'
-  ],
-
-  repair: [
-    'Schade',
-    'Steenslag',
-    'Lekke band',
-    'Slot',
-    'Verlichting',
-    'Camera',
-    'Overig'
-  ]
-
+const maintenanceCategoryLabels = {
+  onderhoud:'Onderhoud',
+  schade:'Schade',
+  keuring:'Keuring',
+  accessoire:'Accessoire',
+  overig:'Overig',
+  fiat:'Fiat Onderhoud',
+  vanomobil:'Vanomobil Onderhoud',
+  repair:'Schade / Reparatie',
+  other:'Overig'
 };
 
 function setMaintenanceStatus(message,isOk){
@@ -4217,58 +4569,56 @@ function setMaintenanceStatus(message,isOk){
   status.className='status '+(isOk?'ok':'err');
 }
 
-function updateOtherMaintenanceVisibility(){
-  const overigAangevinkt=[...document.querySelectorAll('.maintenanceCheck')]
-    .some(x=>x.checked&&x.value==='Overig');
-  const overigBox=document.getElementById('otherMaintenanceBox');
-  if(overigBox)overigBox.style.display=overigAangevinkt?'block':'none';
+function getMaintenanceCategoryLabel(category){
+  return maintenanceCategoryLabels[category]||category||'';
 }
 
-function loadMaintenanceOptions(selectedItems=[]){
-  const category=document.getElementById('mCategory').value;
-  const container=document.getElementById('maintenanceOptions');
-  if(!container)return;
-  const items=maintenanceOptions[category]||[];
-  container.innerHTML=items.map(item=>`
-    <label>
-      <input type="checkbox" class="maintenanceCheck" value="${item}" ${selectedItems.includes(item)?'checked':''}>
-      ${item}
-    </label>
-  `).join('<br>');
-  document.querySelectorAll('.maintenanceCheck').forEach(cb=>{
-    cb.addEventListener('change',updateOtherMaintenanceVisibility);
-  });
-  updateOtherMaintenanceVisibility();
+function cleanupTemporaryMaintenanceCategoryOptions(){
+  const select=document.getElementById('mCategory');
+  if(!select)return;
+  select.querySelectorAll('option[data-temporary="true"]').forEach(opt=>opt.remove());
+}
+
+function ensureMaintenanceCategoryOption(category){
+  const select=document.getElementById('mCategory');
+  if(!select||!category)return;
+  cleanupTemporaryMaintenanceCategoryOptions();
+  const existing=[...select.options].some(opt=>opt.value===category);
+  if(existing)return;
+  const label=getMaintenanceCategoryLabel(category)||category;
+  const opt=document.createElement('option');
+  opt.value=category;
+  opt.textContent=label+' (bestaand)';
+  opt.dataset.temporary='true';
+  select.appendChild(opt);
 }
 
 function resetMaintenanceForm(){
   editingMaintenanceId=null;
+  editingMaintenanceLegacyWork=null;
+  editingMaintenanceLegacyOther=null;
+  cleanupTemporaryMaintenanceCategoryOptions();
   document.getElementById('mCategory').value='';
   document.getElementById('mDate').value='';
   document.getElementById('mKm').value='';
   document.getElementById('mCost').value='';
   document.getElementById('mPerformer').value='';
   document.getElementById('mNotes').value='';
-  const overig=document.getElementById('otherMaintenanceText');
-  if(overig)overig.value='';
-  loadMaintenanceOptions([]);
   document.getElementById('saveMaintenanceBtn').textContent='Onderhoud opslaan';
   document.getElementById('cancelMaintenanceEditBtn').classList.add('hidden');
 }
 
-document.getElementById('mCategory').addEventListener('change',()=>loadMaintenanceOptions([]));
-
 window.startMaintenanceEdit=function(item){
-  const werkItems=String(item.werkzaamheden||'').split(',').map(x=>x.trim()).filter(Boolean);
   editingMaintenanceId=item.id;
+  editingMaintenanceLegacyWork=item.werkzaamheden??null;
+  editingMaintenanceLegacyOther=item.omschrijving_overig??null;
+  ensureMaintenanceCategoryOption(item.categorie||'');
   document.getElementById('mCategory').value=item.categorie||'';
-  loadMaintenanceOptions(werkItems);
   document.getElementById('mDate').value=asDateInputValue(item.datum)||today();
   document.getElementById('mKm').value=item.kmstand??'';
   document.getElementById('mCost').value=item.kosten??'';
   document.getElementById('mPerformer').value=item.uitvoerder||'';
   document.getElementById('mNotes').value=item.opmerkingen||'';
-  document.getElementById('otherMaintenanceText').value=item.omschrijving_overig||'';
   document.getElementById('saveMaintenanceBtn').textContent='Onderhoud wijzigen';
   document.getElementById('cancelMaintenanceEditBtn').classList.remove('hidden');
   setMaintenanceStatus('',false);
@@ -4291,23 +4641,23 @@ window.cancelMaintenanceEdit=function(){
 
 document.getElementById('saveMaintenanceBtn').addEventListener('click', async function(){
   setMaintenanceStatus('',false);
-  const category=document.getElementById('mCategory').value;
-  if(!category){
-    setMaintenanceStatus('Kies eerst een categorie.',false);
+  if(!activeCamperId){
+    setMaintenanceStatus('Geen actieve camper gevonden.',false);
     return;
   }
-  const selectedWork=[...document.querySelectorAll('.maintenanceCheck:checked')].map(x=>x.value);
+  const isEdit=Boolean(editingMaintenanceId);
+  const rawCategory=document.getElementById('mCategory').value;
+  const categoryForSave=rawCategory===''?null:rawCategory;
   const payload={
     camper_id: activeCamperId,
     datum: document.getElementById('mDate').value || null,
-    categorie: category,
-    werkzaamheden: selectedWork.join(', '),
-    omschrijving_overig: document.getElementById('otherMaintenanceText')?.value || null,
+    categorie: categoryForSave,
+    werkzaamheden: isEdit ? editingMaintenanceLegacyWork : null,
+    omschrijving_overig: isEdit ? editingMaintenanceLegacyOther : null,
     kosten: document.getElementById('mCost').value || null,
     uitvoerder: document.getElementById('mPerformer').value || null,
     opmerkingen: document.getElementById('mNotes').value || null
   };
-  const isEdit=Boolean(editingMaintenanceId);
   let error=null;
   if(isEdit){
     const {data:updatedMaintenance,error:updateError}=await supabase
@@ -4358,7 +4708,7 @@ async function loadMaintenance(){
   box.innerHTML = data.map(x => `
     <div class="item">
       <b>${x.datum || ''}</b><br>
-      ${x.categorie || ''}<br>
+      ${esc(getMaintenanceCategoryLabel(x.categorie) || '')}<br>
 
       <div class="muted">
         ${x.werkzaamheden || ''}
@@ -4742,6 +5092,15 @@ function updateDashboardCamperInfo(camperData){
   if(specs)specs.textContent=[camperData.basisvoertuig,camperData.motor,camperData.versnellingsbak].filter(Boolean).join(' · ')||'—';
 }
 
+function updateMaintenanceCamperInfo(camperData){
+  const brand=document.getElementById('maintenanceCamperBrand');
+  const model=document.getElementById('maintenanceCamperModel');
+  const plate=document.getElementById('maintenanceCamperPlate');
+  if(brand)brand.textContent=camperData?.merk||'—';
+  if(model)model.textContent=camperData?.model||'—';
+  if(plate)plate.textContent=camperData?.kenteken||'—';
+}
+
 async function loadCamperProfile(){
   if(!activeCamperId)return;
   const {data,error}=await supabase
@@ -4749,8 +5108,8 @@ async function loadCamperProfile(){
     .select('merk,model,basisvoertuig,motor,versnellingsbak,max_massa,kenteken,bouwjaar,reference_date,reference_km')
     .eq('id',activeCamperId)
     .single();
-  if(error){console.error('Camperprofiel laden mislukt:',error);return;}
-  if(!data)return;
+  if(error){console.error('Camperprofiel laden mislukt:',error);renderCamperCompletenessNotice(null);return;}
+  if(!data){renderCamperCompletenessNotice(null);return;}
   const setVal=(id,val)=>{const el=document.getElementById(id);if(el&&val!=null)el.value=val;};
   setVal('camperMerk',data.merk);
   setVal('camperModel',data.model);
@@ -4763,6 +5122,8 @@ async function loadCamperProfile(){
   setVal('camperReferenceDate',data.reference_date);
   setVal('camperReferenceKm',data.reference_km);
   updateDashboardCamperInfo(data);
+  updateMaintenanceCamperInfo(data);
+  renderCamperCompletenessNotice(data);
 }
 
 window.saveCamperProfile=async function(){
@@ -4794,6 +5155,7 @@ window.saveCamperProfile=async function(){
   if(result.error){status.textContent='Opslaan mislukt: '+result.error.message;status.className='status err';return;}
   status.textContent='Camperprofiel opgeslagen';status.className='status ok';
   updateDashboardCamperInfo(payload);
+  updateMaintenanceCamperInfo(payload);
 };
 
 // ── Vrienden ──────────────────────────────────────────────
@@ -5191,22 +5553,24 @@ function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
   if(filterRef)filtered=filtered.filter(s=>(s.referentie||'').toLowerCase().includes(filterRef));
   if(!filtered.length){box.innerHTML='<div class="muted">Nog geen camperplaatsen beschikbaar.</div>';return;}
   const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
+  const stars=r=>{
+    const rating=Math.max(0,Math.min(5,Number(r)||0));
+    return '★'.repeat(rating);
+  };
   box.innerHTML=filtered.map(s=>{
     const stopFotos=(fotosAll||[]).filter(f=>f.stop_id===s.id);
     const eigenaar=eigenaarMap[s.reis_id]||'Onbekend';
-    const fotoHtml=stopFotos.map(f=>`<img src="${esc(f.url)}" style="max-width:80px;max-height:80px;border-radius:6px;margin:4px;cursor:pointer" onclick="event.stopPropagation();openFotoLightbox('${esc(f.url)}')">`).join('');
-    return `<div class="card" style="cursor:pointer;margin-bottom:14px" onclick="showStopDetail(${s.id})">
-      <div><b>${esc(s.camperplaats||'Onbenoemde stop')}</b></div>
-      <div>Plaats: ${esc(s.camperplaats||'—')}</div>
-      <div>Land: ${esc(s.land||'—')}${s.regio?' · Regio: '+esc(s.regio):''}</div>
-      <div>${'★'.repeat(Number(s.beoordeling||0))}</div>
-      <div>Type stop: ${esc(s.type_stop||'—')}</div>
-      ${s.prijs_per_nacht!=null?`<div>Prijs per nacht: ${fmt(s.prijs_per_nacht)}</div>`:''}
-      ${s.referentie?`<div class="muted">Referentie: ${esc(s.referentie)}</div>`:''}
-      ${s.ervaring?`<div>Ervaring: ${esc(s.ervaring)}</div>`:''}
-      <div class="muted">Foto's: ${stopFotos.length}</div>
+    const fotoHtml=stopFotos.length?`<div class="muted">${stopFotos.length} foto(s)</div><div class="op-photo-grid">${stopFotos.map(f=>`<img src="${esc(f.url)}" onclick="event.stopPropagation();openFotoLightbox('${esc(f.url)}')">`).join('')}</div>`:'';
+    const info=[`${stars(s.beoordeling)} ${esc(s.type_stop||'Onbekend')}`];
+    if(s.prijs_per_nacht!=null)info.push(`${fmt(s.prijs_per_nacht)}/nacht`);
+    return `<div class="card op-card" onclick="showStopDetail(${s.id})">
+      <div class="op-card-title">${esc(s.camperplaats||'Onbenoemde stop')}</div>
+      <div class="muted op-card-subtitle">${esc(s.land||'—')}${s.regio?' • '+esc(s.regio):''}</div>
+      <div class="op-card-info">${info.join(' • ')}</div>
+      ${s.ervaring?`<div class="op-card-description">${esc(s.ervaring)}</div>`:''}
+      ${s.referentie?`<div class="muted" style="margin-top:6px">${esc(s.referentie)}</div>`:''}
       ${fotoHtml}
-      <div class="muted" style="margin-top:8px">Gedeeld door: ${esc(eigenaar)}</div>
+      <div class="muted op-card-footer">Gedeeld door: ${esc(eigenaar)}</div>
     </div>`;
   }).join('');
 }
@@ -5232,19 +5596,21 @@ window.showStopDetail=function(stopId){
   const fotos=(_ontdektePlaatsenData.fotos||[]).filter(f=>f.stop_id===s.id);
   const eigenaar=_ontdektePlaatsenData.eigenaarMap[s.reis_id]||'Onbekend';
   const fmt=n=>'€ '+Number(n).toFixed(2).replace('.',',');
+  const stars=(()=>{
+    const rating=Math.max(0,Math.min(5,Number(s.beoordeling)||0));
+    return '★'.repeat(rating);
+  })();
+  const info=[`${stars} ${esc(s.type_stop||'Onbekend')}`];
+  if(s.prijs_per_nacht!=null)info.push(`${fmt(s.prijs_per_nacht)}/nacht`);
   document.getElementById('stopDetailBody').innerHTML=`
-    <h2>${esc(s.camperplaats||'Onbenoemde stop')}</h2>
-    <div><b>Plaats:</b> ${esc(s.camperplaats||'—')}</div>
-    <div><b>Land:</b> ${esc(s.land||'—')}</div>
-    ${s.regio?`<div><b>Regio:</b> ${esc(s.regio)}</div>`:''}
-    <div><b>Type stop:</b> ${esc(s.type_stop||'—')}</div>
+    <h2 class="op-detail-title">${esc(s.camperplaats||'Onbenoemde stop')}</h2>
+    <div class="muted op-detail-subtitle">${esc(s.land||'—')}${s.regio?' • '+esc(s.regio):''}</div>
+    <div class="op-detail-info">${info.join(' • ')}</div>
     ${s.voorzieningen?`<div><b>Voorzieningen:</b> ${esc(s.voorzieningen)}</div>`:''}
-    <div><b>Beoordeling:</b> ${'★'.repeat(Number(s.beoordeling||0))}</div>
-    ${s.prijs_per_nacht!=null?`<div><b>Prijs per nacht:</b> ${fmt(s.prijs_per_nacht)}</div>`:''}
     ${s.referentie?`<div><b>Referentie:</b> ${esc(s.referentie)}</div>`:''}
-    ${s.ervaring?`<div style="margin-top:10px"><b>Ervaring:</b><p>${esc(s.ervaring)}</p></div>`:''}
-    ${fotos.length?'<div><b>Foto's:</b></div>'+fotos.map(f=>`<img src="${esc(f.url)}" style="max-width:150px;max-height:150px;border-radius:8px;margin:4px;cursor:pointer" onclick="openFotoLightbox('${esc(f.url)}')">`).join(''):''}
-    <div class="muted" style="margin-top:12px">Gedeeld door: ${esc(eigenaar)}</div>`;
+    ${s.ervaring?`<div class="op-detail-description"><b>Beschrijving:</b><p>${esc(s.ervaring)}</p></div>`:''}
+    ${fotos.length?`<div class="op-detail-photos"><b>Foto's:</b><div class="op-detail-photos-grid">${fotos.map(f=>`<img src="${esc(f.url)}" onclick="openFotoLightbox('${esc(f.url)}')">`).join('')}</div></div>`:''}
+    <div class="muted op-card-footer">Gedeeld door: ${esc(eigenaar)}</div>`;
   document.getElementById('stopDetailModal').style.display='block';
 };
 
