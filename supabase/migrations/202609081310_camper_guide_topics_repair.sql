@@ -43,7 +43,7 @@ create table if not exists public.camper_guide_topics (
   id bigint generated always as identity primary key,
   camper_id bigint not null references public.campers(id) on delete cascade,
   title text not null check (length(trim(title)) > 0),
-  category text not null check (category in ('Elektriciteit','Water','Koelkast','Toilet','Luifel','Overig')),
+  category text not null check (length(trim(category)) > 0),
   explanation text not null default '',
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
