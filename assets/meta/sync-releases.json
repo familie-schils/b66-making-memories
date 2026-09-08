@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.13",
-  "releasedAt": "2026-09-08T15:12:57.670Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement minimal Campergids v2 model and frontend flow",
+  "currentVersion": "1.0.14",
+  "releasedAt": "2026-09-08T15:24:58.143Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement campergids v1 rollback",
   "latest5": [
+    {
+      "version": "1.0.14",
+      "releasedAt": "2026-09-08T15:24:58.143Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement campergids v1 rollback"
+    },
     {
       "version": "1.0.13",
       "releasedAt": "2026-09-08T15:12:57.670Z",
@@ -23,14 +28,14 @@
       "version": "1.0.10",
       "releasedAt": "2026-09-08T13:59:41.893Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: improve camper guide editor flow"
-    },
-    {
-      "version": "1.0.9",
-      "releasedAt": "2026-09-08T12:49:06.004Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Voeg campergids datamodel en TEST-AGENT UI toe"
     }
   ],
   "history": [
+    {
+      "version": "1.0.14",
+      "releasedAt": "2026-09-08T15:24:58.143Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement campergids v1 rollback"
+    },
     {
       "version": "1.0.13",
       "releasedAt": "2026-09-08T15:12:57.670Z",
@@ -102,5 +107,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "b077ba04788eeb8fa81082f4e2b0cacac05c7f39"
+  "lastSyncedTestAgentSha": "7bb5b6b97fb4400e140e953fa5df23293d2cfc12"
 }

@@ -1233,6 +1233,7 @@ let stopPhotosToDelete=[];
   let camperGuideTopics = [];
   let camperGuideActiveTopicId = null;
   let camperGuideEditingPhotos = [];
+  let camperGuidePhotoIdsToDelete = [];
   let camperGuidePhotoPathsToDelete = [];
   const CAMPER_GUIDE_STORAGE_PREFIX = 'camper-guides';
   const PHOTO_UPLOAD_ALLOWED_TYPES=['image/jpeg','image/png','image/webp'];
@@ -5471,13 +5472,36 @@ function findCamperGuideTopicById(topicId){
 
 function normalizeCamperGuidePhotos(value){
   if(!Array.isArray(value))return [];
-  return value.map(photo=>{
+  return value.map((photo,index)=>{
+    const photoId=Number(photo?.id);
+    const topicId=Number(photo?.topic_id);
     const storagePath=String(photo?.storage_path||'').trim();
     if(!storagePath)return null;
     const captionRaw=photo?.caption;
     const caption=captionRaw==null?null:String(captionRaw).trim()||null;
-    return {storage_path:storagePath,caption};
+    const sortOrder=Number(photo?.sort_order);
+    return {
+      id:Number.isFinite(photoId)&&photoId>0?photoId:null,
+      topic_id:Number.isFinite(topicId)&&topicId>0?topicId:null,
+      storage_path:storagePath,
+      caption,
+      sort_order:Number.isFinite(sortOrder)?sortOrder:index
+    };
   }).filter(Boolean);
+}
+
+function buildCamperGuideTopicsWithPhotos(topics,photos){
+  const photosByTopicId=new Map();
+  normalizeCamperGuidePhotos(photos).forEach(photo=>{
+    const topicId=Number(photo.topic_id);
+    if(!Number.isFinite(topicId)||topicId<=0)return;
+    if(!photosByTopicId.has(topicId))photosByTopicId.set(topicId,[]);
+    photosByTopicId.get(topicId).push(photo);
+  });
+  return (topics||[]).map(topic=>({
+    ...topic,
+    photos:normalizeCamperGuidePhotos(photosByTopicId.get(Number(topic.id))||[])
+  }));
 }
 
 function renderCamperGuideTopicsList(){
@@ -5582,6 +5606,7 @@ function fillCamperGuideEditor(topic){
   categoryField.value=(topic?.category||'').trim();
   explanationField.value=topic?.explanation||'';
   camperGuideEditingPhotos=normalizeCamperGuidePhotos(topic?.photos);
+  camperGuidePhotoIdsToDelete=[];
   camperGuidePhotoPathsToDelete=[];
   renderCamperGuideEditorPhotos();
 }
@@ -5598,6 +5623,7 @@ function resetCamperGuideEditorState(){
     photoStatus.className='status hidden';
     photoStatus.textContent='';
   }
+  camperGuidePhotoIdsToDelete=[];
   camperGuidePhotoPathsToDelete=[];
   camperGuideEditingPhotos=[];
   const upload=document.getElementById('camperGuidePhotoUpload');
@@ -5643,9 +5669,10 @@ async function loadCamperGuideTopics(){
   setCamperGuideEditorVisibility(canEdit);
   renderCamperGuideReadonlyStatus(camperId);
   const {data:topics,error:topicsError}=await supabase
-    .from('camper_guide_topics_v2')
-    .select('id,camper_id,title,category,explanation,photos,created_at,updated_at')
+    .from('camper_guide_topics')
+    .select('id,camper_id,title,category,explanation,sort_order,created_at,updated_at')
     .eq('camper_id',camperId)
+    .order('sort_order',{ascending:true})
     .order('id',{ascending:true});
   if(topicsError){
     camperGuideTopics=[];
@@ -5655,10 +5682,26 @@ async function loadCamperGuideTopics(){
     showCamperGuideStatus('Onderwerpen laden mislukt: '+topicsError.message,'err');
     return;
   }
-  camperGuideTopics=(topics||[]).map(topic=>({
-    ...topic,
-    photos:normalizeCamperGuidePhotos(topic.photos)
-  }));
+  let topicPhotos=[];
+  if((topics||[]).length){
+    const topicIds=topics.map(topic=>Number(topic.id)).filter(id=>Number.isFinite(id)&&id>0);
+    const {data:photos,error:photosError}=await supabase
+      .from('camper_guide_topic_photos')
+      .select('id,topic_id,storage_path,caption,sort_order')
+      .in('topic_id',topicIds)
+      .order('sort_order',{ascending:true})
+      .order('id',{ascending:true});
+    if(photosError){
+      camperGuideTopics=[];
+      camperGuideActiveTopicId=null;
+      renderCamperGuideTopicsList();
+      renderCamperGuideDetail();
+      showCamperGuideStatus('Foto\'s laden mislukt: '+photosError.message,'err');
+      return;
+    }
+    topicPhotos=photos||[];
+  }
+  camperGuideTopics=buildCamperGuideTopicsWithPhotos(topics||[],topicPhotos);
   if(!camperGuideTopics.some(topic=>Number(topic.id)===Number(camperGuideActiveTopicId))){
     camperGuideActiveTopicId=camperGuideTopics[0]?.id||null;
   }
@@ -5763,6 +5806,8 @@ window.removeCamperGuidePhotoFromEditor=function(photoIndex){
   const index=Number(photoIndex);
   if(!Number.isFinite(index)||index<0||index>=camperGuideEditingPhotos.length)return;
   const removed=camperGuideEditingPhotos.splice(index,1)[0];
+  const photoId=Number(removed?.id);
+  if(Number.isFinite(photoId)&&photoId>0)camperGuidePhotoIdsToDelete.push(photoId);
   const storagePath=String(removed?.storage_path||'').trim();
   if(storagePath)camperGuidePhotoPathsToDelete.push(storagePath);
   renderCamperGuideEditorPhotos();
@@ -5811,21 +5856,20 @@ window.saveCamperGuideTopic=async function(){
     title,
     category,
     explanation,
-    photos,
     updated_at:new Date().toISOString(),
     updated_by:currentUser?.id||null
   };
   let result;
   if(idValue){
     result=await supabase
-      .from('camper_guide_topics_v2')
+      .from('camper_guide_topics')
       .update(payload)
       .eq('id',Number(idValue))
       .select('id')
       .single();
   }else{
     result=await supabase
-      .from('camper_guide_topics_v2')
+      .from('camper_guide_topics')
       .insert({...payload,created_by:currentUser?.id||null})
       .select('id')
       .single();
@@ -5838,6 +5882,66 @@ window.saveCamperGuideTopic=async function(){
     editStatus.className='status err';
     return;
   }
+  const topicId=Number(result?.data?.id||idValue||camperGuideActiveTopicId||0)||null;
+  const photosWithSortOrder=photos.map((photo,index)=>({
+    ...photo,
+    topic_id:topicId,
+    sort_order:index
+  }));
+  const existingPhotoIdsToDelete=[...new Set(camperGuidePhotoIdsToDelete.filter(photoId=>Number.isFinite(Number(photoId))&&Number(photoId)>0).map(Number))];
+  for(const photo of photosWithSortOrder.filter(item=>Number.isFinite(Number(item.id))&&Number(item.id)>0)){
+    const photoResult=await supabase
+      .from('camper_guide_topic_photos')
+      .update({
+        caption:photo.caption,
+        sort_order:photo.sort_order
+      })
+      .eq('id',Number(photo.id));
+    if(photoResult.error){
+      if(uploadSummary.uploadedPaths.length){
+        await supabase.storage.from('fotos').remove(uploadSummary.uploadedPaths);
+      }
+      editStatus.textContent='Opslaan mislukt: '+photoResult.error.message;
+      editStatus.className='status err';
+      return;
+    }
+  }
+  const newPhotos=photosWithSortOrder
+    .filter(photo=>!Number.isFinite(Number(photo.id))||Number(photo.id)<=0)
+    .map(photo=>({
+      topic_id:topicId,
+      storage_path:photo.storage_path,
+      caption:photo.caption,
+      sort_order:photo.sort_order,
+      created_by:currentUser?.id||null
+    }));
+  if(newPhotos.length){
+    const insertPhotosResult=await supabase
+      .from('camper_guide_topic_photos')
+      .insert(newPhotos);
+    if(insertPhotosResult.error){
+      if(uploadSummary.uploadedPaths.length){
+        await supabase.storage.from('fotos').remove(uploadSummary.uploadedPaths);
+      }
+      editStatus.textContent='Opslaan mislukt: '+insertPhotosResult.error.message;
+      editStatus.className='status err';
+      return;
+    }
+  }
+  if(existingPhotoIdsToDelete.length){
+    const deletePhotosResult=await supabase
+      .from('camper_guide_topic_photos')
+      .delete()
+      .in('id',existingPhotoIdsToDelete);
+    if(deletePhotosResult.error){
+      if(uploadSummary.uploadedPaths.length){
+        await supabase.storage.from('fotos').remove(uploadSummary.uploadedPaths);
+      }
+      editStatus.textContent='Opslaan mislukt: '+deletePhotosResult.error.message;
+      editStatus.className='status err';
+      return;
+    }
+  }
   if(camperGuidePhotoPathsToDelete.length){
     const uniquePaths=[...new Set(camperGuidePhotoPathsToDelete.filter(Boolean))];
     if(uniquePaths.length){
@@ -5847,10 +5951,10 @@ window.saveCamperGuideTopic=async function(){
       }
     }
   }
-  const topicId=Number(result?.data?.id||idValue||camperGuideActiveTopicId||0)||null;
   camperGuideActiveTopicId=topicId;
   if(upload)upload.value='';
   if(captionField)captionField.value='';
+  camperGuidePhotoIdsToDelete=[];
   camperGuidePhotoPathsToDelete=[];
   renderCamperGuidePendingPhotoSelection();
   if(photoStatus&&uploadSummary.uploadedCount>0){
@@ -5876,7 +5980,7 @@ window.deleteCamperGuideTopic=async function(){
   const topic=findCamperGuideTopicById(Number(topicId));
   const topicPhotoPaths=normalizeCamperGuidePhotos(topic?.photos).map(photo=>String(photo.storage_path||'').trim()).filter(Boolean);
   const {error}=await supabase
-    .from('camper_guide_topics_v2')
+    .from('camper_guide_topics')
     .delete()
     .eq('id',Number(topicId));
   if(error){
