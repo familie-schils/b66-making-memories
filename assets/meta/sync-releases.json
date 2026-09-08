@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.9",
-  "releasedAt": "2026-09-08T12:49:06.004Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Voeg campergids datamodel en TEST-AGENT UI toe",
+  "currentVersion": "1.0.10",
+  "releasedAt": "2026-09-08T13:59:41.893Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: improve camper guide editor flow",
   "latest5": [
+    {
+      "version": "1.0.10",
+      "releasedAt": "2026-09-08T13:59:41.893Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: improve camper guide editor flow"
+    },
     {
       "version": "1.0.9",
       "releasedAt": "2026-09-08T12:49:06.004Z",
@@ -23,14 +28,14 @@
       "version": "1.0.6",
       "releasedAt": "2026-09-06T15:57:20.677Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Replace system info storage RPC"
-    },
-    {
-      "version": "1.0.5",
-      "releasedAt": "2026-09-06T15:50:10.532Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Vereenvoudig systeeminformatie naar foto-opslag"
     }
   ],
   "history": [
+    {
+      "version": "1.0.10",
+      "releasedAt": "2026-09-08T13:59:41.893Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: improve camper guide editor flow"
+    },
     {
       "version": "1.0.9",
       "releasedAt": "2026-09-08T12:49:06.004Z",
@@ -82,5 +87,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "5a2a9bc31aab3ebad34e357e52fdeb990c3253c5"
+  "lastSyncedTestAgentSha": "8b09a0c3afa9f4e8e1a5a3d5fba1a8c87b69fb39"
 }
