@@ -906,6 +906,21 @@ Nog geen onderhoud geregistreerd.
 </section>
 
 <section id="campergids">
+<!--
+  SQL-migratie – Campergids categorie-check definitief herstellen:
+
+  alter table public.camper_guide_topics
+    drop constraint if exists camper_guide_topics_category_check;
+
+  update public.camper_guide_topics
+  set category = trim(category)
+  where category is not null
+    and category <> trim(category);
+
+  alter table public.camper_guide_topics
+    add constraint camper_guide_topics_category_check
+    check (length(trim(category)) > 0);
+-->
 <div class="card">
   <h2>Campergids</h2>
   <p class="muted">Praktische uitleg per onderwerp voor deze camper. Alleen camper-admins en hoofdbeheerder kunnen inhoud beheren.</p>
@@ -5822,7 +5837,10 @@ window.saveCamperGuideTopic=async function(){
       .single();
   }
   if(result?.error){
-    editStatus.textContent='Opslaan mislukt: '+result.error.message;
+    const isLegacyCategoryConstraintError=String(result.error.message||'').includes('camper_guide_topics_category_check');
+    editStatus.textContent=isLegacyCategoryConstraintError
+      ? 'Opslaan mislukt: database gebruikt nog oude categorie-check. Voer de Campergids SQL-migratie uit (zie commentaar bij sectie Campergids).'
+      : 'Opslaan mislukt: '+result.error.message;
     editStatus.className='status err';
     return;
   }
