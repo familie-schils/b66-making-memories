@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.10",
-  "releasedAt": "2026-09-08T13:59:41.893Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: improve camper guide editor flow",
+  "currentVersion": "1.0.11",
+  "releasedAt": "2026-09-08T14:40:02.513Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Integreer campergids-foto's in onderwerp opslaan",
   "latest5": [
+    {
+      "version": "1.0.11",
+      "releasedAt": "2026-09-08T14:40:02.513Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Integreer campergids-foto's in onderwerp opslaan"
+    },
     {
       "version": "1.0.10",
       "releasedAt": "2026-09-08T13:59:41.893Z",
@@ -23,14 +28,14 @@
       "version": "1.0.7",
       "releasedAt": "2026-09-06T17:23:06.559Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Finalize platform dashboard totals\n- Wire platform overview RPC"
-    },
-    {
-      "version": "1.0.6",
-      "releasedAt": "2026-09-06T15:57:20.677Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Replace system info storage RPC"
     }
   ],
   "history": [
+    {
+      "version": "1.0.11",
+      "releasedAt": "2026-09-08T14:40:02.513Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Integreer campergids-foto's in onderwerp opslaan"
+    },
     {
       "version": "1.0.10",
       "releasedAt": "2026-09-08T13:59:41.893Z",
@@ -87,5 +92,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "8b09a0c3afa9f4e8e1a5a3d5fba1a8c87b69fb39"
+  "lastSyncedTestAgentSha": "0725f4603b6e4609ed08f3d3cd5d6d37b6035dbb"
 }
