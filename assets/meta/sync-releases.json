@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.17",
-  "releasedAt": "2026-09-08T16:11:50Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Versiebeheer bijgewerkt\n- Updates / Wat is nieuw vernieuwd\n- Camper Uitleg gesynchroniseerd\n- Reisverbeteringen gesynchroniseerd\n- Tankbeurtverbeteringen gesynchroniseerd\n- Onderhoudsverbeteringen gesynchroniseerd\n- UI-opruiming behouden zonder test-elementen",
+  "currentVersion": "1.0.18",
+  "releasedAt": "2026-09-08T19:21:12.682Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Add camper uitleg category filter",
   "latest5": [
+    {
+      "version": "1.0.18",
+      "releasedAt": "2026-09-08T19:21:12.682Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Add camper uitleg category filter"
+    },
     {
       "version": "1.0.17",
       "releasedAt": "2026-09-08T16:11:50Z",
@@ -23,14 +28,14 @@
       "version": "1.0.14",
       "releasedAt": "2026-09-08T15:24:58.143Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
-    },
-    {
-      "version": "1.0.13",
-      "releasedAt": "2026-09-08T15:12:57.670Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     }
   ],
   "history": [
+    {
+      "version": "1.0.18",
+      "releasedAt": "2026-09-08T19:21:12.682Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Add camper uitleg category filter"
+    },
     {
       "version": "1.0.17",
       "releasedAt": "2026-09-08T16:11:50Z",
@@ -122,5 +127,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "c53741c984cd0cb308c51ebd66b90f94076977fe"
+  "lastSyncedTestAgentSha": "ad05c53ac0ec704a5afcfaeba2af76084506b28b"
 }

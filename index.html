@@ -13,6 +13,23 @@
 <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 <style>
 body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f5f8ff;color:#20252b}
+body::before{
+  content:"TESTVERSIE";
+  position:fixed;
+  top:calc(env(safe-area-inset-top,0px) + 8px);
+  right:10px;
+  z-index:2001;
+  background:#fff3bf;
+  color:#5c4500;
+  border:1px solid #f1dd7b;
+  border-radius:999px;
+  padding:5px 10px;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.02em;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+  pointer-events:none;
+}
 header{background:#20252b;color:white;padding:20px}
 header h1{margin:0}
 nav{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:0;z-index:2;overflow:auto}
@@ -548,7 +565,7 @@ Reiskosten laden...
 <section id="wat-is-nieuw">
 <div class="card">
   <h2>Wat is nieuw?</h2>
-  <p class="muted">Versie-informatie komt automatisch uit de laatste productie-release.</p>
+  <p class="muted">Versie-informatie komt automatisch uit goedgekeurde TEST-AGENT-synchronisaties.</p>
   <div class="grid" style="margin-top:8px">
     <div>
       <label>Huidige versie</label>
@@ -814,9 +831,16 @@ Nog geen onderhoud geregistreerd.
 
 <div class="card">
   <h3>Onderwerpen</h3>
+  <label>Categorie</label>
+  <select id="camperUitlegCategoryFilter" onchange="filterCamperUitlegTopics()">
+    <option value="">Alle categorieën</option>
+    <option value="Voor de reis">Voor de reis</option>
+    <option value="Tijdens de reis">Tijdens de reis</option>
+    <option value="Na de reis">Na de reis</option>
+  </select>
   <label>Zoeken</label>
-  <input id="camperUitlegSearch" placeholder="Zoek op titel, categorie of uitleg" oninput="filterCamperUitlegTopics()">
-  <div class="muted" style="margin-top:6px">Zoeken start vanaf 3 tekens. Met minder tekens zie je alle onderwerpen.</div>
+  <input id="camperUitlegSearch" placeholder="Zoek op titel of uitleg" oninput="filterCamperUitlegTopics()">
+  <div class="muted" style="margin-top:6px">Kies eerst een categorie. Zoeken start vanaf 3 tekens en werkt binnen de gekozen categorie.</div>
   <div id="camperUitlegTopicsList" class="camper-uitleg-list" style="margin-top:12px">Laden...</div>
 </div>
 </section>
@@ -945,7 +969,7 @@ Nog geen onderhoud geregistreerd.
     used_at     timestamptz
   );
 
-  -- Gebruik Edge Function `create-camper-owner` als enige ingang.
+  -- TEST-omgeving: gebruik Edge Function `create-camper-owner` als enige ingang.
   -- Deze functie doet:
   -- 1) auth.admin.createUser() via service role
   -- 2) interne SECURITY DEFINER RPC `provision_camper_owner_data(...)`
@@ -1032,7 +1056,7 @@ Nog geen onderhoud geregistreerd.
 
 <section id="leden-beheren">
 <!--
-  SQL – maak de invitations tabel aan in Supabase:
+  SQL – maak de invitations tabel aan in Supabase (TEST-omgeving):
 
   CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -6005,16 +6029,19 @@ function renderCamperUitlegTopics(topics){
 
 function filterCamperUitlegTopics(){
   const searchTerm=(document.getElementById('camperUitlegSearch')?.value||'').trim().toLowerCase();
+  const selectedCategory=(document.getElementById('camperUitlegCategoryFilter')?.value||'').trim().toLowerCase();
   const allTopics=camperUitlegData.topics||[];
+  const categoryFiltered=selectedCategory
+    ? allTopics.filter(topic=>(topic.category||'').trim().toLowerCase()===selectedCategory)
+    : allTopics;
   if(searchTerm.length<3){
-    renderCamperUitlegTopics(allTopics);
+    renderCamperUitlegTopics(categoryFiltered);
     return;
   }
-  const filtered=allTopics.filter(topic=>{
+  const filtered=categoryFiltered.filter(topic=>{
     const title=(topic.title||'').toLowerCase();
-    const category=(topic.category||'').toLowerCase();
     const explanation=(topic.explanation||'').toLowerCase();
-    return title.includes(searchTerm)||category.includes(searchTerm)||explanation.includes(searchTerm);
+    return title.includes(searchTerm)||explanation.includes(searchTerm);
   });
   renderCamperUitlegTopics(filtered);
 }
