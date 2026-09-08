@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.11",
-  "releasedAt": "2026-09-08T14:40:02.513Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Integreer campergids-foto's in onderwerp opslaan",
+  "currentVersion": "1.0.12",
+  "releasedAt": "2026-09-08T14:58:36.491Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix campergids categorie-constraint guidance",
   "latest5": [
+    {
+      "version": "1.0.12",
+      "releasedAt": "2026-09-08T14:58:36.491Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix campergids categorie-constraint guidance"
+    },
     {
       "version": "1.0.11",
       "releasedAt": "2026-09-08T14:40:02.513Z",
@@ -23,14 +28,14 @@
       "version": "1.0.8",
       "releasedAt": "2026-09-06T17:32:25.767Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Verwijder systeeminformatie uit test-agent beheer"
-    },
-    {
-      "version": "1.0.7",
-      "releasedAt": "2026-09-06T17:23:06.559Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Finalize platform dashboard totals\n- Wire platform overview RPC"
     }
   ],
   "history": [
+    {
+      "version": "1.0.12",
+      "releasedAt": "2026-09-08T14:58:36.491Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix campergids categorie-constraint guidance"
+    },
     {
       "version": "1.0.11",
       "releasedAt": "2026-09-08T14:40:02.513Z",
@@ -92,5 +97,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "0725f4603b6e4609ed08f3d3cd5d6d37b6035dbb"
+  "lastSyncedTestAgentSha": "a48ea98151d1a093853c6c83bdb4507796da2bb4"
 }
