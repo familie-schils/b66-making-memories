@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.12",
-  "releasedAt": "2026-09-08T14:58:36.491Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix campergids categorie-constraint guidance",
+  "currentVersion": "1.0.13",
+  "releasedAt": "2026-09-08T15:12:57.670Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement minimal Campergids v2 model and frontend flow",
   "latest5": [
+    {
+      "version": "1.0.13",
+      "releasedAt": "2026-09-08T15:12:57.670Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement minimal Campergids v2 model and frontend flow"
+    },
     {
       "version": "1.0.12",
       "releasedAt": "2026-09-08T14:58:36.491Z",
@@ -23,14 +28,14 @@
       "version": "1.0.9",
       "releasedAt": "2026-09-08T12:49:06.004Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Voeg campergids datamodel en TEST-AGENT UI toe"
-    },
-    {
-      "version": "1.0.8",
-      "releasedAt": "2026-09-06T17:32:25.767Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Verwijder systeeminformatie uit test-agent beheer"
     }
   ],
   "history": [
+    {
+      "version": "1.0.13",
+      "releasedAt": "2026-09-08T15:12:57.670Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement minimal Campergids v2 model and frontend flow"
+    },
     {
       "version": "1.0.12",
       "releasedAt": "2026-09-08T14:58:36.491Z",
@@ -97,5 +102,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "a48ea98151d1a093853c6c83bdb4507796da2bb4"
+  "lastSyncedTestAgentSha": "b077ba04788eeb8fa81082f4e2b0cacac05c7f39"
 }
