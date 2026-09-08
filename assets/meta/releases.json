@@ -1,12 +1,12 @@
 {
-  "currentVersion": "1.0.0",
-  "releasedAt": null,
-  "notes": "Initiële versie van het nieuwe versiesysteem.",
+  "currentVersion": "1.0.19",
+  "releasedAt": "2026-09-08T20:24:37.029Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Camper Uitleg toegevoegd\n- Diverse UI-opruimingen\n- Verbeteringen aan beheer en gebruiksgemak",
   "latest5": [
     {
-      "version": "1.0.0",
-      "releasedAt": null,
-      "notes": "Initiële versie van het nieuwe versiesysteem."
+      "version": "1.0.19",
+      "releasedAt": "2026-09-08T20:24:37.029Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Camper Uitleg toegevoegd\n- Diverse UI-opruimingen\n- Verbeteringen aan beheer en gebruiksgemak"
     }
   ]
 }
