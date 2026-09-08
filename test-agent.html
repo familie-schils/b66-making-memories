@@ -139,9 +139,15 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .camper-guide-topic-item:first-child{border-top:0}
 .camper-guide-topic-item.active{background:#eef3f8}
 .camper-guide-topic-title{font-weight:700}
+.camper-guide-topic-meta{margin-top:4px;display:flex;flex-direction:column;gap:2px;font-size:13px;color:#66717d}
 .camper-guide-photo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
 .camper-guide-photo-item{border:1px solid #e4e7eb;border-radius:10px;padding:8px;background:#f7f8fa}
 .camper-guide-photo-item img{width:100%;max-height:120px;object-fit:cover;border-radius:8px}
+.camper-guide-photo-caption{margin-top:6px}
+.camper-guide-photo-item-actions{margin-top:6px;display:flex;justify-content:flex-end}
+.camper-guide-photo-empty{padding:10px 12px;border:1px dashed #d9dde3;border-radius:10px;background:#fafbfc;color:#66717d}
+.camper-guide-editor-section{margin-top:14px;padding-top:14px;border-top:1px solid #e4e7eb}
+.camper-guide-editor-help{margin:6px 0 10px}
 @media (max-width:560px){
   .travel-cost-category-grid{grid-template-columns:1fr}
   .edit-actions .secondary,.edit-actions .primary{flex:1 1 100%}
@@ -942,14 +948,8 @@ Nog geen onderhoud geregistreerd.
     </div>
     <div>
       <label>Categorie</label>
-      <select id="camperGuideCategory">
-        <option value="Elektriciteit">Elektriciteit</option>
-        <option value="Water">Water</option>
-        <option value="Koelkast">Koelkast</option>
-        <option value="Toilet">Toilet</option>
-        <option value="Luifel">Luifel</option>
-        <option value="Overig">Overig</option>
-      </select>
+      <input id="camperGuideCategory" type="text" list="camperGuideCategorySuggestions" placeholder="Bijvoorbeeld: Voor vertrek" autocomplete="off">
+      <datalist id="camperGuideCategorySuggestions"></datalist>
     </div>
     <div>
       <label>Volgorde</label>
@@ -960,28 +960,31 @@ Nog geen onderhoud geregistreerd.
     <label>Uitleg</label>
     <textarea id="camperGuideExplanation" placeholder="Beschrijf de stappen duidelijk en kort."></textarea>
   </div>
+  <div class="camper-guide-editor-section">
+    <h4 style="margin:0">Foto's bij dit onderwerp</h4>
+    <p class="muted camper-guide-editor-help">Foto's horen bij het onderwerp en ondersteunen de uitleg.</p>
+    <div id="camperGuidePhotoStatus" class="status hidden"></div>
+    <div id="camperGuideEditorPhotos" class="camper-guide-photo-grid">
+      <div class="camper-guide-photo-empty">Sla eerst een onderwerp op om foto's toe te voegen.</div>
+    </div>
+    <div class="grid" style="margin-top:10px">
+      <div>
+        <label>Foto's uploaden</label>
+        <input id="camperGuidePhotoUpload" type="file" accept="image/jpeg,image/png,image/webp" multiple disabled>
+      </div>
+      <div>
+        <label>Bijschrift (optioneel)</label>
+        <input id="camperGuidePhotoCaption" type="text" placeholder="Korte toelichting bij de foto's" disabled>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <button id="camperGuidePhotoUploadButton" class="primary" onclick="uploadCamperGuidePhotos()" disabled>Foto's toevoegen</button>
+    </div>
+  </div>
   <div class="edit-actions">
     <button class="primary" onclick="saveCamperGuideTopic()">Opslaan</button>
     <button class="secondary" onclick="resetCamperGuideEditor()">Nieuw onderwerp</button>
     <button class="secondary" onclick="deleteCamperGuideTopic()">Verwijderen</button>
-  </div>
-</div>
-
-<div id="camperGuidePhotoEditorCard" class="card hidden">
-  <h3>Foto's beheren</h3>
-  <div id="camperGuidePhotoStatus" class="status hidden"></div>
-  <div class="grid">
-    <div>
-      <label>Foto's uploaden</label>
-      <input id="camperGuidePhotoUpload" type="file" accept="image/jpeg,image/png,image/webp" multiple>
-    </div>
-    <div>
-      <label>Bijschrift (optioneel)</label>
-      <input id="camperGuidePhotoCaption" type="text" placeholder="Korte toelichting bij de foto's">
-    </div>
-  </div>
-  <div style="margin-top:10px">
-    <button class="primary" onclick="uploadCamperGuidePhotos()">Foto toevoegen</button>
   </div>
 </div>
 </section>
@@ -1236,7 +1239,7 @@ let stopPhotosToDelete=[];
   let camperGuideTopics = [];
   let camperGuidePhotosByTopicId = {};
   let camperGuideActiveTopicId = null;
-  const CAMPER_GUIDE_CATEGORIES = Object.freeze(['Elektriciteit','Water','Koelkast','Toilet','Luifel','Overig']);
+  const CAMPER_GUIDE_CATEGORY_SUGGESTIONS = Object.freeze(['Voor vertrek','Rijden','Parkeren & Waterpas zetten','Buitenkant camper','Binnenkant camper','Water','Elektriciteit','Koelkast','Koken','Toilet','Luifel','Veiligheid','Bij problemen','Einde reis']);
   const CAMPER_GUIDE_STORAGE_PREFIX = 'camper-guides';
   const PHOTO_UPLOAD_ALLOWED_TYPES=['image/jpeg','image/png','image/webp'];
   const PHOTO_UPLOAD_MAX_SOURCE_FILE_SIZE_BYTES=20*1024*1024;
@@ -5424,11 +5427,15 @@ function showCamperGuideStatus(message,type='ok'){
   box.textContent=message;
 }
 
+function populateCamperGuideCategorySuggestions(){
+  const list=document.getElementById('camperGuideCategorySuggestions');
+  if(!list)return;
+  list.innerHTML=CAMPER_GUIDE_CATEGORY_SUGGESTIONS.map(category=>`<option value="${esc(category)}"></option>`).join('');
+}
+
 function setCamperGuideEditorVisibility(canEdit){
   const editor=document.getElementById('camperGuideEditorCard');
-  const photoEditor=document.getElementById('camperGuidePhotoEditorCard');
   if(editor)editor.classList.toggle('hidden',!canEdit);
-  if(photoEditor)photoEditor.classList.toggle('hidden',!canEdit);
 }
 
 async function loadCamperGuideCamperOptions(){
@@ -5483,11 +5490,32 @@ function renderCamperGuideTopicsList(){
   }
   box.innerHTML=camperGuideTopics.map(topic=>{
     const isActive=Number(topic.id)===Number(camperGuideActiveTopicId);
+    const photoCount=(camperGuidePhotosByTopicId[String(topic.id)]||[]).length;
     return `<div class="camper-guide-topic-item${isActive?' active':''}" onclick="selectCamperGuideTopic(${Number(topic.id)})">
       <div class="camper-guide-topic-title">${esc(topic.title||'Onbenoemd onderwerp')}</div>
-      <div class="muted">${esc(topic.category||'Overig')}</div>
+      <div class="camper-guide-topic-meta">
+        <span>${esc((topic.category||'').trim()||'Geen categorie')}</span>
+        <span>${photoCount} foto${photoCount===1?'':'\'s'}</span>
+      </div>
     </div>`;
   }).join('');
+}
+
+function renderCamperGuidePhotoCards(photos,topic,canEdit=false){
+  if(!photos.length){
+    return '<div class="camper-guide-photo-empty">Nog geen foto\'s toegevoegd.</div>';
+  }
+  return `<div class="camper-guide-photo-grid">
+    ${photos.map(photo=>{
+      const publicUrl=getCamperGuidePhotoPublicUrl(photo);
+      const removeButton=canEdit?`<div class="camper-guide-photo-item-actions"><button class="secondary" style="padding:6px 10px" onclick="deleteCamperGuidePhoto(${Number(photo.id)})">Verwijderen</button></div>`:'';
+      return `<div class="camper-guide-photo-item">
+        ${publicUrl?`<img src="${esc(publicUrl)}" alt="${esc(photo.caption||topic?.title||'Campergidsfoto')}">`:'<div class="muted">Foto niet beschikbaar</div>'}
+        ${photo.caption?`<div class="muted camper-guide-photo-caption">${esc(photo.caption)}</div>`:''}
+        ${removeButton}
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 function renderCamperGuideDetail(){
@@ -5499,27 +5527,36 @@ function renderCamperGuideDetail(){
     return;
   }
   const photos=camperGuidePhotosByTopicId[String(topic.id)]||[];
-  const canEdit=canManageCamperGuideForCamper(getCamperGuideContextCamperId());
   const explanation=esc(topic.explanation||'').replace(/\n/g,'<br>');
   detail.innerHTML=`
-    <div><span class="badge">${esc(topic.category||'Overig')}</span></div>
-    <h4 style="margin:6px 0 8px">${esc(topic.title||'Onbenoemd onderwerp')}</h4>
+    <h4 style="margin:0 0 6px">${esc(topic.title||'Onbenoemd onderwerp')}</h4>
+    <div><span class="badge">${esc((topic.category||'').trim()||'Geen categorie')}</span></div>
     <div style="line-height:1.45">${explanation||'<span class="muted">Geen uitleg beschikbaar.</span>'}</div>
     <div style="margin-top:14px">
       <label>Foto's</label>
-      ${photos.length?`<div class="camper-guide-photo-grid">
-        ${photos.map(photo=>{
-          const publicUrl=getCamperGuidePhotoPublicUrl(photo);
-          const removeButton=canEdit?`<button class="secondary" style="margin-top:6px;padding:6px 10px" onclick="deleteCamperGuidePhoto(${Number(photo.id)})">Verwijderen</button>`:'';
-          return `<div class="camper-guide-photo-item">
-            ${publicUrl?`<img src="${esc(publicUrl)}" alt="${esc(photo.caption||topic.title||'Campergidsfoto')}">`:'<div class="muted">Foto niet beschikbaar</div>'}
-            ${photo.caption?`<div class="muted" style="margin-top:6px">${esc(photo.caption)}</div>`:''}
-            ${removeButton}
-          </div>`;
-        }).join('')}
-      </div>`:'<div class="muted">Geen foto\'s toegevoegd.</div>'}
+      ${renderCamperGuidePhotoCards(photos,topic,false)}
     </div>
   `;
+}
+
+function renderCamperGuideEditorPhotos(){
+  const box=document.getElementById('camperGuideEditorPhotos');
+  const upload=document.getElementById('camperGuidePhotoUpload');
+  const caption=document.getElementById('camperGuidePhotoCaption');
+  const button=document.getElementById('camperGuidePhotoUploadButton');
+  if(!box)return;
+  const topic=findCamperGuideTopicById(camperGuideActiveTopicId);
+  const topicId=topic?.id||null;
+  const isEnabled=!!topicId;
+  if(upload)upload.disabled=!isEnabled;
+  if(caption)caption.disabled=!isEnabled;
+  if(button)button.disabled=!isEnabled;
+  if(!topicId){
+    box.innerHTML='<div class="camper-guide-photo-empty">Sla eerst een onderwerp op om foto\'s toe te voegen.</div>';
+    return;
+  }
+  const photos=camperGuidePhotosByTopicId[String(topicId)]||[];
+  box.innerHTML=renderCamperGuidePhotoCards(photos,topic,true);
 }
 
 function fillCamperGuideEditor(topic){
@@ -5531,9 +5568,10 @@ function fillCamperGuideEditor(topic){
   if(!idField||!titleField||!categoryField||!explanationField||!sortField)return;
   idField.value=topic?.id?String(topic.id):'';
   titleField.value=topic?.title||'';
-  categoryField.value=CAMPER_GUIDE_CATEGORIES.includes(topic?.category)?topic.category:'Overig';
+  categoryField.value=(topic?.category||'').trim();
   explanationField.value=topic?.explanation||'';
   sortField.value=Number.isFinite(Number(topic?.sort_order))?String(Number(topic.sort_order)):'0';
+  renderCamperGuideEditorPhotos();
 }
 
 function resetCamperGuideEditorState(){
@@ -5543,6 +5581,16 @@ function resetCamperGuideEditorState(){
     editStatus.className='status hidden';
     editStatus.textContent='';
   }
+  const photoStatus=document.getElementById('camperGuidePhotoStatus');
+  if(photoStatus){
+    photoStatus.className='status hidden';
+    photoStatus.textContent='';
+  }
+  const upload=document.getElementById('camperGuidePhotoUpload');
+  const caption=document.getElementById('camperGuidePhotoCaption');
+  if(upload)upload.value='';
+  if(caption)caption.value='';
+  renderCamperGuideEditorPhotos();
 }
 
 function renderCamperGuideReadonlyStatus(camperId){
@@ -5631,6 +5679,7 @@ async function loadCamperGuideTopics(){
 }
 
 async function loadCamperGuideSection(){
+  populateCamperGuideCategorySuggestions();
   if(isHeadAdmin()){
     await loadCamperGuideCamperOptions();
   }else{
@@ -5675,7 +5724,7 @@ window.saveCamperGuideTopic=async function(){
   const sortOrderRaw=document.getElementById('camperGuideSortOrder')?.value;
   const sortOrder=Math.max(0,Number.isFinite(Number(sortOrderRaw))?Number(sortOrderRaw):0);
   if(!title){editStatus.textContent='Titel is verplicht.';editStatus.className='status err';return;}
-  if(!CAMPER_GUIDE_CATEGORIES.includes(category)){editStatus.textContent='Kies een geldige categorie.';editStatus.className='status err';return;}
+  if(!category){editStatus.textContent='Categorie is verplicht.';editStatus.className='status err';return;}
   const payload={
     camper_id:camperId,
     title,
@@ -5750,49 +5799,59 @@ window.uploadCamperGuidePhotos=async function(){
   if(!topicId){photoStatus.textContent='Kies eerst een onderwerp.';photoStatus.className='status err';return;}
   const files=Array.from(upload.files||[]);
   if(files.length===0){photoStatus.textContent='Selecteer minimaal één foto.';photoStatus.className='status err';return;}
-  for(const file of files){
-    if(!PHOTO_UPLOAD_ALLOWED_TYPES.includes(file.type)){
-      photoStatus.textContent=`"${file.name}" heeft geen ondersteund formaat.`;
-      photoStatus.className='status err';
-      return;
-    }
-    if(file.size>PHOTO_UPLOAD_MAX_SOURCE_FILE_SIZE_BYTES){
-      photoStatus.textContent=`"${file.name}" is groter dan 20 MB.`;
-      photoStatus.className='status err';
-      return;
-    }
+  const validation=validateSelectedPhotos(files);
+  if(!validation.valid){
+    photoStatus.textContent=validation.errors.join(' ');
+    photoStatus.className='status err';
+    return;
   }
   const caption=(captionField?.value||'').trim()||null;
   const existingPhotos=camperGuidePhotosByTopicId[String(topicId)]||[];
   const baseSort=existingPhotos.length;
-  for(let index=0;index<files.length;index++){
-    const file=files[index];
-    const safeName=String(file.name||'foto.jpg').replace(/[^a-zA-Z0-9._-]/g,'-').slice(-80);
-    const filePath=`${CAMPER_GUIDE_STORAGE_PREFIX}/${camperId}/${topicId}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName}`;
-    const uploadResult=await supabase.storage.from('fotos').upload(filePath,file,{upsert:false});
-    if(uploadResult.error){
-      photoStatus.textContent='Upload mislukt: '+uploadResult.error.message;
-      photoStatus.className='status err';
-      return;
-    }
-    const insertResult=await supabase
-      .from('camper_guide_topic_photos')
-      .insert({
-        topic_id:Number(topicId),
-        storage_path:filePath,
-        caption,
-        sort_order:baseSort+index,
-        created_by:currentUser?.id||null
-      });
-    if(insertResult.error){
-      photoStatus.textContent='Foto registreren mislukt: '+insertResult.error.message;
+  let optimizedCount=0;
+  let savedBytes=0;
+  for(let index=0;index<validation.files.length;index++){
+    let filePath='';
+    try{
+      const file=validation.files[index];
+      photoStatus.textContent=`Foto ${index+1} van ${validation.files.length} wordt geoptimaliseerd...`;
+      photoStatus.className='status ok';
+      const optimized=await optimizePhotoForUpload(file);
+      const optimizedFile=optimized.file;
+      if(optimized.optimizedSize<optimized.originalSize){
+        optimizedCount+=1;
+        savedBytes+=Math.max(0,optimized.originalSize-optimized.optimizedSize);
+      }
+      const safeName=String(optimizedFile.name||'foto.jpg').replace(/[^a-zA-Z0-9._-]/g,'-').slice(-80);
+      filePath=`${CAMPER_GUIDE_STORAGE_PREFIX}/${camperId}/${topicId}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName}`;
+      photoStatus.textContent=`Foto ${index+1} van ${validation.files.length} wordt geüpload...`;
+      const uploadResult=await supabase.storage.from('fotos').upload(filePath,optimizedFile,{upsert:false});
+      if(uploadResult.error){
+        throw new Error('Upload mislukt: '+uploadResult.error.message);
+      }
+      const insertResult=await supabase
+        .from('camper_guide_topic_photos')
+        .insert({
+          topic_id:Number(topicId),
+          storage_path:filePath,
+          caption,
+          sort_order:baseSort+index,
+          created_by:currentUser?.id||null
+        });
+      if(insertResult.error){
+        await supabase.storage.from('fotos').remove([filePath]);
+        throw new Error('Foto registreren mislukt: '+insertResult.error.message);
+      }
+    }catch(error){
+      photoStatus.textContent=error?.message||'Foto toevoegen mislukt.';
       photoStatus.className='status err';
       return;
     }
   }
   if(upload)upload.value='';
   if(captionField)captionField.value='';
-  photoStatus.textContent='Foto\'s toegevoegd.';
+  const savedMb=savedBytes>0?` ${Math.max(0.1,savedBytes/(1024*1024)).toFixed(1).replace('.',',')} MB bespaard.`:'';
+  photoStatus.textContent=`Foto's toegevoegd.${optimizedCount?` ${optimizedCount} geoptimaliseerd.`:''}${savedMb}`;
   photoStatus.className='status ok';
   await loadCamperGuideTopics();
 };
