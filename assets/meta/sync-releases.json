@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.14",
-  "releasedAt": "2026-09-08T15:24:58.143Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update",
+  "currentVersion": "1.0.15",
+  "releasedAt": "2026-09-08T15:39:55.442Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- refactor: remove campergids from test-agent",
   "latest5": [
+    {
+      "version": "1.0.15",
+      "releasedAt": "2026-09-08T15:39:55.442Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- refactor: remove campergids from test-agent"
+    },
     {
       "version": "1.0.14",
       "releasedAt": "2026-09-08T15:24:58.143Z",
@@ -23,14 +28,14 @@
       "version": "1.0.11",
       "releasedAt": "2026-09-08T14:40:02.513Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
-    },
-    {
-      "version": "1.0.10",
-      "releasedAt": "2026-09-08T13:59:41.893Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: improve camper guide editor flow"
     }
   ],
   "history": [
+    {
+      "version": "1.0.15",
+      "releasedAt": "2026-09-08T15:39:55.442Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- refactor: remove campergids from test-agent"
+    },
     {
       "version": "1.0.14",
       "releasedAt": "2026-09-08T15:24:58.143Z",
@@ -107,5 +112,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "7bb5b6b97fb4400e140e953fa5df23293d2cfc12"
+  "lastSyncedTestAgentSha": "ffdb8cd85820963a5c81b43fcd5a9db5951a6cca"
 }
