@@ -2,27 +2,27 @@
   "source": "test-agent-sync",
   "currentVersion": "1.0.14",
   "releasedAt": "2026-09-08T15:24:58.143Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement campergids v1 rollback",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update",
   "latest5": [
     {
       "version": "1.0.14",
       "releasedAt": "2026-09-08T15:24:58.143Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement campergids v1 rollback"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.13",
       "releasedAt": "2026-09-08T15:12:57.670Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement minimal Campergids v2 model and frontend flow"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.12",
       "releasedAt": "2026-09-08T14:58:36.491Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix campergids categorie-constraint guidance"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.11",
       "releasedAt": "2026-09-08T14:40:02.513Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Integreer campergids-foto's in onderwerp opslaan"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.10",
@@ -34,32 +34,32 @@
     {
       "version": "1.0.14",
       "releasedAt": "2026-09-08T15:24:58.143Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement campergids v1 rollback"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.13",
       "releasedAt": "2026-09-08T15:12:57.670Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Implement minimal Campergids v2 model and frontend flow"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.12",
       "releasedAt": "2026-09-08T14:58:36.491Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix campergids categorie-constraint guidance"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.11",
       "releasedAt": "2026-09-08T14:40:02.513Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Integreer campergids-foto's in onderwerp opslaan"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.10",
       "releasedAt": "2026-09-08T13:59:41.893Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- feat: improve camper guide editor flow"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.9",
       "releasedAt": "2026-09-08T12:49:06.004Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Voeg campergids datamodel en TEST-AGENT UI toe"
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     },
     {
       "version": "1.0.8",
