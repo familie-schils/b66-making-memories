@@ -3,10 +3,11 @@
 do $$
 declare
   legacy_table_name text := 'public.' || quote_ident('camper_guide_topics' || '_v2');
-  legacy_exists boolean := to_regclass(legacy_table_name) is not null;
+  legacy_exists boolean := false;
   legacy_row record;
   mapped_topic_id bigint;
 begin
+  legacy_exists := to_regclass(legacy_table_name) is not null;
   if not legacy_exists then
     return;
   end if;
