@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.8",
-  "releasedAt": "2026-09-06T17:32:25.767Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Verwijder systeeminformatie uit test-agent beheer",
+  "currentVersion": "1.0.9",
+  "releasedAt": "2026-09-08T12:49:06.004Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Voeg campergids datamodel en TEST-AGENT UI toe",
   "latest5": [
+    {
+      "version": "1.0.9",
+      "releasedAt": "2026-09-08T12:49:06.004Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Voeg campergids datamodel en TEST-AGENT UI toe"
+    },
     {
       "version": "1.0.8",
       "releasedAt": "2026-09-06T17:32:25.767Z",
@@ -23,14 +28,14 @@
       "version": "1.0.5",
       "releasedAt": "2026-09-06T15:50:10.532Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Vereenvoudig systeeminformatie naar foto-opslag"
-    },
-    {
-      "version": "1.0.4",
-      "releasedAt": "2026-09-06T15:31:33.956Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix systeeminformatie foto-datumkolom"
     }
   ],
   "history": [
+    {
+      "version": "1.0.9",
+      "releasedAt": "2026-09-08T12:49:06.004Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Voeg campergids datamodel en TEST-AGENT UI toe"
+    },
     {
       "version": "1.0.8",
       "releasedAt": "2026-09-06T17:32:25.767Z",
@@ -77,5 +82,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "f9baf55c86ed3e37318a0a30d1795456db70bcac"
+  "lastSyncedTestAgentSha": "5a2a9bc31aab3ebad34e357e52fdeb990c3253c5"
 }
