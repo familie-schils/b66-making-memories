@@ -133,6 +133,16 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .op-detail-photos{margin-top:12px}
 .op-detail-photos-grid{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}
 .op-detail-photos-grid img{max-width:150px;max-height:150px;border-radius:8px;cursor:pointer}
+.camper-uitleg-photo-grid{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
+.camper-uitleg-photo-item{width:110px}
+.camper-uitleg-photo-item img{width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid #d8dde3;display:block}
+.camper-uitleg-photo-item button{margin-top:6px;width:100%}
+.camper-uitleg-list{display:grid;gap:10px}
+.camper-uitleg-item{border:1px solid #e4e7eb;border-radius:12px;padding:12px}
+.camper-uitleg-item-header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.camper-uitleg-item-title{margin:0;font-size:17px}
+.camper-uitleg-item-meta{margin-top:4px}
+.camper-uitleg-actions{display:flex;gap:8px;flex-wrap:wrap}
 @media (max-width:560px){
   .travel-cost-category-grid{grid-template-columns:1fr}
   .edit-actions .secondary,.edit-actions .primary{flex:1 1 100%}
@@ -140,6 +150,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
   .op-card-title{font-size:15px}
   .op-card-info{font-size:13px}
   .op-photo-grid img{max-width:72px;max-height:72px}
+  .camper-uitleg-photo-item{width:95px}
 }
 </style>
 </head>
@@ -519,6 +530,7 @@ Reiskosten laden...
     <button type="button" class="section-link-card" onclick="openSection('camper','more')"><span class="section-link-title">Mijn Camper</span><span class="section-link-copy">Profiel, leden en uitnodigingen.</span></button>
     <button type="button" class="section-link-card" onclick="openSection('personen','more')"><span class="section-link-title">Personen</span><span class="section-link-copy">Bestuurders en passagiers beheren.</span></button>
     <button type="button" class="section-link-card" onclick="openSection('maintenance','more')"><span class="section-link-title">Onderhoud</span><span class="section-link-copy">Onderhoud en historiek van de camper.</span></button>
+    <button type="button" class="section-link-card" onclick="openSection('camper-uitleg','more')"><span class="section-link-title">Camper Uitleg</span><span class="section-link-copy">Praktische uitleg per camper voor familie en vrienden.</span></button>
   </div>
 </div>
 
@@ -778,6 +790,54 @@ Nog geen onderhoud geregistreerd.
 <div id="ontdektePlaatsenList">Laden...</div>
 </div>
 </section>
+
+<section id="camper-uitleg">
+<div class="card">
+  <h2>Camper Uitleg</h2>
+  <p class="muted">Eenvoudige kennisbank met praktische onderwerpen per camper.</p>
+  <div id="camperUitlegStatus" class="status hidden"></div>
+  <div id="camperUitlegReadOnlyHint" class="muted hidden">Je hebt alleen-lezen toegang. Wijzigen is alleen toegestaan voor hoofdbeheerder en camper-admin.</div>
+</div>
+
+<div id="camperUitlegCamperPickerCard" class="card hidden">
+  <label>Kies camper</label>
+  <select id="camperUitlegCamperSelect" onchange="changeCamperUitlegCamper(this.value)">
+    <option value="">— Kies camper —</option>
+  </select>
+</div>
+
+<div class="card">
+  <h3>Onderwerp</h3>
+  <div class="grid">
+    <div><label>Titel</label><input id="camperUitlegTitle" placeholder="Bijv. Koelkast tijdens het rijden"></div>
+    <div><label>Categorie</label><select id="camperUitlegCategory">
+      <option value="Voor de reis">Voor de reis</option>
+      <option value="Tijdens de reis">Tijdens de reis</option>
+      <option value="Na de reis">Na de reis</option>
+    </select></div>
+  </div>
+  <label style="margin-top:10px">Uitleg</label>
+  <textarea id="camperUitlegExplanation" placeholder="Praktische uitleg..."></textarea>
+  <label style="margin-top:10px">Foto's toevoegen</label>
+  <input id="camperUitlegPhotoUpload" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+  <div id="camperUitlegPhotoStatus" class="muted">Nog geen foto geselecteerd.</div>
+  <div id="camperUitlegExistingPhotoList" class="camper-uitleg-photo-grid"></div>
+  <div id="camperUitlegPhotoList" class="muted"></div>
+  <div style="margin-top:12px">
+    <button id="saveCamperUitlegBtn" class="primary" onclick="saveCamperUitlegTopic()">Onderwerp opslaan</button>
+    <button id="cancelCamperUitlegEditBtn" class="secondary hidden" onclick="cancelCamperUitlegEdit()">Annuleren</button>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Onderwerpen</h3>
+  <label>Zoeken</label>
+  <input id="camperUitlegSearch" placeholder="Zoek op titel, categorie of uitleg" oninput="filterCamperUitlegTopics()">
+  <div class="muted" style="margin-top:6px">Zoeken start vanaf 3 tekens. Met minder tekens zie je alle onderwerpen.</div>
+  <div id="camperUitlegTopicsList" class="camper-uitleg-list" style="margin-top:12px">Laden...</div>
+</div>
+</section>
+
   <!--
   ALTER TABLE campers ADD COLUMN IF NOT EXISTS merk text;
   ALTER TABLE campers ADD COLUMN IF NOT EXISTS model text;
@@ -1114,6 +1174,11 @@ let editingMaintenanceLegacyOther=null;
 let currentEditingStopPhotos=[];
 let stopPhotosToDelete=[];
   let selectedPhotos = [];
+  let camperUitlegSelectedPhotos = [];
+  let camperUitlegData = { topics:[], photosByTopic:{} };
+  let editingCamperUitlegTopicId = null;
+  let camperUitlegPhotosToDelete = [];
+  let camperUitlegTargetCamperId = null;
   let tripReportPdfLibPromise = null;
   let tripReportXlsxLibPromise = null;
   let activeCamperId = null;
@@ -1143,6 +1208,7 @@ let stopPhotosToDelete=[];
   const PHOTO_UPLOAD_MIN_QUALITY=0.5;
   const PHOTO_UPLOAD_DIMENSION_REDUCTION_FACTOR=0.85;
   const PHOTO_UPLOAD_MIN_DIMENSION=1280;
+  const CAMPER_UITLEG_CATEGORIES = ['Voor de reis','Tijdens de reis','Na de reis'];
 
   function asDateInputValue(value){
     if(!value)return '';
@@ -4441,6 +4507,7 @@ const SECTION_NAV_GROUPS={
   reiskosten:'home',
   profiel:'more',
   maintenance:'more',
+  'camper-uitleg':'more',
   personen:'more',
   vrienden:'more',
   'ontdekte-plaatsen':'more',
@@ -4478,6 +4545,9 @@ async function openSection(sectionId,navKey=SECTION_NAV_GROUPS[sectionId]||'home
   if(sectionId==='camper'){
     await loadCamperTab();
   }
+  if(sectionId==='camper-uitleg'){
+    await window.loadCamperUitlegTab?.();
+  }
   if(sectionId==='profiel'){
     renderProfileIdentity();
   }
@@ -4512,6 +4582,7 @@ window.openHomeTripOverview=async function(){
 
 document.querySelectorAll('nav button[data-nav]').forEach(button=>button.onclick=()=>openSection(button.dataset.nav,button.dataset.nav));
 const photoUpload = document.getElementById('photoUpload');
+const camperUitlegPhotoUpload = document.getElementById('camperUitlegPhotoUpload');
 
 function setPhotoStatus(message,isError=false){
   const photoStatus=document.getElementById('photoStatus');
@@ -4621,6 +4692,28 @@ if (photoUpload) {
     renderPhotoList(selectedPhotos);
   });
 
+}
+if(camperUitlegPhotoUpload){
+  camperUitlegPhotoUpload.addEventListener('change',function(){
+    const files=Array.from(this?.files||[]);
+    if(!files.length){
+      camperUitlegSelectedPhotos=[];
+      setCamperUitlegPhotoStatus('Nog geen foto geselecteerd.');
+      renderCamperUitlegPhotoList([]);
+      return;
+    }
+    const validation=validateCamperUitlegSelectedPhotos(files);
+    if(!validation.valid){
+      camperUitlegSelectedPhotos=[];
+      setCamperUitlegPhotoStatus(validation.errors.join(' '),true);
+      renderCamperUitlegPhotoList([]);
+      this.value='';
+      return;
+    }
+    camperUitlegSelectedPhotos=validation.files;
+    setCamperUitlegPhotoStatus(camperUitlegSelectedPhotos.length+' foto(s) geselecteerd');
+    renderCamperUitlegPhotoList(camperUitlegSelectedPhotos);
+  });
 }
 async function uploadPhotos() {
 
@@ -5730,6 +5823,496 @@ window.removeVriend=async function(id){
   const {error}=await supabase.from('friends').delete().eq('id',id);
   if(error){alert('Verwijderen mislukt: '+error.message);return;}
   await loadVrienden();
+};
+
+function canEditCamperUitleg(){
+  return isHeadAdmin()||isCamperAdmin;
+}
+
+function setCamperUitlegStatus(message,type='hidden'){
+  const box=document.getElementById('camperUitlegStatus');
+  if(!box)return;
+  if(!message){
+    box.className='status hidden';
+    box.textContent='';
+    return;
+  }
+  if(type==='ok'){
+    box.className='status ok';
+  }else if(type==='err'){
+    box.className='status err';
+  }else{
+    box.className='status';
+  }
+  box.textContent=message;
+}
+
+function setCamperUitlegPhotoStatus(message,isError=false){
+  const box=document.getElementById('camperUitlegPhotoStatus');
+  if(!box)return;
+  box.textContent=message;
+  box.className=isError?'status err':'muted';
+}
+
+function renderCamperUitlegPhotoList(photos){
+  const list=document.getElementById('camperUitlegPhotoList');
+  if(!list)return;
+  if(!photos?.length){
+    list.innerHTML='';
+    return;
+  }
+  list.innerHTML=photos.map(photo=>`<div>Foto: ${esc(photo.name||'Onbekend bestand')}</div>`).join('');
+}
+
+function validateCamperUitlegSelectedPhotos(files){
+  if(!files?.length)return {valid:true,files:[]};
+  const errors=[];
+  if(files.length>PHOTO_UPLOAD_MAX_COUNT){
+    errors.push(`Je kan maximaal ${PHOTO_UPLOAD_MAX_COUNT} foto's per onderwerp uploaden.`);
+  }
+  for(const file of files){
+    if(!(file instanceof File)){
+      errors.push('Minstens één geselecteerd item is geen geldig bestand.');
+      continue;
+    }
+    if(file.size<=0){
+      errors.push(`Bestand "${file.name}" bevat geen inhoud.`);
+      continue;
+    }
+    if(!PHOTO_UPLOAD_ALLOWED_TYPES.includes(file.type)){
+      errors.push(`Bestand "${file.name}" is geen toegelaten afbeelding (JPEG, PNG of WEBP).`);
+      continue;
+    }
+    if(file.size>PHOTO_UPLOAD_MAX_SOURCE_FILE_SIZE_BYTES){
+      errors.push(`Bestand "${file.name}" is groter dan 20 MB.`);
+    }
+  }
+  if(errors.length)return {valid:false,errors};
+  return {valid:true,files};
+}
+
+function getCamperUitlegTargetCamperId(){
+  if(isHeadAdmin()){
+    const select=document.getElementById('camperUitlegCamperSelect');
+    const selectedValue=Number(select?.value||0);
+    if(Number.isFinite(selectedValue)&&selectedValue>0)return selectedValue;
+  }
+  return activeCamperId||null;
+}
+
+function getCamperUitlegPhotoUrl(storagePath){
+  if(!storagePath)return '';
+  const {data}=supabase.storage.from('fotos').getPublicUrl(storagePath);
+  return data?.publicUrl||'';
+}
+
+function getCamperUitlegPhotosByTopicId(topicId){
+  return camperUitlegData.photosByTopic?.[topicId]||[];
+}
+
+function renderCamperUitlegExistingPhotoList(){
+  const box=document.getElementById('camperUitlegExistingPhotoList');
+  if(!box)return;
+  if(!editingCamperUitlegTopicId){
+    box.innerHTML='';
+    return;
+  }
+  const photos=getCamperUitlegPhotosByTopicId(editingCamperUitlegTopicId)
+    .filter(photo=>!camperUitlegPhotosToDelete.includes(photo.id));
+  if(!photos.length){
+    box.innerHTML='';
+    return;
+  }
+  const canEdit=canEditCamperUitleg();
+  box.innerHTML=photos.map(photo=>`<div class="camper-uitleg-photo-item">
+    <img src="${esc(photo.url||'')}" alt="${esc(photo.storage_path||'camper uitleg foto')}">
+    ${canEdit?`<button class="secondary" onclick="markCamperUitlegPhotoForDeletion(${photo.id})">Verwijderen</button>`:''}
+  </div>`).join('');
+}
+
+function resetCamperUitlegPhotoSelection(){
+  camperUitlegSelectedPhotos=[];
+  if(camperUitlegPhotoUpload)camperUitlegPhotoUpload.value='';
+  setCamperUitlegPhotoStatus('Nog geen foto geselecteerd.');
+  renderCamperUitlegPhotoList([]);
+}
+
+function resetCamperUitlegEditor(){
+  editingCamperUitlegTopicId=null;
+  camperUitlegPhotosToDelete=[];
+  const title=document.getElementById('camperUitlegTitle');
+  const category=document.getElementById('camperUitlegCategory');
+  const explanation=document.getElementById('camperUitlegExplanation');
+  if(title)title.value='';
+  if(category)category.value=CAMPER_UITLEG_CATEGORIES[0];
+  if(explanation)explanation.value='';
+  const cancelButton=document.getElementById('cancelCamperUitlegEditBtn');
+  if(cancelButton)cancelButton.classList.add('hidden');
+  renderCamperUitlegExistingPhotoList();
+  resetCamperUitlegPhotoSelection();
+}
+
+async function loadCamperUitlegCamperOptions(){
+  const card=document.getElementById('camperUitlegCamperPickerCard');
+  const select=document.getElementById('camperUitlegCamperSelect');
+  if(!card||!select)return;
+  if(!isHeadAdmin()){
+    card.classList.add('hidden');
+    return;
+  }
+  card.classList.remove('hidden');
+  const {data,error}=await supabase
+    .from('campers')
+    .select('id,naam,merk,model')
+    .order('naam',{ascending:true});
+  if(error){
+    setCamperUitlegStatus('Campers laden mislukt: '+error.message,'err');
+    return;
+  }
+  const campers=data||[];
+  select.innerHTML=['<option value="">— Kies camper —</option>',...campers.map(camper=>{
+    const label=camper.naam||[camper.merk,camper.model].filter(Boolean).join(' ')||(`Camper #${camper.id}`);
+    return `<option value="${camper.id}">${esc(label)}</option>`;
+  })].join('');
+  if(camperUitlegTargetCamperId){
+    select.value=String(camperUitlegTargetCamperId);
+  }else if(activeCamperId){
+    select.value=String(activeCamperId);
+  }
+}
+
+function applyCamperUitlegPermissions(){
+  const canEdit=canEditCamperUitleg();
+  const readOnlyHint=document.getElementById('camperUitlegReadOnlyHint');
+  if(readOnlyHint)readOnlyHint.classList.toggle('hidden',canEdit);
+  const fieldIds=['camperUitlegTitle','camperUitlegCategory','camperUitlegExplanation','camperUitlegPhotoUpload','saveCamperUitlegBtn'];
+  fieldIds.forEach(id=>{
+    const element=document.getElementById(id);
+    if(element)element.disabled=!canEdit;
+  });
+}
+
+function renderCamperUitlegTopics(topics){
+  const box=document.getElementById('camperUitlegTopicsList');
+  if(!box)return;
+  if(!topics.length){
+    box.innerHTML='<div class="muted">Nog geen onderwerpen beschikbaar.</div>';
+    return;
+  }
+  const canEdit=canEditCamperUitleg();
+  box.innerHTML=topics.map(topic=>{
+    const photos=getCamperUitlegPhotosByTopicId(topic.id);
+    return `<div class="camper-uitleg-item">
+      <div class="camper-uitleg-item-header">
+        <div>
+          <h4 class="camper-uitleg-item-title">${esc(topic.title||'Zonder titel')}</h4>
+          <div class="muted camper-uitleg-item-meta">${esc(topic.category||'—')}</div>
+        </div>
+        ${canEdit?`<div class="camper-uitleg-actions">
+          <button class="secondary" onclick="startEditCamperUitlegTopic(${topic.id})">Bewerken</button>
+          <button class="secondary" onclick="deleteCamperUitlegTopic(${topic.id})">Verwijderen</button>
+        </div>`:''}
+      </div>
+      <div style="margin-top:8px;white-space:pre-wrap">${esc(topic.explanation||'')}</div>
+      ${photos.length?`<div class="camper-uitleg-photo-grid">${photos.map(photo=>`<div class="camper-uitleg-photo-item"><img src="${esc(photo.url||'')}" alt="${esc(topic.title||'camper uitleg foto')}"></div>`).join('')}</div>`:''}
+      <div class="muted" style="margin-top:8px">Laatst bijgewerkt: ${esc(formatDate(topic.updated_at||topic.created_at||''))}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterCamperUitlegTopics(){
+  const searchTerm=(document.getElementById('camperUitlegSearch')?.value||'').trim().toLowerCase();
+  const allTopics=camperUitlegData.topics||[];
+  if(searchTerm.length<3){
+    renderCamperUitlegTopics(allTopics);
+    return;
+  }
+  const filtered=allTopics.filter(topic=>{
+    const title=(topic.title||'').toLowerCase();
+    const category=(topic.category||'').toLowerCase();
+    const explanation=(topic.explanation||'').toLowerCase();
+    return title.includes(searchTerm)||category.includes(searchTerm)||explanation.includes(searchTerm);
+  });
+  renderCamperUitlegTopics(filtered);
+}
+window.filterCamperUitlegTopics=filterCamperUitlegTopics;
+
+async function loadCamperUitlegTopics(){
+  const targetCamperId=getCamperUitlegTargetCamperId();
+  camperUitlegTargetCamperId=targetCamperId;
+  const box=document.getElementById('camperUitlegTopicsList');
+  if(!box)return;
+  if(!targetCamperId){
+    camperUitlegData={topics:[],photosByTopic:{}};
+    box.innerHTML='<div class="muted">Geen actieve camper geselecteerd.</div>';
+    return;
+  }
+  box.innerHTML='<div class="muted">Onderwerpen laden...</div>';
+  const {data:topics,error}=await supabase
+    .from('camper_guide_topics')
+    .select('id,camper_id,title,category,explanation,created_at,updated_at,sort_order')
+    .eq('camper_id',targetCamperId)
+    .order('sort_order',{ascending:true})
+    .order('updated_at',{ascending:false})
+    .limit(300);
+  if(error){
+    box.innerHTML='<div class="status err">Onderwerpen laden mislukt: '+esc(error.message)+'</div>';
+    return;
+  }
+  const topicRows=topics||[];
+  const topicIds=topicRows.map(topic=>topic.id);
+  let photoRows=[];
+  if(topicIds.length){
+    const {data:photos,error:photosError}=await supabase
+      .from('camper_guide_topic_photos')
+      .select('id,topic_id,storage_path,sort_order')
+      .in('topic_id',topicIds)
+      .order('sort_order',{ascending:true})
+      .order('id',{ascending:true});
+    if(photosError){
+      box.innerHTML='<div class="status err">Foto\'s laden mislukt: '+esc(photosError.message)+'</div>';
+      return;
+    }
+    photoRows=(photos||[]).map(photo=>({
+      ...photo,
+      url:getCamperUitlegPhotoUrl(photo.storage_path)
+    }));
+  }
+  const photosByTopic={};
+  photoRows.forEach(photo=>{
+    const key=photo.topic_id;
+    if(!photosByTopic[key])photosByTopic[key]=[];
+    photosByTopic[key].push(photo);
+  });
+  camperUitlegData={topics:topicRows,photosByTopic};
+  filterCamperUitlegTopics();
+  renderCamperUitlegExistingPhotoList();
+}
+
+window.loadCamperUitlegTab=async function(){
+  setCamperUitlegStatus('');
+  applyCamperUitlegPermissions();
+  await loadCamperUitlegCamperOptions();
+  if(!canEditCamperUitleg())resetCamperUitlegEditor();
+  await loadCamperUitlegTopics();
+};
+
+window.changeCamperUitlegCamper=async function(camperIdValue){
+  if(!isHeadAdmin())return;
+  const parsedId=Number(camperIdValue||0);
+  camperUitlegTargetCamperId=Number.isFinite(parsedId)&&parsedId>0?parsedId:null;
+  resetCamperUitlegEditor();
+  await loadCamperUitlegTopics();
+};
+
+window.markCamperUitlegPhotoForDeletion=function(photoId){
+  if(!canEditCamperUitleg())return;
+  if(!editingCamperUitlegTopicId)return;
+  if(!camperUitlegPhotosToDelete.includes(photoId)){
+    camperUitlegPhotosToDelete.push(photoId);
+  }
+  renderCamperUitlegExistingPhotoList();
+};
+
+window.startEditCamperUitlegTopic=function(topicId){
+  if(!canEditCamperUitleg())return;
+  const topic=(camperUitlegData.topics||[]).find(item=>item.id===topicId||item.id==topicId);
+  if(!topic)return;
+  editingCamperUitlegTopicId=topic.id;
+  camperUitlegPhotosToDelete=[];
+  const title=document.getElementById('camperUitlegTitle');
+  const category=document.getElementById('camperUitlegCategory');
+  const explanation=document.getElementById('camperUitlegExplanation');
+  if(title)title.value=topic.title||'';
+  if(category)category.value=CAMPER_UITLEG_CATEGORIES.includes(topic.category)?topic.category:CAMPER_UITLEG_CATEGORIES[0];
+  if(explanation)explanation.value=topic.explanation||'';
+  const cancelButton=document.getElementById('cancelCamperUitlegEditBtn');
+  if(cancelButton)cancelButton.classList.remove('hidden');
+  resetCamperUitlegPhotoSelection();
+  renderCamperUitlegExistingPhotoList();
+  setCamperUitlegStatus('Bewerkmodus actief.','ok');
+};
+
+window.cancelCamperUitlegEdit=function(){
+  resetCamperUitlegEditor();
+  setCamperUitlegStatus('');
+};
+
+function buildCamperUitlegStoragePath(fileName,camperId){
+  const safeName=String(fileName||'foto')
+    .replace(/\.[^.]+$/,'')
+    .replace(/\s+/g,'_')
+    .replace(/[^a-zA-Z0-9_-]/g,'')
+    .slice(0,40)||'foto';
+  const token=(crypto.randomUUID?.()||`${Date.now()}_${Math.random().toString(16).slice(2)}`);
+  return `camper-uitleg/${camperId}/${token}_${safeName}.jpg`;
+}
+
+async function uploadCamperUitlegPhotos(topicId,startOrder=0){
+  if(!camperUitlegSelectedPhotos.length)return {ok:true,count:0};
+  const validation=validateCamperUitlegSelectedPhotos(camperUitlegSelectedPhotos);
+  if(!validation.valid){
+    setCamperUitlegPhotoStatus(validation.errors.join(' '),true);
+    return {ok:false,error:new Error(validation.errors.join(' '))};
+  }
+  const targetCamperId=getCamperUitlegTargetCamperId();
+  const rows=[];
+  let index=0;
+  for(const file of validation.files){
+    setCamperUitlegPhotoStatus(`Foto ${index+1} van ${validation.files.length} wordt geoptimaliseerd...`);
+    const optimized=await optimizePhotoForUpload(file);
+    const optimizedFile=optimized.file;
+    const path=buildCamperUitlegStoragePath(optimizedFile.name,targetCamperId||'onbekend');
+    const buffer=await optimizedFile.arrayBuffer();
+    setCamperUitlegPhotoStatus(`Foto ${index+1} van ${validation.files.length} wordt geüpload...`);
+    const {error:uploadError}=await supabase.storage
+      .from('fotos')
+      .upload(path,buffer,optimizedFile.type?{contentType:optimizedFile.type}:undefined);
+    if(uploadError){
+      setCamperUitlegPhotoStatus(`Upload mislukt voor "${file.name}": ${uploadError.message}`,true);
+      return {ok:false,error:uploadError};
+    }
+    rows.push({
+      topic_id:topicId,
+      storage_path:path,
+      sort_order:startOrder+index
+    });
+    index+=1;
+  }
+  const {error:insertError}=await supabase
+    .from('camper_guide_topic_photos')
+    .insert(rows);
+  if(insertError){
+    setCamperUitlegPhotoStatus('Foto koppelen mislukt: '+insertError.message,true);
+    return {ok:false,error:insertError};
+  }
+  setCamperUitlegPhotoStatus(rows.length+' foto(s) geüpload');
+  return {ok:true,count:rows.length};
+}
+
+async function deleteCamperUitlegStoragePaths(paths){
+  const validPaths=(paths||[]).filter(Boolean);
+  if(!validPaths.length)return;
+  const {error}=await supabase.storage.from('fotos').remove(validPaths);
+  if(error){
+    console.warn('Opschonen van camper-uitlegfoto\'s in storage mislukt:',error);
+  }
+}
+
+window.saveCamperUitlegTopic=async function(){
+  if(!canEditCamperUitleg()){
+    setCamperUitlegStatus('Geen toegang om onderwerpen te wijzigen.','err');
+    return;
+  }
+  const camperId=getCamperUitlegTargetCamperId();
+  if(!camperId){
+    setCamperUitlegStatus('Kies eerst een camper.','err');
+    return;
+  }
+  const title=(document.getElementById('camperUitlegTitle')?.value||'').trim();
+  const category=(document.getElementById('camperUitlegCategory')?.value||'').trim();
+  const explanation=(document.getElementById('camperUitlegExplanation')?.value||'').trim();
+  if(!title){
+    setCamperUitlegStatus('Titel is verplicht.','err');
+    return;
+  }
+  if(!CAMPER_UITLEG_CATEGORIES.includes(category)){
+    setCamperUitlegStatus('Kies een geldige categorie.','err');
+    return;
+  }
+  if(!explanation){
+    setCamperUitlegStatus('Uitleg is verplicht.','err');
+    return;
+  }
+  setCamperUitlegStatus(editingCamperUitlegTopicId?'Onderwerp bijwerken...':'Onderwerp opslaan...','ok');
+  const nowIso=new Date().toISOString();
+  let topicId=editingCamperUitlegTopicId;
+  if(editingCamperUitlegTopicId){
+    const {error:updateError}=await supabase
+      .from('camper_guide_topics')
+      .update({
+        title,
+        category,
+        explanation,
+        updated_at:nowIso,
+        updated_by:currentUser?.id||null
+      })
+      .eq('id',editingCamperUitlegTopicId)
+      .eq('camper_id',camperId);
+    if(updateError){
+      setCamperUitlegStatus('Onderwerp bijwerken mislukt: '+updateError.message,'err');
+      return;
+    }
+  }else{
+    const {data,error:insertError}=await supabase
+      .from('camper_guide_topics')
+      .insert({
+        camper_id:camperId,
+        title,
+        category,
+        explanation,
+        created_by:currentUser?.id||null,
+        updated_by:currentUser?.id||null
+      })
+      .select('id')
+      .single();
+    if(insertError){
+      setCamperUitlegStatus('Onderwerp opslaan mislukt: '+insertError.message,'err');
+      return;
+    }
+    topicId=data?.id||null;
+  }
+  if(!topicId){
+    setCamperUitlegStatus('Onderwerp opslaan mislukt: geen onderwerp-ID ontvangen.','err');
+    return;
+  }
+  const existingPhotos=getCamperUitlegPhotosByTopicId(topicId);
+  const deletePaths=[];
+  if(camperUitlegPhotosToDelete.length){
+    for(const photoId of camperUitlegPhotosToDelete){
+      const photo=existingPhotos.find(item=>item.id===photoId);
+      const {error:deleteError}=await supabase
+        .from('camper_guide_topic_photos')
+        .delete()
+        .eq('id',photoId)
+        .eq('topic_id',topicId);
+      if(deleteError){
+        setCamperUitlegStatus('Foto verwijderen mislukt: '+deleteError.message,'err');
+        return;
+      }
+      if(photo?.storage_path)deletePaths.push(photo.storage_path);
+    }
+  }
+  await deleteCamperUitlegStoragePaths(deletePaths);
+  const remainingPhotoCount=Math.max(0,existingPhotos.filter(photo=>!camperUitlegPhotosToDelete.includes(photo.id)).length);
+  const uploadResult=await uploadCamperUitlegPhotos(topicId,remainingPhotoCount);
+  if(!uploadResult.ok)return;
+  resetCamperUitlegEditor();
+  await loadCamperUitlegTopics();
+  setCamperUitlegStatus('Onderwerp opgeslagen.','ok');
+};
+
+window.deleteCamperUitlegTopic=async function(topicId){
+  if(!canEditCamperUitleg()){
+    setCamperUitlegStatus('Geen toegang om onderwerpen te verwijderen.','err');
+    return;
+  }
+  if(!confirm('Onderwerp verwijderen?'))return;
+  const photos=getCamperUitlegPhotosByTopicId(topicId);
+  const {error}=await supabase
+    .from('camper_guide_topics')
+    .delete()
+    .eq('id',topicId);
+  if(error){
+    setCamperUitlegStatus('Onderwerp verwijderen mislukt: '+error.message,'err');
+    return;
+  }
+  await deleteCamperUitlegStoragePaths(photos.map(photo=>photo.storage_path));
+  if(editingCamperUitlegTopicId===topicId){
+    resetCamperUitlegEditor();
+  }
+  await loadCamperUitlegTopics();
+  setCamperUitlegStatus('Onderwerp verwijderd.','ok');
 };
 
 // ── Ontdekte plaatsen ─────────────────────────────────────
