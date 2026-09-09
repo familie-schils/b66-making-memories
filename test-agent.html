@@ -530,7 +530,7 @@ Reiskosten laden...
   <div class="section-link-grid">
     <button type="button" class="section-link-card" onclick="openSection('camper','more')"><span class="section-link-title">Mijn Camper</span><span class="section-link-copy">Profiel, leden en uitnodigingen.</span></button>
     <button type="button" class="section-link-card" onclick="openSection('personen','more')"><span class="section-link-title">Personen</span><span class="section-link-copy">Bestuurders en passagiers beheren.</span></button>
-    <button type="button" class="section-link-card" onclick="openSection('maintenance','more')"><span class="section-link-title">Onderhoud</span><span class="section-link-copy">Onderhoud en historiek van de camper.</span></button>
+    <button type="button" class="section-link-card" onclick="openSection('maintenance','more')"><span class="section-link-title">Onderhoud &amp; Toebehoren</span><span class="section-link-copy">Onderhoud, herstellingen en toebehoren van de camper.</span></button>
     <button type="button" class="section-link-card" onclick="openSection('camper-uitleg','more')"><span class="section-link-title">Camper Uitleg</span><span class="section-link-copy">Praktische uitleg per camper voor familie en vrienden.</span></button>
   </div>
 </div>
@@ -622,7 +622,7 @@ Reiskosten laden...
 <section id="maintenance">
 
 <div class="card">
-<h2>Onderhoud</h2>
+<h2>Onderhoud &amp; Toebehoren</h2>
 <div id="maintenanceStatus" class="status hidden"></div>
 
 <div class="card" style="margin-bottom:12px">
@@ -639,10 +639,10 @@ Reiskosten laden...
 <select id="mCategory">
   <option value="">(optioneel)</option>
   <option value="onderhoud">Onderhoud</option>
-  <option value="schade">Schade</option>
+  <option value="toebehoren">Toebehoren</option>
+  <option value="herstelling">Herstelling</option>
   <option value="keuring">Keuring</option>
-  <option value="accessoire">Accessoire</option>
-  <option value="overig">Overig</option>
+  <option value="accessoires">Accessoires</option>
 </select>
 </div>
 
@@ -674,14 +674,14 @@ Reiskosten laden...
 <br><br>
 
 <button id="saveMaintenanceBtn" class="primary">
-Onderhoud opslaan
+Item opslaan
 </button>
 <button id="cancelMaintenanceEditBtn" class="secondary hidden" onclick="cancelMaintenanceEdit()">
 Annuleren bewerken
 </button>
   <hr>
 
-<h3>Onderhoudshistorie</h3>
+<h3>Historiek onderhoud &amp; toebehoren</h3>
 
 <div id="maintenanceHistory">
 Nog geen onderhoud geregistreerd.
@@ -4940,14 +4940,17 @@ window.testUpload = async function(){
 
 const maintenanceCategoryLabels = {
   onderhoud:'Onderhoud',
-  schade:'Schade',
+  toebehoren:'Toebehoren',
+  herstelling:'Herstelling',
   keuring:'Keuring',
-  accessoire:'Accessoire',
-  overig:'Overig',
+  accessoires:'Accessoires',
+  schade:'Herstelling',
+  accessoire:'Toebehoren',
+  overig:'Overig (bestaand)',
   fiat:'Fiat Onderhoud',
   vanomobil:'Vanomobil Onderhoud',
-  repair:'Schade / Reparatie',
-  other:'Overig'
+  repair:'Herstelling',
+  other:'Overig (bestaand)'
 };
 
 function setMaintenanceStatus(message,isOk){
@@ -4997,7 +5000,7 @@ function resetMaintenanceForm(){
   document.getElementById('mCost').value='';
   document.getElementById('mPerformer').value='';
   document.getElementById('mNotes').value='';
-  document.getElementById('saveMaintenanceBtn').textContent='Onderhoud opslaan';
+  document.getElementById('saveMaintenanceBtn').textContent='Item opslaan';
   document.getElementById('cancelMaintenanceEditBtn').classList.add('hidden');
 }
 
@@ -5012,7 +5015,7 @@ window.startMaintenanceEdit=function(item){
   document.getElementById('mCost').value=item.kosten??'';
   document.getElementById('mPerformer').value=item.uitvoerder||'';
   document.getElementById('mNotes').value=item.opmerkingen||'';
-  document.getElementById('saveMaintenanceBtn').textContent='Onderhoud wijzigen';
+  document.getElementById('saveMaintenanceBtn').textContent='Item wijzigen';
   document.getElementById('cancelMaintenanceEditBtn').classList.remove('hidden');
   setMaintenanceStatus('',false);
   document.getElementById('maintenance').scrollIntoView({behavior:'smooth',block:'start'});
@@ -5021,7 +5024,7 @@ window.startMaintenanceEdit=function(item){
 window.startMaintenanceEditById=async function(id){
   const {data,error}=await supabase.from('onderhoud').select('*').eq('id',id).single();
   if(error){
-    alert('Onderhoud laden mislukt: '+error.message);
+    alert('Item laden mislukt: '+error.message);
     return;
   }
   window.startMaintenanceEdit(data);
@@ -5072,7 +5075,7 @@ document.getElementById('saveMaintenanceBtn').addEventListener('click', async fu
     console.error(error);
     return;
   }
-  setMaintenanceStatus(isEdit?'Onderhoud bijgewerkt':'Onderhoud opgeslagen',true);
+  setMaintenanceStatus(isEdit?'Item bijgewerkt':'Item opgeslagen',true);
   resetMaintenanceForm();
   await loadMaintenance();
 });
