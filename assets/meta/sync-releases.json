@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.19",
-  "releasedAt": "2026-09-08T20:24:37.029Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Camper Uitleg toegevoegd\n- Diverse UI-opruimingen\n- Verbeteringen aan beheer en gebruiksgemak",
+  "currentVersion": "1.0.20",
+  "releasedAt": "2026-09-09T15:05:04.231Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Bereken overnachtingskosten op basis van nachten per stop",
   "latest5": [
+    {
+      "version": "1.0.20",
+      "releasedAt": "2026-09-09T15:05:04.231Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Bereken overnachtingskosten op basis van nachten per stop"
+    },
     {
       "version": "1.0.19",
       "releasedAt": "2026-09-08T20:24:37.029Z",
@@ -23,14 +28,14 @@
       "version": "1.0.15",
       "releasedAt": "2026-09-08T15:39:55.442Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- refactor: remove campergids from test-agent"
-    },
-    {
-      "version": "1.0.14",
-      "releasedAt": "2026-09-08T15:24:58.143Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Interne update"
     }
   ],
   "history": [
+    {
+      "version": "1.0.20",
+      "releasedAt": "2026-09-09T15:05:04.231Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Bereken overnachtingskosten op basis van nachten per stop"
+    },
     {
       "version": "1.0.19",
       "releasedAt": "2026-09-08T20:24:37.029Z",
@@ -127,5 +132,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "ad05c53ac0ec704a5afcfaeba2af76084506b28b"
+  "lastSyncedTestAgentSha": "5af3974f981c304f0a85a4bde4a8936c9886fc14"
 }

@@ -13,6 +13,23 @@
 <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 <style>
 body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f5f8ff;color:#20252b}
+body::before{
+  content:"TESTVERSIE";
+  position:fixed;
+  top:calc(env(safe-area-inset-top,0px) + 8px);
+  right:10px;
+  z-index:2001;
+  background:#fff3bf;
+  color:#5c4500;
+  border:1px solid #f1dd7b;
+  border-radius:999px;
+  padding:5px 10px;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.02em;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+  pointer-events:none;
+}
 header{background:#20252b;color:white;padding:20px}
 header h1{margin:0}
 nav{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:0;z-index:2;overflow:auto}
@@ -272,7 +289,8 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 
 <h3 id="stopHeading">Eerste stop</h3>
 <div class="grid">
-<div><label>Datum stop</label><input id="sDate" type="date"></div>
+<div><label>Aankomstdatum</label><input id="sDate" type="date"></div>
+<div><label>Vertrekdatum</label><input id="sDepartureDate" type="date"></div>
 <div><label>Type stop</label><select id="sType">
 <option>Camperplaats</option>
 <option>Camping</option>
@@ -548,7 +566,7 @@ Reiskosten laden...
 <section id="wat-is-nieuw">
 <div class="card">
   <h2>Wat is nieuw?</h2>
-  <p class="muted">Versie-informatie komt automatisch uit goedgekeurde synchronisaties.</p>
+  <p class="muted">Versie-informatie komt automatisch uit goedgekeurde TEST-AGENT-synchronisaties.</p>
   <div class="grid" style="margin-top:8px">
     <div>
       <label>Huidige versie</label>
@@ -952,7 +970,7 @@ Nog geen onderhoud geregistreerd.
     used_at     timestamptz
   );
 
-  -- Productie-omgeving: gebruik Edge Function `create-camper-owner` als enige ingang.
+  -- TEST-omgeving: gebruik Edge Function `create-camper-owner` als enige ingang.
   -- Deze functie doet:
   -- 1) auth.admin.createUser() via service role
   -- 2) interne SECURITY DEFINER RPC `provision_camper_owner_data(...)`
@@ -1039,7 +1057,7 @@ Nog geen onderhoud geregistreerd.
 
 <section id="leden-beheren">
 <!--
-  SQL – maak de invitations tabel aan in Supabase:
+  SQL – maak de invitations tabel aan in Supabase (TEST-omgeving):
 
   CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -2400,7 +2418,7 @@ async function loadActiveTripStopsPanel(){
   list.textContent='Stops laden...';
   const {data:stops,error}=await supabase
     .from('reis_stops')
-    .select('id,reis_id,volgorde,datum,camperplaats,land')
+    .select('*')
     .eq('reis_id',activeTripId)
     .order('volgorde',{ascending:true});
   if(error){
@@ -2413,15 +2431,18 @@ async function loadActiveTripStopsPanel(){
     list.textContent='Nog geen stops opgeslagen.';
     return;
   }
-  list.innerHTML=stops.map(stop=>`
-    <div class="item">
+  list.innerHTML=stops.map(stop=>{
+    const overnight=getStopOvernightDetails(stop,{legacyFallback:true});
+    const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
+    const overnightText=overnight.nightlyRate!=null?` · ${formatCurrency(overnight.nightlyRate)}/nacht · ${formatCurrency(overnight.totalCost)} totaal`:'';
+    return `<div class="item">
       <b>${Number(stop.volgorde||0)}. ${esc(stop.camperplaats||'Onbenoemde stop')}</b> · ${esc(stop.land||'')}
-      <div class="muted">${esc(stop.datum||'')}</div>
+      <div class="muted">${esc(overnight.arrivalDate||'')} → ${esc(overnight.departureDate||'—')} · ${nightsText}${overnightText}</div>
       <div class="edit-actions">
         <button class="secondary" onclick="startStopEdit(${stop.id},${stop.reis_id})">Bewerken</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 window.startNewTrip=async()=>{
@@ -2594,16 +2615,30 @@ if(currentStopSaved && !editingStopId){
   return;
 }
 
+const arrivalDate=v('sDate')||v('tStartDate');
+const departureDate=v('sDepartureDate')||null;
+const enteredPrice=v('sPrice');
+if(enteredPrice&& !departureDate){
+  showStatus('Vul ook een vertrekdatum in om overnachtingskosten te berekenen.',false);
+  return;
+}
+if(departureDate){
+  const nights=calculateStopNights(arrivalDate,departureDate);
+  if(nights==null){
+    showStatus('Vertrekdatum moet gelijk of later zijn dan aankomstdatum.',false);
+    return;
+  }
+}
 const stop={
 reis_id:activeTripId,
 volgorde:stopNumber,
-datum:v('sDate')||v('tStartDate'),
+datum:arrivalDate,
+vertrekdatum:departureDate,
 type_stop:v('sType'),
 camperplaats:v('sPlace'),
 land:v('sCountry'),
-    km_aankomst:
-    v('sKm') ? Number(v('sKm')) : null,
-prijs_per_nacht:v('sPrice')?Number(v('sPrice')):null,
+km_aankomst:v('sKm') ? Number(v('sKm')) : null,
+prijs_per_nacht:enteredPrice?Number(enteredPrice):null,
 beoordeling:Number(v('sRating')),
 voorzieningen:v('sFacilities'),
 ervaring:v('sNotes'),
@@ -2619,13 +2654,19 @@ if(!stop.camperplaats){
 
 let stopId=editingStopId;
 if(editingStopId){
-  const {data:updatedStop,error}=await supabase
+  const updateStop=payload=>supabase
     .from('reis_stops')
-    .update(stop)
+    .update(payload)
     .eq('id',editingStopId)
     .eq('reis_id',activeTripId)
     .select('id')
     .maybeSingle();
+  let {data:updatedStop,error}=await updateStop(stop);
+  if(error&&isMissingColumnError(error,'vertrekdatum')){
+    const legacyStop={...stop};
+    delete legacyStop.vertrekdatum;
+    ({data:updatedStop,error}=await updateStop(legacyStop));
+  }
   if(error){
     showStatus('Stop bijwerken mislukt: '+error.message,false);
     return;
@@ -2635,11 +2676,17 @@ if(editingStopId){
     return;
   }
 }else{
-  const {data,error}=await supabase
+  const insertStop=payload=>supabase
     .from('reis_stops')
-    .insert(stop)
+    .insert(payload)
     .select()
     .single();
+  let {data,error}=await insertStop(stop);
+  if(error&&isMissingColumnError(error,'vertrekdatum')){
+    const legacyStop={...stop};
+    delete legacyStop.vertrekdatum;
+    ({data,error}=await insertStop(legacyStop));
+  }
   if(error){
     showStatus('Stop opslaan mislukt: '+error.message,false);
     return;
@@ -2742,7 +2789,11 @@ window.startStopEdit=async function(stopId,tripId){
   document.getElementById('tStartKm').readOnly=false;
   document.getElementById('tBestuurder').value=trip.bestuurder||'';
   document.getElementById('tPassagier').value=trip.passagier||'';
-  document.getElementById('sDate').value=asDateInputValue(stop.datum)||today();
+  const arrivalDate=asDateInputValue(getStopArrivalDate(stop))||today();
+  const departureDate=asDateInputValue(getStopDepartureDate(stop))
+    ||(stop.prijs_per_nacht!=null?addDaysToIsoDate(arrivalDate,1):arrivalDate);
+  document.getElementById('sDate').value=arrivalDate;
+  document.getElementById('sDepartureDate').value=departureDate;
   document.getElementById('sType').value=stop.type_stop||'Camperplaats';
   document.getElementById('sPlace').value=stop.camperplaats||'';
   document.getElementById('sCountry').value=stop.land||'';
@@ -2876,6 +2927,7 @@ function clearStopFields(){
   document.getElementById('sRating').value='5';
   document.getElementById('sType').value='Camperplaats';
   document.getElementById('sDate').value=today();
+  document.getElementById('sDepartureDate').value=addDaysToIsoDate(today(),1);
   document.getElementById('shareWithFriends').checked=false;
   currentEditingStopPhotos=[];
   stopPhotosToDelete=[];
@@ -3072,7 +3124,11 @@ detail.innerHTML=`<h2>Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagier?' &
 
 <h4>Overnachtingskosten</h4>
 <div class="item">
-  ${stops.filter(s=>s.prijs_per_nacht!=null).map(s=>`<div>${esc(s.datum)} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${formatCurrency(s.prijs_per_nacht)}/nacht</div>`).join('')||'<div class="muted">Geen overnachtingskosten geregistreerd.</div>'}
+  ${stops.filter(s=>s.prijs_per_nacht!=null).map(s=>{
+    const overnight=getStopOvernightDetails(s,{legacyFallback:true});
+    const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
+    return `<div>${esc(overnight.arrivalDate||'')} → ${esc(overnight.departureDate||'—')} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${nightsText} × ${formatCurrency(overnight.nightlyRate)} = ${formatCurrency(overnight.totalCost)}</div>`;
+  }).join('')||'<div class="muted">Geen overnachtingskosten geregistreerd.</div>'}
   <div style="margin-top:6px"><b>Totaal overnachtingen:</b> ${formatCurrency(summary.overnightTotal)}</div>
 </div>
 
@@ -3115,7 +3171,11 @@ ${logItems.length?logItems.map(item=>{
 <div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div>
 ${s.voorzieningen?`<div>${esc(s.voorzieningen)}</div>`:''}
 ${s.ervaring?`<p>${esc(s.ervaring)}</p>`:''}
-${s.prijs_per_nacht!=null?`<div class="muted">Prijs per nacht: ${formatCurrency(s.prijs_per_nacht)} / nacht</div>`:''}
+${s.prijs_per_nacht!=null?`<div class="muted">${(()=>{
+  const overnight=getStopOvernightDetails(s,{legacyFallback:true});
+  const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
+  return `Aankomst: ${esc(overnight.arrivalDate||'—')} · Vertrek: ${esc(overnight.departureDate||'—')} · ${nightsText} · ${formatCurrency(overnight.nightlyRate)}/nacht · ${formatCurrency(overnight.totalCost)} totaal`;
+})()}</div>`:''}
 ${stopFotos.length?`<div class="muted">Foto's: ${stopFotos.length}</div>`+''+stopFotos.map(f=>`<div style="margin-top:10px"><img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;"></div>`).join(''):''}
 <div class="edit-actions"><button class="secondary" onclick="startStopEdit(${s.id},${id})">Bewerken</button></div>
 </div>`;
@@ -3205,14 +3265,20 @@ window.exportTripPdf=async function(tripId){
     if(report.stops.length){
       for(const stop of report.stops){
         addParagraph(`${stop.volgorde||'-'}. ${stop.camperplaats||'Onbenoemde stop'} · ${stop.land||'—'}`,12,'bold',1);
-        addKeyValue('Datum',formatDate(stop.datum));
+        const overnight=getStopOvernightDetails(stop,{legacyFallback:true});
+        addKeyValue('Aankomst',formatDate(overnight.arrivalDate));
+        addKeyValue('Vertrek',formatDate(overnight.departureDate));
         addKeyValue('Type',stop.type_stop||'—');
         addKeyValue('KM bij aankomst',formatKilometers(stop.km_aankomst));
         if(stop.regio)addKeyValue('Regio',stop.regio);
         if(stop.referentie)addKeyValue('Referentie',stop.referentie);
         if(stop.voorzieningen)addKeyValue('Voorzieningen / indruk',stop.voorzieningen);
         if(stop.ervaring)addParagraph(`Onze ervaring: ${stop.ervaring}`,10,'normal',1);
-        if(stop.prijs_per_nacht!=null)addKeyValue('Prijs per nacht',formatCurrency(stop.prijs_per_nacht));
+        if(overnight.nightlyRate!=null){
+          addKeyValue('Aantal nachten',overnight.nights!=null?String(overnight.nights):'—');
+          addKeyValue('Prijs per nacht',formatCurrency(overnight.nightlyRate));
+          addKeyValue('Totale kost overnachting',formatCurrency(overnight.totalCost));
+        }
         const stopPhotos=report.photosByStopId[stop.id]||[];
         addKeyValue('Foto\'s',String(stopPhotos.length));
         y+=2;
@@ -3318,24 +3384,30 @@ window.exportTripExcel=async function(tripId){
     reisSheet['!cols']=[{wch:24},{wch:28}];
     XLSX.utils.book_append_sheet(workbook,reisSheet,'Reis');
     const stopSheet=XLSX.utils.aoa_to_sheet([
-      ['Stop','Datum','Type','Plaats','Land','Regio','Referentie','KM aankomst','Prijs per nacht','Beoordeling','Voorzieningen','Ervaring','Fotoaantal'],
-      ...report.stops.map(stop=>[
+      ['Stop','Aankomst','Vertrek','Aantal nachten','Type','Plaats','Land','Regio','Referentie','KM aankomst','Prijs per nacht','Totale kost overnachting','Beoordeling','Voorzieningen','Ervaring','Fotoaantal'],
+      ...report.stops.map(stop=>{
+        const overnight=getStopOvernightDetails(stop,{legacyFallback:true});
+        return [
         stop.volgorde||'',
-        formatDate(stop.datum),
+        formatDate(overnight.arrivalDate),
+        formatDate(overnight.departureDate),
+        overnight.nights??'',
         stop.type_stop||'',
         stop.camperplaats||'',
         stop.land||'',
         stop.regio||'',
         stop.referentie||'',
         stop.km_aankomst??'',
-        stop.prijs_per_nacht??'',
+        overnight.nightlyRate??'',
+        overnight.totalCost??'',
         stop.beoordeling??'',
         stop.voorzieningen||'',
         stop.ervaring||'',
         (report.photosByStopId[stop.id]||[]).length
-      ])
+      ];
+      })
     ]);
-    stopSheet['!cols']=[{wch:8},{wch:14},{wch:16},{wch:24},{wch:18},{wch:18},{wch:18},{wch:14},{wch:16},{wch:12},{wch:26},{wch:34},{wch:10}];
+    stopSheet['!cols']=[{wch:8},{wch:14},{wch:14},{wch:14},{wch:16},{wch:24},{wch:18},{wch:18},{wch:18},{wch:14},{wch:16},{wch:20},{wch:12},{wch:26},{wch:34},{wch:10}];
     XLSX.utils.book_append_sheet(workbook,stopSheet,'Stops');
     const fuelSheet=XLSX.utils.aoa_to_sheet([
       ['Datum','Type','Locatie','Land','KM','Liters','Prijs per liter','Totaal'],
@@ -3821,6 +3893,47 @@ function formatDate(value){
   if(Number.isNaN(date.getTime()))return String(value).slice(0,10);
   return date.toLocaleDateString('nl-BE');
 }
+function isMissingColumnError(error,columnName){
+  const message=String(error?.message||'').toLowerCase();
+  const column=String(columnName||'').toLowerCase();
+  return message.includes('column')&&message.includes(column)&&message.includes('does not exist');
+}
+function parseIsoDateToUtcMs(value){
+  const stringValue=String(value||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(stringValue))return null;
+  const [year,month,day]=stringValue.split('-').map(Number);
+  const utcMs=Date.UTC(year,month-1,day);
+  return Number.isNaN(utcMs)?null:utcMs;
+}
+function addDaysToIsoDate(value,days){
+  const baseMs=parseIsoDateToUtcMs(value);
+  if(baseMs==null)return '';
+  return new Date(baseMs+Number(days||0)*86400000).toISOString().slice(0,10);
+}
+function calculateStopNights(arrivalDate,departureDate){
+  const arrivalMs=parseIsoDateToUtcMs(arrivalDate);
+  const departureMs=parseIsoDateToUtcMs(departureDate);
+  if(arrivalMs==null||departureMs==null)return null;
+  const diffDays=Math.round((departureMs-arrivalMs)/86400000);
+  return diffDays>=0?diffDays:null;
+}
+function getStopArrivalDate(stop){
+  return stop?.aankomstdatum||stop?.datum||null;
+}
+function getStopDepartureDate(stop){
+  return stop?.vertrekdatum||stop?.vertrek_datum||stop?.einddatum||null;
+}
+function getStopOvernightDetails(stop,{legacyFallback=false}={}){
+  const nightlyRateRaw=stop?.prijs_per_nacht;
+  const nightlyRate=nightlyRateRaw==null?null:Number(nightlyRateRaw);
+  const validNightlyRate=nightlyRate!=null&&Number.isFinite(nightlyRate)?nightlyRate:null;
+  const arrivalDate=getStopArrivalDate(stop);
+  const departureDate=getStopDepartureDate(stop);
+  let nights=calculateStopNights(arrivalDate,departureDate);
+  if(nights==null&&validNightlyRate!=null&&legacyFallback)nights=1;
+  const totalCost=(validNightlyRate!=null&&nights!=null)?validNightlyRate*nights:0;
+  return {arrivalDate,departureDate,nightlyRate:validNightlyRate,nights,totalCost};
+}
 function formatDateTime(value){
   if(!value)return 'Onbekend';
   const date=new Date(value);
@@ -4076,7 +4189,7 @@ async function loadTripReportData(tripId){
   },{});
   const stopCount=stopRows.length;
   const distance=(trip.start_km!=null&&trip.eind_km!=null)?Number(trip.eind_km)-Number(trip.start_km):null;
-  const overnightTotal=stopRows.reduce((sum,stop)=>sum+(stop.prijs_per_nacht!=null?Number(stop.prijs_per_nacht):0),0);
+  const overnightTotal=stopRows.reduce((sum,stop)=>sum+getStopOvernightDetails(stop,{legacyFallback:true}).totalCost,0);
   const fuelByType={Diesel:{liters:0,cost:0,count:0},AdBlue:{liters:0,cost:0,count:0},Gas:{liters:0,cost:0,count:0}};
   let fuelTotalLiters=0;
   let fuelTotalCost=0;
@@ -6335,7 +6448,11 @@ function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
     const eigenaar=eigenaarMap[s.reis_id]||'Onbekend';
     const fotoHtml=stopFotos.length?`<div class="muted">${stopFotos.length} foto(s)</div><div class="op-photo-grid">${stopFotos.map(f=>`<img src="${esc(f.url)}" onclick="event.stopPropagation();openFotoLightbox('${esc(f.url)}')">`).join('')}</div>`:'';
     const info=[`${stars(s.beoordeling)} ${esc(s.type_stop||'Onbekend')}`];
-    if(s.prijs_per_nacht!=null)info.push(`${fmt(s.prijs_per_nacht)}/nacht`);
+    if(s.prijs_per_nacht!=null){
+      const overnight=getStopOvernightDetails(s,{legacyFallback:true});
+      const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
+      info.push(`${nightsText} • ${fmt(overnight.nightlyRate)}/nacht • ${fmt(overnight.totalCost)} totaal`);
+    }
     return `<div class="card op-card" onclick="showStopDetail(${s.id})">
       <div class="op-card-title">${esc(s.camperplaats||'Onbenoemde stop')}</div>
       <div class="muted op-card-subtitle">${esc(s.land||'—')}${s.regio?' • '+esc(s.regio):''}</div>
@@ -6374,7 +6491,11 @@ window.showStopDetail=function(stopId){
     return '★'.repeat(rating);
   })();
   const info=[`${stars} ${esc(s.type_stop||'Onbekend')}`];
-  if(s.prijs_per_nacht!=null)info.push(`${fmt(s.prijs_per_nacht)}/nacht`);
+  if(s.prijs_per_nacht!=null){
+    const overnight=getStopOvernightDetails(s,{legacyFallback:true});
+    const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
+    info.push(`${nightsText} • ${fmt(overnight.nightlyRate)}/nacht • ${fmt(overnight.totalCost)} totaal`);
+  }
   document.getElementById('stopDetailBody').innerHTML=`
     <h2 class="op-detail-title">${esc(s.camperplaats||'Onbenoemde stop')}</h2>
     <div class="muted op-detail-subtitle">${esc(s.land||'—')}${s.regio?' • '+esc(s.regio):''}</div>
