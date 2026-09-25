@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.28",
-  "releasedAt": "2026-09-25T19:16:56.475Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine travel detail hierarchy",
+  "currentVersion": "1.0.29",
+  "releasedAt": "2026-09-25T19:20:25.702Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine trip odometer entry",
   "latest5": [
+    {
+      "version": "1.0.29",
+      "releasedAt": "2026-09-25T19:20:25.702Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine trip odometer entry"
+    },
     {
       "version": "1.0.28",
       "releasedAt": "2026-09-25T19:16:56.475Z",
@@ -23,14 +28,14 @@
       "version": "1.0.25",
       "releasedAt": "2026-09-25T18:42:01.938Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Process pending invitations on login"
-    },
-    {
-      "version": "1.0.24",
-      "releasedAt": "2026-09-25T18:09:09.388Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Unify camper member invitations"
     }
   ],
   "history": [
+    {
+      "version": "1.0.29",
+      "releasedAt": "2026-09-25T19:20:25.702Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine trip odometer entry"
+    },
     {
       "version": "1.0.28",
       "releasedAt": "2026-09-25T19:16:56.475Z",
@@ -172,5 +177,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "e5255e3ad182462b19a4efcd951f22f520dd4d2c"
+  "lastSyncedTestAgentSha": "682ce424f8eeeb246f2a238e86e703cf11685d01"
 }
