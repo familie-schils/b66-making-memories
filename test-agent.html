@@ -1825,10 +1825,14 @@ async function maybeResumeInviteOnboarding(userId){
   if(!userId)return false;
   const invite=await hydratePendingInvite();
   if(!invite)return false;
-  const {data:existingMembership,error:membershipError}=await supabase
+  let membershipQuery=supabase
     .from('camper_users')
     .select('id,camper_id')
-    .eq('user_id',userId)
+    .eq('user_id',userId);
+  if(invite.camper_id!=null){
+    membershipQuery=membershipQuery.eq('camper_id',invite.camper_id);
+  }
+  const {data:existingMembership,error:membershipError}=await membershipQuery
     .limit(1)
     .maybeSingle();
   if(membershipError){
