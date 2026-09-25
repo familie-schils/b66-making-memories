@@ -84,14 +84,18 @@ button{font:inherit}
 .trip-list-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .trip-list-title{font-size:18px;line-height:1.3}
 .trip-list-period{margin-top:4px}
+.trip-detail-title{margin-bottom:6px;font-size:28px;line-height:1.2}
+.trip-detail-period{margin:0}
+.trip-detail-status{margin-top:10px}
 .trip-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-top:14px}
 .trip-summary-item{background:#f7f8fa;border:1px solid #e4e7eb;border-radius:10px;padding:11px}
 .trip-summary-label{font-size:12px;font-weight:700;color:#66717d}
 .trip-summary-value{margin-top:4px;font-size:16px;font-weight:700;line-height:1.35}
 .trip-details-list{display:grid;gap:7px;margin-top:14px}
-.trip-log{display:grid;gap:18px}
+.trip-log{display:grid;gap:24px}
 .trip-log-day{padding-top:2px}
-.trip-log-date{margin:0 0 8px;font-size:14px;font-weight:800;letter-spacing:.02em}
+.trip-log-day+.trip-log-day{border-top:1px solid #d8dde3;padding-top:20px}
+.trip-log-date{margin:0 0 12px;font-size:14px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#55616d}
 .trip-log-entry{border-top:1px solid #e4e7eb;padding:14px 0 0;margin-top:14px}
 .trip-log-entry:first-of-type{margin-top:0}
 .trip-log-entry-title{font-size:16px;line-height:1.35}
@@ -3220,66 +3224,17 @@ const logDays=logItems.reduce((days,item)=>{
   days[dateKey].push(item);
   return days;
 },{});
-detail.innerHTML=`<h2>${esc(tripName)}</h2>
-<div class="muted">${formatDate(t.datum)}${t.einddatum?' t/m '+formatDate(t.einddatum):' · onderweg'}</div>
-${t.einddatum?'':`<div style="margin-top:8px"><span class="badge">ACTIEVE REIS</span></div>`}
+detail.innerHTML=`<h2 class="trip-detail-title">${esc(tripName)}</h2>
+<div class="trip-detail-status"><span class="badge">${t.einddatum?'AFGESLOTEN REIS':'ACTIEVE REIS'}</span></div>
+<p class="muted trip-detail-period">${formatDate(t.datum)}${t.einddatum?' t/m '+formatDate(t.einddatum):' - actief'}</p>
 
 <hr>
 <h3>Reissamenvatting</h3>
 <div class="trip-summary-grid">
-  <div class="trip-summary-item"><div class="trip-summary-label">Reis</div><div class="trip-summary-value">${esc(tripName)}</div></div>
-  <div class="trip-summary-item"><div class="trip-summary-label">Periode</div><div class="trip-summary-value">${formatDate(t.datum)}${t.einddatum?' t/m '+formatDate(t.einddatum):' · onderweg'}</div></div>
   <div class="trip-summary-item"><div class="trip-summary-label">Stops</div><div class="trip-summary-value">${summary.stopCount}</div></div>
   <div class="trip-summary-item"><div class="trip-summary-label">Totale kosten</div><div class="trip-summary-value">${formatCurrency(summary.grandTotal)}</div></div>
 </div>
-<div class="trip-details-list muted">
-  <div>Bestuurder: ${esc(t.bestuurder||t.crew||'—')}${t.passagier?' · Passagier: '+esc(t.passagier):''}</div>
-  <div>Startkilometerstand: ${formatKilometers(t.start_km)}${t.eind_km!=null?' · Eindkilometerstand: '+formatKilometers(t.eind_km):''}</div>
-  <div>${summary.distance!=null?'Totaal gereden: '+formatKilometers(summary.distance):'Kilometerstand wordt berekend bij het afsluiten van de reis'}</div>
-</div>
 
-<hr>
-<h3>Kostenoverzicht</h3>
-
-<h4>Overnachtingskosten</h4>
-<div class="item">
-  ${stops.filter(s=>s.prijs_per_nacht!=null).map(s=>{
-    const overnight=getStopOvernightDetails(s,{legacyFallback:true});
-    const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
-    return `<div>${formatDate(overnight.arrivalDate)} → ${formatDate(overnight.departureDate)} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${nightsText} × ${formatCurrency(overnight.nightlyRate)} = ${formatCurrency(overnight.totalCost)}</div>`;
-  }).join('')||'<div class="muted">Geen overnachtingskosten geregistreerd.</div>'}
-  <div style="margin-top:6px"><b>Totaal overnachtingen:</b> ${formatCurrency(summary.overnightTotal)}</div>
-</div>
-
-<h4>Reiskosten</h4>
-<div class="item">
-  ${kostenTypes.map(type=>summary.travelCostByType[type]?`<div><b>${esc(getTravelCostCategoryLabel(type))}:</b> ${formatCurrency(summary.travelCostByType[type])}</div>`:``).join('')||'<div class="muted">Geen reiskosten geregistreerd.</div>'}
-  <div style="margin-top:6px"><b>Totaal reiskosten:</b> ${formatCurrency(summary.travelCostTotal)}</div>
-</div>
-
-<h4>Brandstofkosten</h4>
-<div class="item">
-  ${brandstofTypes.filter(bt=>summary.fuelByType[bt].count>0).map(bt=>`<div><b>${esc(bt)}:</b> ${formatLiters(summary.fuelByType[bt].liters)} · ${formatCurrency(summary.fuelByType[bt].cost)} (${summary.fuelByType[bt].count} tankbeurt${summary.fuelByType[bt].count===1?'':'en'})</div>`).join('')||'<div class="muted">Geen brandstofregistraties in deze reisperiode.</div>'}
-  <div style="margin-top:6px"><b>Totaal liters:</b> ${formatLiters(summary.fuelTotalLiters)}</div>
-  <div><b>Totale brandstofkost:</b> ${formatCurrency(summary.fuelTotalCost)}</div>
-</div>
-
-<h4>Reistotaal</h4>
-<div class="item" style="font-size:1.1em">
-  <div>${formatCurrency(summary.overnightTotal)} overnachtingen + ${formatCurrency(summary.travelCostTotal)} reiskosten + ${formatCurrency(summary.fuelTotalCost)} brandstof</div>
-  <div style="margin-top:6px"><b>Totaal: ${formatCurrency(summary.grandTotal)}</b></div>
-</div>
-${t.einddatum?`
-<div id="tripReportPanel" class="trip-report-panel">
-  <h3 style="margin-top:0">Reisrapport</h3>
-  <p class="muted">Download deze afgesloten reis als PDF of Excel.</p>
-  <div class="edit-actions">
-    <button class="primary" onclick="exportTripPdf(${id})">PDF downloaden</button>
-    <button class="secondary" onclick="exportTripExcel(${id})">Excel downloaden</button>
-  </div>
-  <div id="tripReportStatus" class="status hidden"></div>
-</div>`:''}
- 
 <hr>
 <h3>Reislog</h3>
 ${logItems.length?`<div class="trip-log">${Object.entries(logDays).map(([date,items])=>`<section class="trip-log-day">
@@ -3319,6 +3274,54 @@ ${stopFotos.length?`<div class="muted">Foto's: ${stopFotos.length}</div>`+''+sto
   }
   return '';
 }).join('')}</section>`).join('')}</div>`:'<div class="muted">Nog geen activiteiten tijdens deze reis.</div>'}
+
+<hr>
+<h3>Reisdetails</h3>
+<div class="trip-details-list muted">
+  <div>Bestuurder: ${esc(t.bestuurder||t.crew||'—')}${t.passagier?' · Passagier: '+esc(t.passagier):''}</div>
+  <div>Startkilometerstand: ${formatKilometers(t.start_km)}${t.eind_km!=null?' · Eindkilometerstand: '+formatKilometers(t.eind_km):''}</div>
+  <div>${summary.distance!=null?'Totaal gereden: '+formatKilometers(summary.distance):'Kilometerstand wordt berekend bij het afsluiten van de reis'}</div>
+</div>
+
+<h3>Kostenoverzicht</h3>
+<h4>Overnachtingskosten</h4>
+<div class="item">
+  ${stops.filter(s=>s.prijs_per_nacht!=null).map(s=>{
+    const overnight=getStopOvernightDetails(s,{legacyFallback:true});
+    const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
+    return `<div>${formatDate(overnight.arrivalDate)} → ${formatDate(overnight.departureDate)} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${nightsText} × ${formatCurrency(overnight.nightlyRate)} = ${formatCurrency(overnight.totalCost)}</div>`;
+  }).join('')||'<div class="muted">Geen overnachtingskosten geregistreerd.</div>'}
+  <div style="margin-top:6px"><b>Totaal overnachtingen:</b> ${formatCurrency(summary.overnightTotal)}</div>
+</div>
+
+<h4>Reiskosten</h4>
+<div class="item">
+  ${kostenTypes.map(type=>summary.travelCostByType[type]?`<div><b>${esc(getTravelCostCategoryLabel(type))}:</b> ${formatCurrency(summary.travelCostByType[type])}</div>`:``).join('')||'<div class="muted">Geen reiskosten geregistreerd.</div>'}
+  <div style="margin-top:6px"><b>Totaal reiskosten:</b> ${formatCurrency(summary.travelCostTotal)}</div>
+</div>
+
+<h4>Brandstofkosten</h4>
+<div class="item">
+  ${brandstofTypes.filter(bt=>summary.fuelByType[bt].count>0).map(bt=>`<div><b>${esc(bt)}:</b> ${formatLiters(summary.fuelByType[bt].liters)} · ${formatCurrency(summary.fuelByType[bt].cost)} (${summary.fuelByType[bt].count} tankbeurt${summary.fuelByType[bt].count===1?'':'en'})</div>`).join('')||'<div class="muted">Geen brandstofregistraties in deze reisperiode.</div>'}
+  <div style="margin-top:6px"><b>Totaal liters:</b> ${formatLiters(summary.fuelTotalLiters)}</div>
+  <div><b>Totale brandstofkost:</b> ${formatCurrency(summary.fuelTotalCost)}</div>
+</div>
+
+<h4>Reistotaal</h4>
+<div class="item" style="font-size:1.1em">
+  <div>${formatCurrency(summary.overnightTotal)} overnachtingen + ${formatCurrency(summary.travelCostTotal)} reiskosten + ${formatCurrency(summary.fuelTotalCost)} brandstof</div>
+  <div style="margin-top:6px"><b>Totaal: ${formatCurrency(summary.grandTotal)}</b></div>
+</div>
+${t.einddatum?`
+<div id="tripReportPanel" class="trip-report-panel">
+  <h3 style="margin-top:0">Reisrapport</h3>
+  <p class="muted">Download deze afgesloten reis als PDF of Excel.</p>
+  <div class="edit-actions">
+    <button class="primary" onclick="exportTripPdf(${id})">PDF downloaden</button>
+    <button class="secondary" onclick="exportTripExcel(${id})">Excel downloaden</button>
+  </div>
+  <div id="tripReportStatus" class="status hidden"></div>
+</div>`:''}
  
 <br><button class="secondary" onclick="document.getElementById('tripDetail').classList.add('hidden')">Sluiten</button>`;
 detail.scrollIntoView({behavior:'smooth'});

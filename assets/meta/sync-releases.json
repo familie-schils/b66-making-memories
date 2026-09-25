@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.27",
-  "releasedAt": "2026-09-25T19:03:58.884Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Improve travel log readability",
+  "currentVersion": "1.0.28",
+  "releasedAt": "2026-09-25T19:16:56.475Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine travel detail hierarchy",
   "latest5": [
+    {
+      "version": "1.0.28",
+      "releasedAt": "2026-09-25T19:16:56.475Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine travel detail hierarchy"
+    },
     {
       "version": "1.0.27",
       "releasedAt": "2026-09-25T19:03:58.884Z",
@@ -23,14 +28,14 @@
       "version": "1.0.24",
       "releasedAt": "2026-09-25T18:09:09.388Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Unify camper member invitations"
-    },
-    {
-      "version": "1.0.23",
-      "releasedAt": "2026-09-25T17:54:15.433Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix existing camper invite resumption"
     }
   ],
   "history": [
+    {
+      "version": "1.0.28",
+      "releasedAt": "2026-09-25T19:16:56.475Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine travel detail hierarchy"
+    },
     {
       "version": "1.0.27",
       "releasedAt": "2026-09-25T19:03:58.884Z",
@@ -167,5 +172,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "c85d67010fd22e6061a8dc44a218d5df6ab570c5"
+  "lastSyncedTestAgentSha": "e5255e3ad182462b19a4efcd951f22f520dd4d2c"
 }
