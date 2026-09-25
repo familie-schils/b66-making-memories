@@ -862,7 +862,7 @@ Nog geen onderhoud geregistreerd.
 
   ALTER TABLE camper_users ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'lid';
 
-  SQL – maak de camper_invites tabel aan in Supabase:
+  Legacy SQL – camper_invites blijft alleen leesbaar voor eerder gedeelde uitnodigingslinks:
 
   CREATE TABLE IF NOT EXISTS camper_invites (
     id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -945,8 +945,8 @@ Nog geen onderhoud geregistreerd.
     <input id="camperInviteEmail" type="email" placeholder="naam@example.com">
   </div>
   <div style="flex:0 0 auto;display:flex;gap:8px;align-items:flex-end">
-    <button class="primary" onclick="createCamperInvite()">Uitnodigen</button>
-    <button class="secondary" onclick="generateCamperInviteLink()">Link genereren</button>
+    <button class="primary" onclick="createCamperInvitation()">Uitnodigen</button>
+    <button class="secondary" onclick="generateCamperInvitationLink()">Link genereren</button>
   </div>
 </div>
 <div id="camperInviteGeneratedBox" class="status ok hidden" style="margin-top:12px"></div>
@@ -1580,7 +1580,7 @@ function renderRoleModelReport(){
       <li>profiles levert gebruikersidentiteit, maar bewaart geen expliciete platformrol.</li>
       <li>camper_users bewaart camperrelaties en gebruikt role = admin/lid voor camperrechten.</li>
       <li>beheer wordt in de huidige architectuur afgeleid uit public.platform_admins.</li>
-      <li>invite_codes bedient platform invites; camper_invites bedient invites naar een bestaande camper.</li>
+      <li>invite_codes bedient platform invites; invitations bedient uitnodigingen naar een bestaande camper.</li>
     </ul>
     <div style="margin-top:12px"><b>Ontbrekende rollen / regels</b></div>
     <ul class="note-list">
@@ -5404,40 +5404,61 @@ async function loadCamperMembers(){
   if(card)card.classList.toggle('hidden',!isCamperAdmin);
 }
 
-async function loadCamperInvites(){
+async function loadCamperInvitations(){
   const list=document.getElementById('camperInvitesList');
   if(!list||!activeCamperId||!isCamperAdmin)return;
   list.textContent='Uitnodigingen laden...';
   const {data,error}=await supabase
-    .from('camper_invites')
-    .select('id,email,invite_code,created_at,used,used_at')
+    .from('invitations')
+    .select('id,email,role,status,created_at,expires_at,invitation_token')
     .eq('camper_id',activeCamperId)
-    .eq('used',false)
+    .eq('status','pending')
     .order('created_at',{ascending:false})
     .limit(50);
   if(error){list.innerHTML='<div class="status err">Uitnodigingen laden mislukt: '+esc(error.message)+'</div>';return;}
-  if(!data||data.length===0){list.innerHTML='<div class="muted">Geen openstaande uitnodigingen.</div>';return;}
-  list.innerHTML=data.map(inv=>{
-    const link=getCamperInviteLink(inv.invite_code);
+  const invitationMarkup=(data||[]).map(inv=>{
+    const link=getInvitationLink(inv.invitation_token);
     return `<div class="item">
       <div><b>${esc(inv.email||'—')}</b></div>
+      <div class="muted">Rol: ${esc(getRoleLabelLedenBeheren(inv.role||'viewer'))}</div>
       <div class="muted">Status: In afwachting</div>
       <div class="muted">Aangemaakt: ${esc(formatDate(inv.created_at))}</div>
       <div class="muted" style="margin-top:4px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
     </div>`;
   }).join('');
+  const {data:legacyInvites,error:legacyError}=await supabase
+    .from('camper_invites')
+    .select('id,email,invite_code,created_at')
+    .eq('camper_id',activeCamperId)
+    .eq('used',false)
+    .order('created_at',{ascending:false})
+    .limit(50);
+  const legacyMarkup=(legacyInvites||[]).map(inv=>{
+    const link=getInvitationLink(inv.invite_code);
+    return `<div class="item">
+      <div><b>${esc(inv.email||'—')}</b></div>
+      <div class="muted">Legacy uitnodiging</div>
+      <div class="muted">Status: In afwachting</div>
+      <div class="muted">Aangemaakt: ${esc(formatDate(inv.created_at))}</div>
+      <div class="muted" style="margin-top:4px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
+    </div>`;
+  }).join('');
+  const emptyMarkup=!invitationMarkup&&!legacyMarkup?'<div class="muted">Geen openstaande uitnodigingen.</div>':'';
+  const legacySection=legacyMarkup?`<h4 style="margin:16px 0 8px">Legacy uitnodigingen</h4>${legacyMarkup}`:'';
+  const legacyErrorMarkup=legacyError?`<div class="status err">Legacy uitnodigingen laden mislukt: ${esc(legacyError.message)}</div>`:'';
+  list.innerHTML=`${invitationMarkup}${legacySection}${emptyMarkup}${legacyErrorMarkup}`;
 }
 
-function getCamperInviteLink(inviteCode){
+function getInvitationLink(inviteCode){
   const base=window.location.origin+window.location.pathname.replace(/\/[^/]*$/,'/').replace(/\/$/,'');
   return base+'/?invite='+encodeURIComponent(inviteCode);
 }
 
-function renderCamperInviteGenerated(invite){
+function renderCamperInvitationGenerated(invite){
   const box=document.getElementById('camperInviteGeneratedBox');
   if(!box)return;
   if(!invite){box.classList.add('hidden');box.innerHTML='';return;}
-  const link=getCamperInviteLink(invite.invite_code);
+  const link=getInvitationLink(invite.invitation_token);
   box.innerHTML=`
     <div><b>Uitnodigingslink voor ${esc(invite.email)}</b></div>
     <div class="code" style="margin-top:6px"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a></div>
@@ -5445,19 +5466,30 @@ function renderCamperInviteGenerated(invite){
   box.classList.remove('hidden');
 }
 
-async function saveCamperInvite(email){
+async function saveCamperInvitation(email){
   const status=document.getElementById('camperInviteStatus');
   status.className='status hidden';
   if(!isCamperAdmin){status.textContent='Geen toegang: alleen camper-admins kunnen uitnodigingen maken.';status.className='status err';return null;}
   if(!activeCamperId){status.textContent='Geen actieve camper gevonden.';status.className='status err';return null;}
   if(!email){status.textContent='Vul een e-mailadres in.';status.className='status err';return null;}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){status.textContent='Vul een geldig e-mailadres in.';status.className='status err';return null;}
+  const {data:existingInvite,error:existingInviteError}=await supabase
+    .from('invitations')
+    .select('id')
+    .eq('camper_id',activeCamperId)
+    .eq('email',email)
+    .eq('status','pending')
+    .maybeSingle();
+  if(existingInviteError){status.textContent='Bestaande uitnodiging controleren mislukt: '+existingInviteError.message;status.className='status err';return null;}
+  if(existingInvite){status.textContent='Er staat al een openstaande uitnodiging voor dit e-mailadres.';status.className='status err';return null;}
+  const expiresAt=new Date(Date.now()+7*24*60*60*1000).toISOString();
   let result=null;
   for(let attempt=0;attempt<5;attempt++){
+    const token=generateInviteCode(12);
     result=await supabase
-      .from('camper_invites')
-      .insert({camper_id:activeCamperId,email,invite_code:generateInviteCode(),created_by:currentUser?.id||null,used:false})
-      .select('id,email,invite_code,created_at,used,used_at')
+      .from('invitations')
+      .insert({camper_id:activeCamperId,email,role:'viewer',invitation_token:token,status:'pending',expires_at:expiresAt,created_by:currentUser?.id||null})
+      .select('id,email,role,invitation_token,created_at')
       .single();
     if(!result.error)break;
     if(result.error.code!=='23505')break;
@@ -5466,34 +5498,34 @@ async function saveCamperInvite(email){
   return result.data;
 }
 
-window.createCamperInvite=async function(){
+window.createCamperInvitation=async function(){
   const emailField=document.getElementById('camperInviteEmail');
   const status=document.getElementById('camperInviteStatus');
   if(!emailField||!status)return;
   const email=emailField.value.trim().toLowerCase();
-  const invite=await saveCamperInvite(email);
+  const invite=await saveCamperInvitation(email);
   if(!invite)return;
   emailField.value='';
-  renderCamperInviteGenerated(invite);
+  renderCamperInvitationGenerated(invite);
   status.textContent='Uitnodiging opgeslagen.';
   status.className='status ok';
-  await loadCamperInvites();
+  await loadCamperInvitations();
 };
 
-window.generateCamperInviteLink=async function(){
+window.generateCamperInvitationLink=async function(){
   const emailField=document.getElementById('camperInviteEmail');
   if(!emailField)return;
   const email=emailField.value.trim().toLowerCase();
-  const invite=await saveCamperInvite(email);
+  const invite=await saveCamperInvitation(email);
   if(!invite)return;
   emailField.value='';
-  renderCamperInviteGenerated(invite);
-  await loadCamperInvites();
+  renderCamperInvitationGenerated(invite);
+  await loadCamperInvitations();
 };
 
 async function loadCamperTab(){
   await loadCamperMembers();
-  if(isCamperAdmin)await loadCamperInvites();
+  if(isCamperAdmin)await loadCamperInvitations();
 }
 
 function updateDashboardCamperInfo(camperData){
@@ -6856,7 +6888,7 @@ window.sendLedenBeheerInvitation=async function(){
   }
   if(result?.error){status.textContent='Uitnodiging maken mislukt: '+result.error.message;status.className='status err';return;}
   emailField.value='';
-  const link=getCamperInviteLink(result.data.invitation_token);
+  const link=getInvitationLink(result.data.invitation_token);
   renderInviteLinkStatus(status,'Uitnodiging opgeslagen. Stuur deze link naar de ontvanger:',link);
   status.className='status ok';
   await loadInvitationsForLedenBeheren();
@@ -6892,7 +6924,7 @@ window.resendInvitationLedenBeheren=async function(invId,email,role){
     if(result.error.code!=='23505')break;
   }
   if(result?.error){if(status){status.textContent='Opnieuw versturen mislukt: '+result.error.message;status.className='status err';}return;}
-  const link=getCamperInviteLink(result.data.invitation_token);
+  const link=getInvitationLink(result.data.invitation_token);
   if(status){
     renderInviteLinkStatus(status,'Uitnodiging opnieuw verstuurd. Deel de nieuwe link:',link);
     status.className='status ok';
