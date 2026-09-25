@@ -1737,6 +1737,7 @@ function getInviteCodeFromLocation(){
 
 let pendingInviteData=null;
 let inviteProcessing=false;
+let inviteOnboardingPromise=null;
 const PENDING_INVITE_STORAGE_KEY='b66.pendingInviteData';
 
 function storePendingInvite(invite){
@@ -1825,26 +1826,71 @@ async function maybeResumeInviteOnboarding(userId){
   if(!userId)return false;
   const invite=await hydratePendingInvite();
   if(!invite)return false;
+  console.log('invite', invite);
+  console.log('userId', userId);
+  console.log('camperId', invite.camper_id);
   let membershipQuery=supabase
     .from('camper_users')
-    .select('id,camper_id')
+    .select('camper_id')
     .eq('user_id',userId);
   if(invite.camper_id!=null){
     membershipQuery=membershipQuery.eq('camper_id',invite.camper_id);
   }
-  const {data:existingMembership,error:membershipError}=await membershipQuery
+  const {data:existingMembership,error}=await membershipQuery
     .limit(1)
     .maybeSingle();
-  if(membershipError){
-    console.error('Bestaande camperkoppeling controleren mislukt:', membershipError);
+  console.log('camperUsersError', error);
+  if(error){
+    console.error('Bestaande camperkoppeling controleren mislukt:', error);
     return false;
   }
   if(existingMembership?.camper_id!=null){
     clearPendingInvite();
     return false;
   }
-  await processInvite(userId);
-  return true;
+  return processInvite(userId,null,true);
+}
+
+async function processPendingInvitationsForUser(user){
+  const userId=user?.id||null;
+  const email=(user?.email||'').trim().toLowerCase();
+  if(!userId||!email)return false;
+  const {data:invitations,error}=await supabase
+    .from('invitations')
+    .select('id,camper_id,email,role,invitation_token,status,expires_at')
+    .eq('email',email)
+    .eq('status','pending')
+    .gt('expires_at',new Date().toISOString())
+    .order('created_at',{ascending:true});
+  if(error){
+    console.error('Pending uitnodigingen controleren mislukt:',error);
+    return false;
+  }
+  let processed=false;
+  for(const invitation of invitations||[]){
+    const accepted=await processInvite(userId,{
+      type:'member-invite',
+      ...invitation,
+      invite_code:invitation.invitation_token
+    },true);
+    processed=accepted||processed;
+  }
+  return processed;
+}
+
+async function processInviteOnboardingForUser(user){
+  if(!user?.id)return false;
+  if(inviteOnboardingPromise)return inviteOnboardingPromise;
+  inviteOnboardingPromise=(async()=>{
+    const resumed=await maybeResumeInviteOnboarding(user.id);
+    const processed=await processPendingInvitationsForUser(user);
+    return resumed||processed;
+  })();
+  try{
+    return await inviteOnboardingPromise;
+  }finally{
+    inviteOnboardingPromise=null;
+  }
 }
 
 async function handleInviteRoute(){
@@ -2029,8 +2075,8 @@ supabase.auth.onAuthStateChange(async(_e,s)=>{
   if(s?.user){
     if(inPasswordRecovery)return;
     document.getElementById('resetPasswordView').classList.add('hidden');
-    const inviteHandled=await maybeResumeInviteOnboarding(s.user.id);
-    if(!inviteHandled)showApp(s.user);
+    await processInviteOnboardingForUser(s.user);
+    showApp(s.user);
   }else{
     showLogin();
   }
@@ -2038,12 +2084,12 @@ supabase.auth.onAuthStateChange(async(_e,s)=>{
 if(isInviteRoute){
   loginView.classList.add('hidden');
   if(session?.user){
-    const inviteHandled=await maybeResumeInviteOnboarding(session.user.id);
-    if(!inviteHandled)showApp(session.user);
+    await processInviteOnboardingForUser(session.user);
+    showApp(session.user);
   }
 }else if(session&&!inPasswordRecovery){
-  const inviteHandled=await maybeResumeInviteOnboarding(session.user.id);
-  if(!inviteHandled)showApp(session.user);
+  await processInviteOnboardingForUser(session.user);
+  showApp(session.user);
 }else if(!session){showLogin();}
 }
 function showLogin(){
@@ -2200,60 +2246,62 @@ if(error){box.textContent=error.message;box.classList.remove('hidden')}
 };
 window.logout=()=>supabase.auth.signOut();
 
-async function processInvite(userId){
-  if(inviteProcessing)return;
+async function processInvite(userId,inviteOverride=null,suppressNavigation=false){
+  if(inviteProcessing)return false;
   inviteProcessing=true;
   try{
-  if(!pendingInviteData){
+  if(!inviteOverride&&!pendingInviteData){
     await hydratePendingInvite();
   }
-  if(!pendingInviteData)return;
-  const invite=pendingInviteData;
+  const invite=inviteOverride||pendingInviteData;
+  if(!invite)return false;
   const inviteType=invite.type||(invite.camper_id?'camper':'platform');
   const statusEl=document.getElementById('inviteRouteStatus');
   function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
   const {data:{user:authUser}}=await supabase.auth.getUser();
   if(!authUser){
     setStatus('Niet ingelogd. Log opnieuw in en probeer opnieuw.','err');
-    return;
+    return false;
   }
   const currentEmail=authUser.email.trim().toLowerCase();
   if(invite.email&&!validateInviteEmail(invite,currentEmail)){
     setStatus('Deze uitnodiging hoort bij een ander e-mailadres. Gebruik het uitgenodigde account.','err');
-    return;
+    return false;
   }
   if(inviteType==='camper'){
-    const {data:existing}=await supabase
+    const {data:existing,error:existingError}=await supabase
       .from('camper_users')
-      .select('id,role')
+      .select('role')
       .eq('user_id',userId)
       .eq('camper_id',invite.camper_id)
       .maybeSingle();
+    if(existingError){setStatus('Bestaande camperkoppeling controleren mislukt: '+existingError.message,'err');return false;}
     if(!existing){
       const {error:insertErr}=await supabase
         .from('camper_users')
         .insert({user_id:userId,camper_id:invite.camper_id,role:'lid'});
-      if(insertErr){setStatus('Koppeling aan camper mislukt: '+insertErr.message,'err');return;}
+      if(insertErr){setStatus('Koppeling aan camper mislukt: '+insertErr.message,'err');return false;}
     }
     await supabase
       .from('camper_invites')
       .update({used:true,used_at:new Date().toISOString()})
       .eq('id',invite.id);
-    clearPendingInvite();
+    if(!inviteOverride)clearPendingInvite();
     setStatus(existing?'Je had al toegang tot deze camper.':'Welkom! Je bent als camper lid gekoppeld aan deze camper.','ok');
   } else if(inviteType==='member-invite'){
-    const {data:existing}=await supabase
+    const {data:existing,error:existingError}=await supabase
       .from('camper_users')
-      .select('id,role')
+      .select('role')
       .eq('user_id',userId)
       .eq('camper_id',invite.camper_id)
       .maybeSingle();
+    if(existingError){setStatus('Bestaande camperkoppeling controleren mislukt: '+existingError.message,'err');return false;}
     if(!existing){
       const memberRole=invite.role||'viewer';
       const {error:insertErr}=await supabase
         .from('camper_users')
         .insert({user_id:userId,camper_id:invite.camper_id,role:memberRole});
-      if(insertErr){setStatus('Koppeling aan camper mislukt: '+insertErr.message,'err');return;}
+      if(insertErr){setStatus('Koppeling aan camper mislukt: '+insertErr.message,'err');return false;}
     }
     const {error:invUpdateErr}=await supabase
       .from('invitations')
@@ -2261,8 +2309,10 @@ async function processInvite(userId){
       .eq('id',invite.id);
     if(invUpdateErr){
       console.error('[processInvite] status update naar accepted mislukt:',invUpdateErr);
+      setStatus('Uitnodiging afronden mislukt: '+invUpdateErr.message,'err');
+      return false;
     }
-    clearPendingInvite();
+    if(!inviteOverride)clearPendingInvite();
     setStatus(existing?'Je had al toegang tot deze camper.':'Welkom! Je bent als lid gekoppeld aan deze camper.','ok');
   } else if(inviteType==='platform'){
     const {data:existing}=await supabase
@@ -2274,7 +2324,7 @@ async function processInvite(userId){
     if(existing?.camper_id!=null){
       clearPendingInvite();
       setStatus('Deze platformuitnodiging is alleen bedoeld voor nieuwe gebruikers zonder bestaande camperrelatie.','err');
-      return;
+      return false;
     }
     if(!existing){
       const sessionData=await supabase.auth.getUser();
@@ -2296,7 +2346,7 @@ async function processInvite(userId){
         console.error('CAMPER ERROR', camperErrDetails);
         console.error('[signup-flow:first-error]', {line:1232, step:"supabase.from('campers').insert(camperPayload)", error:camperErrDetails});
         setStatus('Camper aanmaken mislukt: '+JSON.stringify(camperErrDetails,null,2),'err');
-        return;
+        return false;
       }
       const {error:linkErr}=await supabase
         .from('camper_users')
@@ -2304,7 +2354,7 @@ async function processInvite(userId){
       if(linkErr){
         console.error('[signup-flow:first-error]', {line:1251, step:"supabase.from('camper_users').insert(...)", error:linkErr});
         setStatus('Koppeling aan camper mislukt: '+linkErr.message,'err');
-        return;
+        return false;
       }
     }
     await supabase
@@ -2313,10 +2363,13 @@ async function processInvite(userId){
       .eq('id',invite.id);
     clearPendingInvite();
     setStatus('Welkom! Je bent gewone gebruiker en camper admin van je eigen camper.','ok');
+  }else{
+    return false;
   }
   const formsEl=document.getElementById('inviteRouteForms');
   if(formsEl)formsEl.classList.add('hidden');
-  setTimeout(()=>showApp(null),1500);
+  if(!suppressNavigation)setTimeout(()=>showApp(null),1500);
+  return true;
   }finally{
     inviteProcessing=false;
   }
@@ -2355,7 +2408,7 @@ window.inviteRegister=async()=>{
     setStatus('Registratie gelukt. Bevestig je e-mail en log daarna in om de uitnodiging te activeren.','ok');
     return;
   }
-  await processInvite(user.id);
+  await processInviteOnboardingForUser(user);
 };
 
 window.inviteLogin=async()=>{
@@ -2379,7 +2432,7 @@ window.inviteLogin=async()=>{
     setStatus(getProfileProvisionErrorMessage(profileProvisionResult.error),'err');
     return;
   }
-  await processInvite(user.id);
+  await processInviteOnboardingForUser(user);
 };
 
 let currentStopSaved=false;
