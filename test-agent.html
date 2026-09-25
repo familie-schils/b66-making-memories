@@ -287,7 +287,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div class="trip-header">
 <h3 style="margin-top:0">Kilometerstand van deze reis</h3>
 <div class="grid">
-<div><label>Start KM van deze reis</label><input id="tStartKm" type="number" min="0" step="1" readonly></div>
+<div><label>Huidige kilometerstand</label><input id="tStartKm" type="number" min="0" step="1" required></div>
 
 <div><div id="kmResult" class="km-result">Wordt berekend bij het afsluiten van de reis</div></div>
 </div>
@@ -2540,6 +2540,7 @@ document.getElementById('endBox').classList.add('hidden');
 document.getElementById('tStartDate').value=today();
 document.getElementById('sDate').value=today();
 document.getElementById('tStartKm').value='';
+document.getElementById('tStartKm').readOnly=false;
 
 document.getElementById('tEndKmEndBox').value='';
 document.getElementById('kmResult').textContent='Wordt berekend bij het afsluiten van de reis';
@@ -2550,19 +2551,8 @@ clearStopFields();
 showStatus('',true);
 updateTripFormMode();
 await loadActiveTripStopsPanel();
-
-const latest=await getLatestOdometer();
-if(latest!=null){
-  document.getElementById('tStartKm').value=latest;
-  document.getElementById('tStartKm').readOnly=true;
-  document.getElementById('activeTripInfo').textContent=
-    'Start KM automatisch overgenomen van de hoogste bekende B66-kilometerstand: '+
-    Number(latest).toLocaleString('nl-BE')+' km';
-}else{
-  document.getElementById('tStartKm').readOnly=false;
-  document.getElementById('activeTripInfo').textContent=
-    'Geen eerdere kilometerstand gevonden. Voer de huidige kilometerstand in.';
-}
+document.getElementById('activeTripInfo').textContent=
+  'Voer de huidige kilometerstand in bij het starten van deze reis.';
 };
 
 window.startTripEdit=async function(tripId){
@@ -2605,12 +2595,12 @@ window.saveTripEdit=async function(){
   const startKmText=v('tStartKm');
   const bestuurder=v('tBestuurder');
   if(!bestuurder||!startDate||startKmText===''){
-    showStatus('Vul bestuurder, startdatum en Start KM in.',false);
+    showStatus('Vul bestuurder, startdatum en huidige kilometerstand in.',false);
     return;
   }
   const startKm=Number(startKmText);
   if(!Number.isInteger(startKm)||startKm<0){
-    showStatus('Vul een geldige Start KM in.',false);
+    showStatus('Vul een geldige huidige kilometerstand in.',false);
     return;
   }
   const passagier=v('tPassagier')||null;
@@ -2667,9 +2657,9 @@ async function ensureTripCreated(){
 if(activeTripId)return true;
 const startDate=v('tStartDate'),startKmText=v('tStartKm');
 if(!v('tBestuurder')||!startDate||startKmText===''){
-showStatus('Vul eerst bestuurder, startdatum en Start KM in.',false);return false}
+showStatus('Vul eerst bestuurder, startdatum en huidige kilometerstand in.',false);return false}
 const startKm=Number(startKmText);
-if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige Start KM in.',false);return false}
+if(!Number.isInteger(startKm)||startKm<0){showStatus('Vul een geldige huidige kilometerstand in.',false);return false}
 
 const bestuurder=v('tBestuurder');
 const passagier=v('tPassagier')||null;
@@ -3279,8 +3269,7 @@ ${stopFotos.length?`<div class="muted">Foto's: ${stopFotos.length}</div>`+''+sto
 <h3>Reisdetails</h3>
 <div class="trip-details-list muted">
   <div>Bestuurder: ${esc(t.bestuurder||t.crew||'—')}${t.passagier?' · Passagier: '+esc(t.passagier):''}</div>
-  <div>Startkilometerstand: ${formatKilometers(t.start_km)}${t.eind_km!=null?' · Eindkilometerstand: '+formatKilometers(t.eind_km):''}</div>
-  <div>${summary.distance!=null?'Totaal gereden: '+formatKilometers(summary.distance):'Kilometerstand wordt berekend bij het afsluiten van de reis'}</div>
+  ${t.einddatum&&summary.distance!=null?`<div>Totaal gereden afstand: ${formatKilometers(summary.distance)}</div>`:''}
 </div>
 
 <h3>Kostenoverzicht</h3>
