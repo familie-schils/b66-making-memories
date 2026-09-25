@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.26",
-  "releasedAt": "2026-09-25T18:51:31.144Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Allow ending trips without a new stop",
+  "currentVersion": "1.0.27",
+  "releasedAt": "2026-09-25T19:03:58.884Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Improve travel log readability",
   "latest5": [
+    {
+      "version": "1.0.27",
+      "releasedAt": "2026-09-25T19:03:58.884Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Improve travel log readability"
+    },
     {
       "version": "1.0.26",
       "releasedAt": "2026-09-25T18:51:31.144Z",
@@ -23,14 +28,14 @@
       "version": "1.0.23",
       "releasedAt": "2026-09-25T17:54:15.433Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix existing camper invite resumption"
-    },
-    {
-      "version": "1.0.22",
-      "releasedAt": "2026-09-25T17:45:37.052Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Harden dynamic HTML rendering"
     }
   ],
   "history": [
+    {
+      "version": "1.0.27",
+      "releasedAt": "2026-09-25T19:03:58.884Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Improve travel log readability"
+    },
     {
       "version": "1.0.26",
       "releasedAt": "2026-09-25T18:51:31.144Z",
@@ -162,5 +167,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "dbdd5cd20c3fbd6af97f73331acaf38bb4e44bd7"
+  "lastSyncedTestAgentSha": "c85d67010fd22e6061a8dc44a218d5df6ab570c5"
 }
