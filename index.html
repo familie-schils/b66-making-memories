@@ -347,12 +347,15 @@ Nog geen foto geselecteerd.
 
 <div id="endBox" class="end-box hidden">
 <h3>Einde reis</h3>
+<div id="endTripLastStop" class="muted"></div>
+<p class="muted">Je kunt de reis nu beëindigen, of eerst nog een stop toevoegen.</p>
 <div class="grid">
 <div><label>Einddatum</label><input id="tEndDate" type="date"></div>
 <div><label>Eind KM</label><input id="tEndKmEndBox" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Bij thuiskomst"></div>
 </div>
 <p class="muted">De Eind KM is de kilometerstand bij thuiskomst / einde van deze reis.</p>
-<button class="primary" onclick="finishTrip()">Reis afsluiten</button>
+<button class="primary" onclick="finishTrip()">Reis beëindigen</button>
+<button class="secondary" onclick="addStopBeforeEndingTrip()">Eerst stop toevoegen</button>
 <button class="secondary" onclick="hideEndTrip()">Terug</button>
 </div>
 </div>
@@ -2902,18 +2905,33 @@ clearStopFields();
 document.getElementById('sKm').value = lastKm;
 }
 
-function showEndTrip(){
+async function showEndTrip(){
 if(!activeTripId){
   showStatus('Start eerst een reis.',false);
-  return;
-}
-if(!currentStopSaved){
-  showStatus('Sla eerst stop '+stopNumber+' op voordat je de reis afsluit.',false);
   return;
 }
 document.getElementById('endBox').classList.remove('hidden');
 document.getElementById('tEndDate').value=today();
 document.getElementById('tEndKmEndBox').value='';
+const lastStopInfo=document.getElementById('endTripLastStop');
+lastStopInfo.textContent='Laatste geregistreerde stop laden...';
+const {data:lastStop,error}=await supabase
+  .from('reis_stops')
+  .select('camperplaats,datum,vertrekdatum')
+  .eq('reis_id',activeTripId)
+  .order('volgorde',{ascending:false})
+  .limit(1)
+  .maybeSingle();
+if(error){
+  console.error('Laatste stop ophalen mislukt:',error);
+  lastStopInfo.textContent='Laatste geregistreerde stop kon niet worden geladen.';
+}else if(lastStop){
+  const stopDate=getStopDepartureDate(lastStop)||getStopArrivalDate(lastStop)||'onbekende datum';
+  lastStopInfo.textContent='Laatste geregistreerde stop: '+
+    (lastStop.camperplaats||'Onbenoemde stop')+' ('+stopDate+').';
+}else{
+  lastStopInfo.textContent='Er zijn nog geen stops geregistreerd voor deze reis.';
+}
 
 
 document.getElementById('endBox').scrollIntoView({behavior:'smooth',block:'center'});
@@ -2921,6 +2939,12 @@ document.getElementById('endBox').scrollIntoView({behavior:'smooth',block:'cente
 
 function hideEndTrip(){
 document.getElementById('endBox').classList.add('hidden');
+}
+
+function addStopBeforeEndingTrip(){
+hideEndTrip();
+document.getElementById('stopHeading').scrollIntoView({behavior:'smooth',block:'center'});
+document.getElementById('sPlace').focus();
 }
 
 async function finishTrip(){
@@ -2964,7 +2988,7 @@ await loadActiveTripStopsPanel();
 await loadTrips();await loadStats();
 }
 
-window.saveCurrentStop=saveCurrentStop;window.prepareNextStop=prepareNextStop;window.showEndTrip=showEndTrip;window.hideEndTrip=hideEndTrip;window.finishTrip=finishTrip;window.cancelTrip = cancelTrip;
+window.saveCurrentStop=saveCurrentStop;window.prepareNextStop=prepareNextStop;window.showEndTrip=showEndTrip;window.hideEndTrip=hideEndTrip;window.addStopBeforeEndingTrip=addStopBeforeEndingTrip;window.finishTrip=finishTrip;window.cancelTrip = cancelTrip;
 
 function clearStopFields(){
 

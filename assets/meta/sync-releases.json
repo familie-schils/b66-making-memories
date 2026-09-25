@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.25",
-  "releasedAt": "2026-09-25T18:42:01.938Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Process pending invitations on login",
+  "currentVersion": "1.0.26",
+  "releasedAt": "2026-09-25T18:51:31.144Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Allow ending trips without a new stop",
   "latest5": [
+    {
+      "version": "1.0.26",
+      "releasedAt": "2026-09-25T18:51:31.144Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Allow ending trips without a new stop"
+    },
     {
       "version": "1.0.25",
       "releasedAt": "2026-09-25T18:42:01.938Z",
@@ -23,14 +28,14 @@
       "version": "1.0.22",
       "releasedAt": "2026-09-25T17:45:37.052Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Harden dynamic HTML rendering"
-    },
-    {
-      "version": "1.0.21",
-      "releasedAt": "2026-09-09T16:16:49.298Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Hernoem onderhoud naar onderhoud en toebehoren"
     }
   ],
   "history": [
+    {
+      "version": "1.0.26",
+      "releasedAt": "2026-09-25T18:51:31.144Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Allow ending trips without a new stop"
+    },
     {
       "version": "1.0.25",
       "releasedAt": "2026-09-25T18:42:01.938Z",
@@ -157,5 +162,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "bb4a65e8084ae584a982acd443c207abbda1bc0c"
+  "lastSyncedTestAgentSha": "dbdd5cd20c3fbd6af97f73331acaf38bb4e44bd7"
 }
