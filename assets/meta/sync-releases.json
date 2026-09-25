@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.22",
-  "releasedAt": "2026-09-25T17:45:37.052Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Harden dynamic HTML rendering",
+  "currentVersion": "1.0.23",
+  "releasedAt": "2026-09-25T17:54:15.433Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix existing camper invite resumption",
   "latest5": [
+    {
+      "version": "1.0.23",
+      "releasedAt": "2026-09-25T17:54:15.433Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix existing camper invite resumption"
+    },
     {
       "version": "1.0.22",
       "releasedAt": "2026-09-25T17:45:37.052Z",
@@ -23,14 +28,14 @@
       "version": "1.0.19",
       "releasedAt": "2026-09-08T20:24:37.029Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Camper Uitleg toegevoegd\n- Diverse UI-opruimingen\n- Verbeteringen aan beheer en gebruiksgemak"
-    },
-    {
-      "version": "1.0.17",
-      "releasedAt": "2026-09-08T16:11:50Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Versiebeheer bijgewerkt\n- Updates / Wat is nieuw vernieuwd\n- Camper Uitleg gesynchroniseerd\n- Reisverbeteringen gesynchroniseerd\n- Tankbeurtverbeteringen gesynchroniseerd\n- Onderhoudsverbeteringen gesynchroniseerd\n- UI-opruiming behouden zonder test-elementen"
     }
   ],
   "history": [
+    {
+      "version": "1.0.23",
+      "releasedAt": "2026-09-25T17:54:15.433Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix existing camper invite resumption"
+    },
     {
       "version": "1.0.22",
       "releasedAt": "2026-09-25T17:45:37.052Z",
@@ -142,5 +147,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "86776bd397a5111357132be8aec70124362210ec"
+  "lastSyncedTestAgentSha": "3187dbfdaebd93273e790526c20bec9a1e8d4c97"
 }
