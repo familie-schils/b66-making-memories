@@ -3887,6 +3887,28 @@ async function loadStats(){
 
 function v(id){return document.getElementById(id).value.trim()}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function createTextElement(tag,text,className){
+  const element=document.createElement(tag);
+  if(className)element.className=className;
+  element.textContent=String(text??'');
+  return element;
+}
+function createStatusElement(className,text){
+  return createTextElement('div',text,className);
+}
+function renderInviteLinkStatus(element,message,link){
+  element.replaceChildren();
+  element.append(document.createTextNode(message));
+  element.append(document.createElement('br'));
+  const linkBox=createTextElement('div','', 'code');
+  linkBox.style.marginTop='6px';
+  const anchor=createTextElement('a',link);
+  anchor.href=link;
+  anchor.target='_blank';
+  anchor.rel='noopener noreferrer';
+  linkBox.append(anchor);
+  element.append(linkBox);
+}
 function formatDate(value){
   if(!value)return '—';
   const date=new Date(value);
@@ -5096,30 +5118,27 @@ async function loadMaintenance(){
     document.getElementById('maintenanceHistory');
 
   if(!data || data.length === 0){
-    box.innerHTML =
-      'Nog geen onderhoud geregistreerd.';
+    box.textContent='Nog geen onderhoud geregistreerd.';
     return;
   }
 
-  box.innerHTML = data.map(x => `
-    <div class="item">
-      <b>${x.datum || ''}</b><br>
-      ${esc(getMaintenanceCategoryLabel(x.categorie) || '')}<br>
-
-      <div class="muted">
-        ${x.werkzaamheden || ''}
-      </div>
-
-      ${x.uitvoerder
-        ? `<div>Uitvoerder: ${x.uitvoerder}</div>`
-        : ''}
-
-      ${x.kosten
-        ? `<div>Kosten: € ${x.kosten}</div>`
-        : ''}
-      <div class="edit-actions"><button class="secondary" onclick="startMaintenanceEditById(${x.id})">Bewerken</button></div>
-    </div>
-  `).join('');
+  box.replaceChildren();
+  data.forEach(x=>{
+    const item=createTextElement('div','', 'item');
+    const date=createTextElement('b',x.datum||'');
+    item.append(date,document.createElement('br'));
+    item.append(createTextElement('span',getMaintenanceCategoryLabel(x.categorie)||''));
+    item.append(document.createElement('br'));
+    item.append(createTextElement('div',x.werkzaamheden||'','muted'));
+    if(x.uitvoerder)item.append(createTextElement('div','Uitvoerder: '+x.uitvoerder));
+    if(x.kosten)item.append(createTextElement('div','Kosten: € '+x.kosten));
+    const actions=createTextElement('div','','edit-actions');
+    const editButton=createTextElement('button','Bewerken','secondary');
+    editButton.addEventListener('click',()=>window.startMaintenanceEditById(x.id));
+    actions.append(editButton);
+    item.append(actions);
+    box.append(item);
+  });
 
 }
 async function loadTravelCosts(){
@@ -5141,34 +5160,32 @@ async function loadTravelCosts(){
    
 
   if(error){
-    box.innerHTML = error.message;
+    box.textContent=error.message;
     return;
   }
 
  if(!data || data.length === 0){
-  box.innerHTML =
-    'Nog geen reiskosten geregistreerd.';
+  box.textContent='Nog geen reiskosten geregistreerd.';
   return;
 }
 
-box.innerHTML = data.map(x => `
-  <div class="item">
-
-    <b>${x.datum}</b><br>
-
-    ${esc(getTravelCostCategoryLabel(x.type_kost))}<br>
-
-    ${x.land || ''}<br>
-
-    € ${Number(x.bedrag).toFixed(2)}
-
-    ${x.opmerking
-      ? `<div class="muted">${x.opmerking}</div>`
-      : ''}
-    <div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${x.id})">Bewerken</button></div>
-
-  </div>
-`).join('');
+box.replaceChildren();
+data.forEach(x=>{
+  const item=createTextElement('div','','item');
+  item.append(createTextElement('b',x.datum||''),document.createElement('br'));
+  item.append(createTextElement('span',getTravelCostCategoryLabel(x.type_kost)||''));
+  item.append(document.createElement('br'));
+  item.append(document.createTextNode(String(x.land||'')));
+  item.append(document.createElement('br'));
+  item.append(document.createTextNode('€ '+Number(x.bedrag).toFixed(2)));
+  if(x.opmerking)item.append(createTextElement('div',x.opmerking,'muted'));
+  const actions=createTextElement('div','','edit-actions');
+  const editButton=createTextElement('button','Bewerken','secondary');
+  editButton.addEventListener('click',()=>window.startTravelCostEdit(x.id));
+  actions.append(editButton);
+  item.append(actions);
+  box.append(item);
+});
   
   }
 
@@ -5200,13 +5217,12 @@ async function loadTravelCostTrips(){
     return;
   }
 
-  select.innerHTML = (data || [])
-    .map(x => `
-      <option value="${x.id}">
-        ${x.datum} - ${x.bestuurder||x.crew||''}${x.passagier?' & '+x.passagier:''}
-      </option>
-    `)
-    .join('');
+  select.replaceChildren();
+  (data||[]).forEach(x=>{
+    const bestuurder=x.bestuurder||x.crew||'';
+    const passagier=x.passagier?' & '+x.passagier:'';
+    select.append(new Option(`${x.datum||''} - ${bestuurder}${passagier}`,String(x.id??'')));
+  });
   const costDate=document.getElementById('costDate');
   if(costDate&&!costDate.value)costDate.value=new Date().toISOString().slice(0,10);
 }
@@ -6449,7 +6465,7 @@ function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
   box.innerHTML=filtered.map(s=>{
     const stopFotos=(fotosAll||[]).filter(f=>f.stop_id===s.id);
     const eigenaar=eigenaarMap[s.reis_id]||'Onbekend';
-    const fotoHtml=stopFotos.length?`<div class="muted">${stopFotos.length} foto(s)</div><div class="op-photo-grid">${stopFotos.map(f=>`<img src="${esc(f.url)}" onclick="event.stopPropagation();openFotoLightbox('${esc(f.url)}')">`).join('')}</div>`:'';
+    const fotoHtml=stopFotos.length?`<div class="muted">${stopFotos.length} foto(s)</div><div class="op-photo-grid">${stopFotos.map(f=>`<img src="${esc(f.url)}" data-photo-url="${esc(f.url)}">`).join('')}</div>`:'';
     const info=[`${stars(s.beoordeling)} ${esc(s.type_stop||'Onbekend')}`];
     if(s.prijs_per_nacht!=null){
       const overnight=getStopOvernightDetails(s,{legacyFallback:true});
@@ -6466,6 +6482,12 @@ function renderOntdektePlaatsen(stops,fotosAll,eigenaarMap){
       <div class="muted op-card-footer">Gedeeld door: ${esc(eigenaar)}</div>
     </div>`;
   }).join('');
+  box.querySelectorAll('img[data-photo-url]').forEach(image=>{
+    image.addEventListener('click',event=>{
+      event.stopPropagation();
+      window.openFotoLightbox(image.dataset.photoUrl);
+    });
+  });
 }
 
 window.filterOntdektePlaatsen=function(){
@@ -6506,8 +6528,11 @@ window.showStopDetail=function(stopId){
     ${s.voorzieningen?`<div><b>Voorzieningen:</b> ${esc(s.voorzieningen)}</div>`:''}
     ${s.referentie?`<div><b>Referentie:</b> ${esc(s.referentie)}</div>`:''}
     ${s.ervaring?`<div class="op-detail-description"><b>Beschrijving:</b><p>${esc(s.ervaring)}</p></div>`:''}
-    ${fotos.length?`<div class="op-detail-photos"><b>Foto's:</b><div class="op-detail-photos-grid">${fotos.map(f=>`<img src="${esc(f.url)}" onclick="openFotoLightbox('${esc(f.url)}')">`).join('')}</div></div>`:''}
+    ${fotos.length?`<div class="op-detail-photos"><b>Foto's:</b><div class="op-detail-photos-grid">${fotos.map(f=>`<img src="${esc(f.url)}" data-photo-url="${esc(f.url)}">`).join('')}</div></div>`:''}
     <div class="muted op-card-footer">Gedeeld door: ${esc(eigenaar)}</div>`;
+  document.querySelectorAll('#stopDetailBody img[data-photo-url]').forEach(image=>{
+    image.addEventListener('click',()=>window.openFotoLightbox(image.dataset.photoUrl));
+  });
   document.getElementById('stopDetailModal').style.display='block';
 };
 
@@ -6676,36 +6701,64 @@ async function loadMembersForLedenBeheren(){
     .from('camper_users')
     .select('user_id,role')
     .eq('camper_id',activeCamperId);
-  if(error){list.innerHTML='<div class="status err">Leden laden mislukt: '+esc(error.message)+'</div>';return;}
-  if(!members||members.length===0){list.innerHTML='<div class="muted">Nog geen leden gekoppeld.</div>';return;}
+  if(error){list.replaceChildren(createStatusElement('status err','Leden laden mislukt: '+error.message));return;}
+  if(!members||members.length===0){list.replaceChildren(createStatusElement('muted','Nog geen leden gekoppeld.'));return;}
   const userIds=members.map(m=>m.user_id).filter(Boolean);
   let profileMap={};
   if(userIds.length){
     const {data:profiles}=await supabase.from('profiles').select('user_id,display_name,email').in('user_id',userIds);
     if(profiles)profiles.forEach(p=>{profileMap[p.user_id]=p;});
   }
-  const headerRow='<tr style="text-align:left;border-bottom:2px solid #ddd"><th style="padding:8px 6px">Naam</th><th style="padding:8px 6px">E-mail</th><th style="padding:8px 6px">Rol</th><th style="padding:8px 6px">Acties</th></tr>';
-  const rows=members.map(m=>{
+  const table=document.createElement('table');
+  table.style.cssText='width:100%;border-collapse:collapse';
+  const thead=document.createElement('thead');
+  const headerRow=document.createElement('tr');
+  headerRow.style.cssText='text-align:left;border-bottom:2px solid #ddd';
+  ['Naam','E-mail','Rol','Acties'].forEach(label=>{
+    const header=document.createElement('th');
+    header.style.padding='8px 6px';
+    header.textContent=label;
+    headerRow.append(header);
+  });
+  thead.append(headerRow);
+  const tbody=document.createElement('tbody');
+  members.forEach(m=>{
     const p=profileMap[m.user_id]||{};
-    const naam=esc(p.display_name||'(onbekend)');
-    const email=esc(p.email||'—');
+    const naam=p.display_name||'(onbekend)';
+    const email=p.email||'—';
     const role=m.role||'viewer';
     const isCurrentUser=m.user_id===currentUser?.id;
     const isAdmin=role==='admin';
-    const roleCell=isAdmin?'<span class="badge">Admin</span>':`
-      <select onchange="changeMemberRoleLedenBeheren('${esc(m.user_id)}',this.value)" style="padding:4px 6px;border-radius:6px;border:1px solid #bbb">
-        <option value="viewer"${role==='viewer'?' selected':''}>Viewer</option>
-        <option value="editor"${role==='editor'?' selected':''}>Editor</option>
-      </select>`;
-    const deleteBtn=isCurrentUser||isAdmin?'':`<button class="secondary" style="padding:6px 10px;margin-left:4px" onclick="removeMemberLedenBeheren('${esc(m.user_id)}')">Verwijderen</button>`;
-    return `<tr style="border-bottom:1px solid #eee">
-      <td style="padding:8px 6px">${naam}</td>
-      <td style="padding:8px 6px">${email}</td>
-      <td style="padding:8px 6px">${roleCell}</td>
-      <td style="padding:8px 6px">${deleteBtn}</td>
-    </tr>`;
-  }).join('');
-  list.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead>${headerRow}</thead><tbody>${rows}</tbody></table>`;
+    const row=document.createElement('tr');
+    row.style.borderBottom='1px solid #eee';
+    const nameCell=createTextElement('td',naam);
+    const emailCell=createTextElement('td',email);
+    const roleCell=document.createElement('td');
+    const actionsCell=document.createElement('td');
+    [nameCell,emailCell,roleCell,actionsCell].forEach(cell=>{cell.style.padding='8px 6px';row.append(cell);});
+    if(isAdmin){
+      roleCell.append(createTextElement('span','Admin','badge'));
+    }else{
+      const roleSelect=document.createElement('select');
+      roleSelect.style.cssText='padding:4px 6px;border-radius:6px;border:1px solid #bbb';
+      ['viewer','editor'].forEach(optionRole=>{
+        const option=new Option(optionRole==='viewer'?'Viewer':'Editor',optionRole);
+        option.selected=role===optionRole;
+        roleSelect.append(option);
+      });
+      roleSelect.addEventListener('change',()=>window.changeMemberRoleLedenBeheren(m.user_id,roleSelect.value));
+      roleCell.append(roleSelect);
+    }
+    if(!isCurrentUser&&!isAdmin){
+      const deleteButton=createTextElement('button','Verwijderen','secondary');
+      deleteButton.style.cssText='padding:6px 10px;margin-left:4px';
+      deleteButton.addEventListener('click',()=>window.removeMemberLedenBeheren(m.user_id));
+      actionsCell.append(deleteButton);
+    }
+    tbody.append(row);
+  });
+  table.append(thead,tbody);
+  list.replaceChildren(table);
 }
 
 async function loadInvitationsForLedenBeheren(){
@@ -6719,20 +6772,43 @@ async function loadInvitationsForLedenBeheren(){
     .eq('status','pending')
     .order('created_at',{ascending:false})
     .limit(50);
-  if(error){list.innerHTML='<div class="status err">Uitnodigingen laden mislukt: '+esc(error.message)+'</div>';return;}
-  if(!data||data.length===0){list.innerHTML='<div class="muted">Geen openstaande uitnodigingen.</div>';return;}
-  const headerRow='<tr style="text-align:left;border-bottom:2px solid #ddd"><th style="padding:8px 6px">E-mail</th><th style="padding:8px 6px">Rol</th><th style="padding:8px 6px">Status</th><th style="padding:8px 6px">Aangemaakt</th><th style="padding:8px 6px">Acties</th></tr>';
-  const rows=data.map(inv=>`<tr style="border-bottom:1px solid #eee">
-    <td style="padding:8px 6px">${esc(inv.email||'—')}</td>
-    <td style="padding:8px 6px">${esc(getRoleLabelLedenBeheren(inv.role||'viewer'))}</td>
-    <td style="padding:8px 6px"><span class="badge">In afwachting</span></td>
-    <td style="padding:8px 6px">${esc(formatDate(inv.created_at))}</td>
-    <td style="padding:8px 6px;white-space:nowrap">
-      <button class="secondary" style="padding:6px 10px" onclick="resendInvitationLedenBeheren('${esc(inv.id)}','${esc(inv.email)}','${esc(inv.role||'viewer')}')">Opnieuw</button>
-      <button class="secondary" style="padding:6px 10px;margin-left:4px" onclick="revokeInvitationLedenBeheren('${esc(inv.id)}')">Intrekken</button>
-    </td>
-  </tr>`).join('');
-  list.innerHTML=`<table style="width:100%;border-collapse:collapse"><thead>${headerRow}</thead><tbody>${rows}</tbody></table>`;
+  if(error){list.replaceChildren(createStatusElement('status err','Uitnodigingen laden mislukt: '+error.message));return;}
+  if(!data||data.length===0){list.replaceChildren(createStatusElement('muted','Geen openstaande uitnodigingen.'));return;}
+  const table=document.createElement('table');
+  table.style.cssText='width:100%;border-collapse:collapse';
+  const thead=document.createElement('thead');
+  const headerRow=document.createElement('tr');
+  headerRow.style.cssText='text-align:left;border-bottom:2px solid #ddd';
+  ['E-mail','Rol','Status','Aangemaakt','Acties'].forEach(label=>{
+    const header=document.createElement('th');
+    header.style.padding='8px 6px';
+    header.textContent=label;
+    headerRow.append(header);
+  });
+  thead.append(headerRow);
+  const tbody=document.createElement('tbody');
+  data.forEach(inv=>{
+    const row=document.createElement('tr');
+    row.style.borderBottom='1px solid #eee';
+    const emailCell=createTextElement('td',inv.email||'—');
+    const roleCell=createTextElement('td',getRoleLabelLedenBeheren(inv.role||'viewer'));
+    const statusCell=createTextElement('td');
+    statusCell.append(createTextElement('span','In afwachting','badge'));
+    const dateCell=createTextElement('td',formatDate(inv.created_at));
+    const actionsCell=createTextElement('td');
+    actionsCell.style.whiteSpace='nowrap';
+    [emailCell,roleCell,statusCell,dateCell,actionsCell].forEach(cell=>{cell.style.padding='8px 6px';row.append(cell);});
+    const resendButton=createTextElement('button','Opnieuw','secondary');
+    resendButton.style.padding='6px 10px';
+    resendButton.addEventListener('click',()=>window.resendInvitationLedenBeheren(inv.id,inv.email,inv.role||'viewer'));
+    const revokeButton=createTextElement('button','Intrekken','secondary');
+    revokeButton.style.cssText='padding:6px 10px;margin-left:4px';
+    revokeButton.addEventListener('click',()=>window.revokeInvitationLedenBeheren(inv.id));
+    actionsCell.append(resendButton,revokeButton);
+    tbody.append(row);
+  });
+  table.append(thead,tbody);
+  list.replaceChildren(table);
 }
 
 window.selectLedenBeheerRole=function(role){
@@ -6777,7 +6853,7 @@ window.sendLedenBeheerInvitation=async function(){
   if(result?.error){status.textContent='Uitnodiging maken mislukt: '+result.error.message;status.className='status err';return;}
   emailField.value='';
   const link=getCamperInviteLink(result.data.invitation_token);
-  status.innerHTML='Uitnodiging opgeslagen. Stuur deze link naar de ontvanger:<br><div class="code" style="margin-top:6px"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link)+'</a></div>';
+  renderInviteLinkStatus(status,'Uitnodiging opgeslagen. Stuur deze link naar de ontvanger:',link);
   status.className='status ok';
   await loadInvitationsForLedenBeheren();
 };
@@ -6814,7 +6890,7 @@ window.resendInvitationLedenBeheren=async function(invId,email,role){
   if(result?.error){if(status){status.textContent='Opnieuw versturen mislukt: '+result.error.message;status.className='status err';}return;}
   const link=getCamperInviteLink(result.data.invitation_token);
   if(status){
-    status.innerHTML='Uitnodiging opnieuw verstuurd. Deel de nieuwe link:<br><div class="code" style="margin-top:6px"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link)+'</a></div>';
+    renderInviteLinkStatus(status,'Uitnodiging opnieuw verstuurd. Deel de nieuwe link:',link);
     status.className='status ok';
   }
   await loadInvitationsForLedenBeheren();
