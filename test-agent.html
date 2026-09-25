@@ -79,6 +79,23 @@ button{font:inherit}
 .trip-stop{border-left:4px solid #ddd;padding-left:12px;margin:10px 0}
 .end-box{background:#f7f7f7;border-radius:12px;padding:14px;margin-top:18px}
 .trip-header{background:#f7f7f7;border-radius:12px;padding:14px;margin-bottom:18px}
+.trip-list-card{padding:18px 0}
+.trip-list-card:first-child{padding-top:0;border-top:0}
+.trip-list-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.trip-list-title{font-size:18px;line-height:1.3}
+.trip-list-period{margin-top:4px}
+.trip-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-top:14px}
+.trip-summary-item{background:#f7f8fa;border:1px solid #e4e7eb;border-radius:10px;padding:11px}
+.trip-summary-label{font-size:12px;font-weight:700;color:#66717d}
+.trip-summary-value{margin-top:4px;font-size:16px;font-weight:700;line-height:1.35}
+.trip-details-list{display:grid;gap:7px;margin-top:14px}
+.trip-log{display:grid;gap:18px}
+.trip-log-day{padding-top:2px}
+.trip-log-date{margin:0 0 8px;font-size:14px;font-weight:800;letter-spacing:.02em}
+.trip-log-entry{border-top:1px solid #e4e7eb;padding:14px 0 0;margin-top:14px}
+.trip-log-entry:first-of-type{margin-top:0}
+.trip-log-entry-title{font-size:16px;line-height:1.35}
+.trip-log-entry-meta{margin-top:4px}
 .fuel-summary{background:#f7f7f7;border-radius:12px;padding:14px;margin-bottom:18px}
 .fuel-number{font-size:24px;font-weight:800}
 .inline-form{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
@@ -268,7 +285,7 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <div class="grid">
 <div><label>Start KM van deze reis</label><input id="tStartKm" type="number" min="0" step="1" readonly></div>
 
-<div><div id="kmResult" class="km-result">KM gereden: —</div></div>
+<div><div id="kmResult" class="km-result">Wordt berekend bij het afsluiten van de reis</div></div>
 </div>
 </div>
 
@@ -2521,7 +2538,7 @@ document.getElementById('sDate').value=today();
 document.getElementById('tStartKm').value='';
 
 document.getElementById('tEndKmEndBox').value='';
-document.getElementById('kmResult').textContent='KM gereden: —';
+document.getElementById('kmResult').textContent='Wordt berekend bij het afsluiten van de reis';
 document.getElementById('activeTripInfo').textContent='';
 document.getElementById('saveStopBtn').classList.remove('hidden');
 document.getElementById('nextStopBtn').classList.add('hidden');
@@ -2629,7 +2646,7 @@ function updateKm(){
 const s=v('tStartKm'),
       e=v('tEndKmEndBox'),
       el=document.getElementById('kmResult');
-if(s===''||e===''){el.textContent='KM gereden: —';return}
+if(s===''||e===''){el.textContent='Wordt berekend bij het afsluiten van de reis';return}
 const diff=Number(e)-Number(s);
 if(diff<0){el.textContent='Eind KM is lager dan Start KM';return}
 el.textContent='KM gereden: '+diff.toLocaleString('nl-BE')+' km';
@@ -3129,6 +3146,14 @@ if(!trips.length){
   list.innerHTML='<div class="muted">Nog geen reizen. Start jullie eerste reis!</div>';
   return;
 }
+trips.sort((a,b)=>{
+  const aActive=!a.einddatum;
+  const bActive=!b.einddatum;
+  if(aActive!==bActive)return aActive?-1:1;
+  const aDate=a.einddatum||a.datum||'';
+  const bDate=b.einddatum||b.datum||'';
+  return bDate.localeCompare(aDate);
+});
 const filterValue=getTripFilterValue();
 const filteredTrips=trips.filter(t=>filterValue==='closed'?Boolean(t.einddatum):!t.einddatum);
 if(!filteredTrips.length){
@@ -3151,11 +3176,15 @@ list.innerHTML=filteredTrips.map(t=>{
 const ts=(stops||[]).filter(s=>s.reis_id===t.id);
 const closed=t.einddatum!=null;
 const km=(t.start_km!=null&&t.eind_km!=null)?Number(t.eind_km)-Number(t.start_km):null;
-return `<div class="item">
-<b>${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</b> · ${esc(t.datum)}${closed?' → '+esc(t.einddatum):' · actief'}
+return `<div class="item trip-list-card">
+<div class="trip-list-heading">
+  <b class="trip-list-title">${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</b>
+  ${closed?'':`<span class="badge">ACTIEVE REIS</span>`}
+</div>
+<div class="muted trip-list-period">${formatDate(t.datum)}${closed?' t/m '+formatDate(t.einddatum):' · onderweg'}</div>
 <div class="muted">${ts.length} stop${ts.length===1?'':'s'}${km!=null?' · '+km.toLocaleString('nl-BE')+' km':''}</div>
 ${ts.slice(0,5).map(s=>`<div class="trip-stop"><b>${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
-<div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
+<div class="muted">${formatDate(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div></div>`).join('')}
 <div class="edit-actions">
  <button class="secondary" onclick="showTripDetail(${t.id})">Bekijk reis</button>
  ${closed?`<button class="primary" onclick="showTripDetail(${t.id},true)">Reisrapport</button>`:''}
@@ -3184,20 +3213,29 @@ logItems.sort((a,b)=>a.datum<b.datum?-1:a.datum>b.datum?1:a.volgorde-b.volgorde)
 
 const detail=document.getElementById('tripDetail');
 detail.classList.remove('hidden');
-detail.innerHTML=`<h2>Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagier?' & '+esc(t.passagier):''}</h2>
-<div class="muted">${esc(t.datum)}${t.einddatum?' → '+esc(t.einddatum):' · nog actief'}</div>
+const tripName=`${t.bestuurder||t.crew||'Reis'}${t.passagier?' & '+t.passagier:''}`;
+const logDays=logItems.reduce((days,item)=>{
+  const dateKey=item.datum||'';
+  if(!days[dateKey])days[dateKey]=[];
+  days[dateKey].push(item);
+  return days;
+},{});
+detail.innerHTML=`<h2>${esc(tripName)}</h2>
+<div class="muted">${formatDate(t.datum)}${t.einddatum?' t/m '+formatDate(t.einddatum):' · onderweg'}</div>
+${t.einddatum?'':`<div style="margin-top:8px"><span class="badge">ACTIEVE REIS</span></div>`}
 
 <hr>
 <h3>Reissamenvatting</h3>
-<div class="item">
-  <div><b>Bestuurder:</b> ${esc(t.bestuurder||t.crew||'—')}</div>
-  <div><b>Passagier:</b> ${esc(t.passagier||'—')}</div>
-  <div><b>Startdatum:</b> ${esc(t.datum||'—')}</div>
-  <div><b>Einddatum:</b> ${esc(t.einddatum||'nog actief')}</div>
-  <div><b>Start KM:</b> ${formatKilometers(t.start_km)}</div>
-  <div><b>Eind KM:</b> ${formatKilometers(t.eind_km)}</div>
-  <div><b>Totaal gereden KM:</b> ${summary.distance!=null?formatKilometers(summary.distance):'—'}</div>
-  <div><b>Aantal stops:</b> ${summary.stopCount}</div>
+<div class="trip-summary-grid">
+  <div class="trip-summary-item"><div class="trip-summary-label">Reis</div><div class="trip-summary-value">${esc(tripName)}</div></div>
+  <div class="trip-summary-item"><div class="trip-summary-label">Periode</div><div class="trip-summary-value">${formatDate(t.datum)}${t.einddatum?' t/m '+formatDate(t.einddatum):' · onderweg'}</div></div>
+  <div class="trip-summary-item"><div class="trip-summary-label">Stops</div><div class="trip-summary-value">${summary.stopCount}</div></div>
+  <div class="trip-summary-item"><div class="trip-summary-label">Totale kosten</div><div class="trip-summary-value">${formatCurrency(summary.grandTotal)}</div></div>
+</div>
+<div class="trip-details-list muted">
+  <div>Bestuurder: ${esc(t.bestuurder||t.crew||'—')}${t.passagier?' · Passagier: '+esc(t.passagier):''}</div>
+  <div>Startkilometerstand: ${formatKilometers(t.start_km)}${t.eind_km!=null?' · Eindkilometerstand: '+formatKilometers(t.eind_km):''}</div>
+  <div>${summary.distance!=null?'Totaal gereden: '+formatKilometers(summary.distance):'Kilometerstand wordt berekend bij het afsluiten van de reis'}</div>
 </div>
 
 <hr>
@@ -3208,7 +3246,7 @@ detail.innerHTML=`<h2>Reis van ${esc(t.bestuurder||t.crew||'')}${t.passagier?' &
   ${stops.filter(s=>s.prijs_per_nacht!=null).map(s=>{
     const overnight=getStopOvernightDetails(s,{legacyFallback:true});
     const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
-    return `<div>${esc(overnight.arrivalDate||'')} → ${esc(overnight.departureDate||'—')} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${nightsText} × ${formatCurrency(overnight.nightlyRate)} = ${formatCurrency(overnight.totalCost)}</div>`;
+    return `<div>${formatDate(overnight.arrivalDate)} → ${formatDate(overnight.departureDate)} · ${esc(s.camperplaats||'Onbenoemde stop')}: ${nightsText} × ${formatCurrency(overnight.nightlyRate)} = ${formatCurrency(overnight.totalCost)}</div>`;
   }).join('')||'<div class="muted">Geen overnachtingskosten geregistreerd.</div>'}
   <div style="margin-top:6px"><b>Totaal overnachtingen:</b> ${formatCurrency(summary.overnightTotal)}</div>
 </div>
@@ -3243,19 +3281,21 @@ ${t.einddatum?`
 </div>`:''}
  
 <hr>
-<h3>Chronologische reislog</h3>
-${logItems.length?logItems.map(item=>{
+<h3>Reislog</h3>
+${logItems.length?`<div class="trip-log">${Object.entries(logDays).map(([date,items])=>`<section class="trip-log-day">
+<h4 class="trip-log-date">${formatDate(date)}</h4>
+${items.map(item=>{
   if(item.type==='stop'){
     const s=item.data;
     const stopFotos=photosByStopId[s.id]||[];
-    return `<div class="trip-stop"><b>${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b> · ${esc(s.land||'')}
-<div class="muted">${esc(s.datum)} · ${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div>
+    return `<div class="trip-log-entry"><b class="trip-log-entry-title">${s.volgorde}. ${esc(s.camperplaats||'Onbenoemde stop')}</b>${s.land?' · '+esc(s.land):''}
+<div class="muted trip-log-entry-meta">${esc(s.type_stop)} · ${'★'.repeat(Number(s.beoordeling||0))}</div>
 ${s.voorzieningen?`<div>${esc(s.voorzieningen)}</div>`:''}
 ${s.ervaring?`<p>${esc(s.ervaring)}</p>`:''}
 ${s.prijs_per_nacht!=null?`<div class="muted">${(()=>{
   const overnight=getStopOvernightDetails(s,{legacyFallback:true});
   const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
-  return `Aankomst: ${esc(overnight.arrivalDate||'—')} · Vertrek: ${esc(overnight.departureDate||'—')} · ${nightsText} · ${formatCurrency(overnight.nightlyRate)}/nacht · ${formatCurrency(overnight.totalCost)} totaal`;
+  return `Aankomst: ${formatDate(overnight.arrivalDate)} · Vertrek: ${formatDate(overnight.departureDate)} · ${nightsText} · ${formatCurrency(overnight.nightlyRate)}/nacht · ${formatCurrency(overnight.totalCost)} totaal`;
 })()}</div>`:''}
 ${stopFotos.length?`<div class="muted">Foto's: ${stopFotos.length}</div>`+''+stopFotos.map(f=>`<div style="margin-top:10px"><img src="${f.url}" style="max-width:150px;max-height:150px;border-radius:8px;"></div>`).join(''):''}
 <div class="edit-actions"><button class="secondary" onclick="startStopEdit(${s.id},${id})">Bewerken</button></div>
@@ -3263,8 +3303,8 @@ ${stopFotos.length?`<div class="muted">Foto's: ${stopFotos.length}</div>`+''+sto
   }
   if(item.type==='kost'){
     const k=item.data;
-    return `<div class="trip-stop" style="border-left-color:#e0a800"><b>${esc(getTravelCostCategoryLabel(k.type_kost))}</b>${k.land?' · '+esc(k.land):''}
-<div class="muted">${esc(k.datum)}${k.opmerking?' · '+esc(k.opmerking):''}</div>
+    return `<div class="trip-log-entry"><b class="trip-log-entry-title">${esc(getTravelCostCategoryLabel(k.type_kost))}</b>${k.land?' · '+esc(k.land):''}
+<div class="muted trip-log-entry-meta">${k.opmerking?esc(k.opmerking):'Reisuitgave'}</div>
 <div>Bedrag: ${formatCurrency(k.bedrag)}</div>
 <div class="edit-actions"><button class="secondary" onclick="startTravelCostEdit(${k.id})">Bewerken</button></div></div>`;
   }
@@ -3272,13 +3312,13 @@ ${stopFotos.length?`<div class="muted">Foto's: ${stopFotos.length}</div>`+''+sto
     const x=item.data;
     const liters=Number(x.liters||0);
     const kost=x.totaalbedrag!=null?Number(x.totaalbedrag):liters*Number(x.prijs_per_liter||0);
-    return `<div class="trip-stop" style="border-left-color:#2e7d32"><b>Tanken${x.brandstof_type?' ('+esc(x.brandstof_type)+')':''}</b>${x.locatie?' · '+esc(x.locatie):''}${x.land?' · '+esc(x.land):''}
-<div class="muted">${esc(x.datum)}</div>
+    return `<div class="trip-log-entry"><b class="trip-log-entry-title">Tanken${x.brandstof_type?' ('+esc(x.brandstof_type)+')':''}</b>${x.locatie?' · '+esc(x.locatie):''}${x.land?' · '+esc(x.land):''}
+<div class="muted trip-log-entry-meta">Tankbeurt</div>
 <div>${liters.toFixed(2).replace('.',',')} l · ${formatCurrency(kost)}</div>
 <div class="edit-actions"><button class="secondary" onclick="startFuelEdit(${x.id})">Bewerken</button></div></div>`;
   }
   return '';
-}).join(''):'<div class="muted">Geen activiteiten.</div>'}
+}).join('')}</section>`).join('')}</div>`:'<div class="muted">Nog geen activiteiten tijdens deze reis.</div>'}
  
 <br><button class="secondary" onclick="document.getElementById('tripDetail').classList.add('hidden')">Sluiten</button>`;
 detail.scrollIntoView({behavior:'smooth'});
@@ -3796,7 +3836,7 @@ async function loadFuel(){
       const consumption=(isDiesel&&distance>0&&liters>0)?liters/distance*100:null;
 
       return `<div class="item">
-        <b>${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${esc(x.datum)}${btype!=='Diesel'?' · '+esc(btype):''}
+        <b>${Number(x.kmstand).toLocaleString('nl-BE')} km</b> · ${formatDate(x.datum)}${btype!=='Diesel'?' · '+esc(btype):''}
         <div class="muted">${x.locatie?esc(x.locatie)+' · ':''}${x.land?esc(x.land):''}</div>
         <div>${liters.toFixed(2).replace('.',',')} liter · € ${price.toFixed(3).replace('.',',')}/l · <b>€ ${cost.toFixed(2).replace('.',',')}</b></div>
         ${isDiesel?(consumption!=null
@@ -3992,9 +4032,12 @@ function renderInviteLinkStatus(element,message,link){
 }
 function formatDate(value){
   if(!value)return '—';
-  const date=new Date(value);
+  const dateOnly=String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date=dateOnly
+    ?new Date(Number(dateOnly[1]),Number(dateOnly[2])-1,Number(dateOnly[3]))
+    :new Date(value);
   if(Number.isNaN(date.getTime()))return String(value).slice(0,10);
-  return date.toLocaleDateString('nl-BE');
+  return date.toLocaleDateString('nl-BE',{day:'numeric',month:'short',year:'numeric'});
 }
 function isMissingColumnError(error,columnName){
   const message=String(error?.message||'').toLowerCase();
