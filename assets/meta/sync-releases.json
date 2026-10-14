@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.29",
-  "releasedAt": "2026-09-25T19:20:25.702Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine trip odometer entry",
+  "currentVersion": "1.0.30",
+  "releasedAt": "2026-10-14T16:16:16.458Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Apply remaining changes",
   "latest5": [
+    {
+      "version": "1.0.30",
+      "releasedAt": "2026-10-14T16:16:16.458Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Apply remaining changes"
+    },
     {
       "version": "1.0.29",
       "releasedAt": "2026-09-25T19:20:25.702Z",
@@ -23,14 +28,14 @@
       "version": "1.0.26",
       "releasedAt": "2026-09-25T18:51:31.144Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Allow ending trips without a new stop"
-    },
-    {
-      "version": "1.0.25",
-      "releasedAt": "2026-09-25T18:42:01.938Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Process pending invitations on login"
     }
   ],
   "history": [
+    {
+      "version": "1.0.30",
+      "releasedAt": "2026-10-14T16:16:16.458Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Apply remaining changes"
+    },
     {
       "version": "1.0.29",
       "releasedAt": "2026-09-25T19:20:25.702Z",
@@ -177,5 +182,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "682ce424f8eeeb246f2a238e86e703cf11685d01"
+  "lastSyncedTestAgentSha": "00c001319df3472597ad86620d06e9a413bdfa52"
 }
