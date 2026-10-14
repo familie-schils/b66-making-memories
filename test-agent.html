@@ -1228,6 +1228,7 @@ let stopPhotosToDelete=[];
     ADMIN:'admin',
     MEMBER:'lid'
   });
+  const ALLOWED_INVITE_ROLES = ['viewer','editor'];
   let currentRoleContext = createEmptyRoleContext();
   let platformAdminCandidateCountGlobal = null;
   let latestReleaseMetadata = null;
@@ -2282,6 +2283,11 @@ async function processInvite(userId,inviteOverride=null,suppressNavigation=false
   const inviteType=invite.type||(invite.camper_id?'camper':'platform');
   const statusEl=document.getElementById('inviteRouteStatus');
   function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
+  if(inviteType==='member-invite'&&!ALLOWED_INVITE_ROLES.includes(invite.role||'viewer')){
+    console.error('[processInvite] Ongeldige uitnodigingsrol geweigerd:',invite.role);
+    setStatus('Deze uitnodiging bevat een ongeldige rol en is geweigerd.','err');
+    return false;
+  }
   const {data:{user:authUser}}=await supabase.auth.getUser();
   if(!authUser){
     setStatus('Niet ingelogd. Log opnieuw in en probeer opnieuw.','err');
@@ -6975,6 +6981,12 @@ window.sendLedenBeheerInvitation=async function(){
   const role=roleRadio?roleRadio.value:'viewer';
   status.className='status hidden';
   if(!isCamperAdmin){status.textContent='Geen toegang: alleen Camper Admins kunnen uitnodigingen sturen.';status.className='status err';return;}
+  if(!ALLOWED_INVITE_ROLES.includes(role)){
+    console.error('[sendLedenBeheerInvitation] Ongeldige uitnodigingsrol geweigerd:',role);
+    status.textContent='Ongeldige rol: uitnodigingen zijn alleen toegestaan voor Viewer of Editor.';
+    status.className='status err';
+    return;
+  }
   if(!activeCamperId){status.textContent='Geen actieve camper gevonden.';status.className='status err';return;}
   if(!email){status.textContent='Vul een e-mailadres in.';status.className='status err';return;}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){status.textContent='Vul een geldig e-mailadres in.';status.className='status err';return;}
@@ -7022,6 +7034,12 @@ window.revokeInvitationLedenBeheren=async function(invId){
 window.resendInvitationLedenBeheren=async function(invId,email,role){
   if(!invId||!isCamperAdmin)return;
   const status=document.getElementById('ledenBeheerInviteStatus');
+  const inviteRole=role||'viewer';
+  if(!ALLOWED_INVITE_ROLES.includes(inviteRole)){
+    console.error('[resendInvitationLedenBeheren] Ongeldige uitnodigingsrol geweigerd:',inviteRole);
+    if(status){status.textContent='Ongeldige rol: uitnodigingen zijn alleen toegestaan voor Viewer of Editor.';status.className='status err';}
+    return;
+  }
   await supabase.from('invitations').update({status:'revoked'}).eq('id',invId).eq('camper_id',activeCamperId);
   const token=generateInviteCode(12);
   const expiresAt=new Date(Date.now()+7*24*60*60*1000).toISOString();
@@ -7029,7 +7047,7 @@ window.resendInvitationLedenBeheren=async function(invId,email,role){
   for(let attempt=0;attempt<5;attempt++){
     result=await supabase
       .from('invitations')
-      .insert({camper_id:activeCamperId,email,role,invitation_token:token,status:'pending',expires_at:expiresAt,created_by:currentUser?.id||null})
+      .insert({camper_id:activeCamperId,email,role:inviteRole,invitation_token:token,status:'pending',expires_at:expiresAt,created_by:currentUser?.id||null})
       .select('id,email,role,invitation_token,created_at')
       .single();
     if(!result.error)break;
