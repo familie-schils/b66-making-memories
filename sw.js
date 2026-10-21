@@ -1,7 +1,7 @@
 // Making Memories – Service Worker
 // Enables offline caching and PWA installability
 
-const CACHE_NAME = 'making-memories-v1';
+const CACHE_NAME = 'making-memories-v2';
 const PRECACHE = [
   './index.html',
   './manifest.json',
@@ -26,16 +26,34 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Network-first for navigation; cache fallback for assets
-  if (event.request.mode === 'navigate') {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+
+  // Navigation: network-first with index fallback when offline
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match('./index.html')
-      )
+      fetch(request).catch(() => caches.match('./index.html'))
     );
-  } else {
-    event.respondWith(
-      caches.match(event.request).then(cached => cached || fetch(event.request))
-    );
+    return;
   }
+
+  // JS/JSON: network-first with cache fallback
+  if (url.origin === self.location.origin && /\.(js|json)$/i.test(url.pathname)) {
+    event.respondWith(
+      fetch(request).then(response => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+        }
+        return response;
+      }).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Static assets: cache-first with network fallback
+  event.respondWith(
+    caches.match(request).then(cached => cached || fetch(request))
+  );
 });
