@@ -3585,7 +3585,7 @@ async function getLatestOdometer(){
 async function getFirstOdometer(){
   const [{data:trips},{data:tanks}]=await Promise.all([
     supabase.from('reizen').select('start_km,eind_km').eq('camper_id',activeCamperId).limit(1000),
-    supabase.from('tankbeurten').select('kmstand').limit(1000)
+    supabase.from('tankbeurten').select('kmstand').eq('camper_id',activeCamperId).limit(1000)
   ]);
   const kms=[];
   (trips||[]).forEach(x=>{
@@ -3599,6 +3599,8 @@ async function getFirstOdometer(){
 async function getPreviousTank(km){
   const {data}=await supabase.from('tankbeurten')
     .select('kmstand,liters,datum')
+    .eq('camper_id',activeCamperId)
+    .or('brandstof_type.eq.Diesel,brandstof_type.is.null')
     .lt('kmstand',km)
     .order('kmstand',{ascending:false})
     .limit(1)
@@ -3638,6 +3640,11 @@ async function updateFuelCalc(){
   const el=document.getElementById('fuelCalc');
   el.textContent='Totaalbedrag: € '+total.toFixed(2).replace('.',',')+
     ' · KM sinds vorige tankbeurt: — · Verbruik: —';
+  if(document.getElementById('fFuelType').value!=='Diesel'){
+    el.textContent='Totaalbedrag: € '+total.toFixed(2).replace('.',',')+
+      ' · Verbruik wordt enkel berekend voor Diesel';
+    return;
+  }
   if(km>0) await updateFuelCalcAsync(km,liters);
 }
 
@@ -3674,7 +3681,7 @@ function updateFuelFormMode(){
   }
 }
 
-['fKm','fLiters','fPrice'].forEach(id=>{
+['fKm','fLiters','fPrice','fFuelType'].forEach(id=>{
   document.getElementById(id).addEventListener('input',()=>updateFuelCalc());
 });
 
@@ -7093,7 +7100,16 @@ init();
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then(registration => registration.update())
+      .catch(error => console.error('Service worker registratie mislukt:', error));
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      navigator.serviceWorker.getRegistration('./')
+        .then(registration => registration?.update())
+        .catch(() => {});
+    }
   });
 }
 </script>

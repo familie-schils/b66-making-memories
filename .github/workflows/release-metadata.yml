@@ -57,8 +57,7 @@ jobs:
             };
 
             fs.mkdirSync('assets/meta', { recursive: true });
-            fs.writeFileSync(path, `${JSON.stringify(payload, null, 2)}
-`);
+            fs.writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`);
 
       - name: Commit metadata update
         run: |

@@ -1,28 +1,32 @@
 // Making Memories – Service Worker
 // Enables offline caching and PWA installability
 
-const CACHE_NAME = 'making-memories-v2';
+const CACHE_PREFIX = 'making-memories-';
+const CACHE_NAME = `${CACHE_PREFIX}v3`;
 const PRECACHE = [
   './index.html',
+  './test-agent.html',
   './manifest.json',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE))
-  );
-  self.skipWaiting();
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(PRECACHE);
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys
+      .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+      .map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', event => {
@@ -33,7 +37,9 @@ self.addEventListener('fetch', event => {
   // Navigation: network-first with index fallback when offline
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('./index.html'))
+      fetch(request, { cache: 'no-cache' }).catch(async () =>
+        (await caches.match(request)) || caches.match('./index.html')
+      )
     );
     return;
   }
@@ -41,10 +47,10 @@ self.addEventListener('fetch', event => {
   // JS/JSON: network-first with cache fallback
   if (url.origin === self.location.origin && /\.(js|json)$/i.test(url.pathname)) {
     event.respondWith(
-      fetch(request).then(response => {
+      fetch(request, { cache: 'no-cache' }).then(async response => {
         if (response && response.ok) {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+          await (await caches.open(CACHE_NAME)).put(request, copy);
         }
         return response;
       }).catch(() => caches.match(request))
