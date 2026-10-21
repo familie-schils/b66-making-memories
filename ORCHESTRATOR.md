@@ -1,11 +1,13 @@
 # B66 – Making Memories: Orchestrator Command Center
 
 ## Actieve Status: Database Beveiliging & Vrienden-Logica Audit
+
 De Orchestrator Agent (AI) en de Lead-Developer hebben het eerste rapport gelezen. De prioriteit ligt bij het beveiligen van de tabellen: reizen, tankbeurten, reis_stops, reiskosten, fotos, campers en friend_requests.
 
 ## Opdracht voor de GitHub Agent:
+
 1. Stop met het vragen van handmatige SQL-queries aan de Lead-Developer via chats.
-2. Schrijf een SQL-script genaamd `check_security_status.sql` in een nieuwe map `assets/meta/security/`. 
+2. Schrijf een SQL-script genaamd `check_security_status.sql` in een nieuwe map `assets/meta/security/`.
 3. Dit script moet de live status van RLS en actieve policies opvragen, exact zoals je voorstelde in je SQL-queries 1 t/m 4.
 4. Bereid een Pull Request (PR) voor waarin je dit script klaarzet, zodat de Lead-Developer dit in één klik kan uitvoeren in zijn Supabase SQL Editor wanneer hij tijd heeft.
 5. Zodra de resultaten er zijn, schrijf je jouw conclusie direct in DIT bestand (`ORCHESTRATOR.md`) onder het kopje '## Database Audit Resultaten'.
@@ -20,7 +22,7 @@ Live-check klaargezet in `assets/meta/security/check_security_status.sql` (queri
 
 ### Samenvatting
 
-De zeven prioriteitstabellen (`reizen`, `tankbeurten`, `reis_stops`, `reiskosten`, `fotos`, `campers`, `friend_requests`) hebben **geen RLS-migratie in `supabase/migrations/`**. De applicatie filtert in JavaScript op `camper_id` / `user_id`. Dat is geen databasegrens: zonder RLS (of met RLS zonder policies) kan iedere ingelogde client via de API alle rijen lezen of wijzigen.
+De zeven prioriteitstabellen (`reizen`, `tankbeurten`, `reis_stops`, `reiskosten`, `fotos`, `campers`, `friend_requests`) hebben **geen RLS-migratie in** `supabase/migrations/`. De applicatie filtert in JavaScript op `camper_id` / `user_id`. Dat is geen databasegrens: zonder RLS (of met RLS zonder policies) kan iedere ingelogde client via de API alle rijen lezen of wijzigen.
 
 Conclusie zolang de live SQL-uitvoer ontbreekt: **beveiliging van deze tabellen is in de repo niet aantoonbaar en moet als open risico worden behandeld.**
 
@@ -42,9 +44,9 @@ Wel RLS in migraties, maar **buiten** deze opdracht: `platform_admins`, `owner_p
 
 1. **Vriendendeling is geen RLS.** `loadOntdektePlaatsen` haalt vriend-campers, hun `reizen` en daarna `reis_stops` met `gedeeld_met_vrienden = true`. Dat werkt alleen als die rijen voor de ingelogde gebruiker zichtbaar zijn. Ontbreekt RLS, dan is de filter cosmetisch. Staat RLS strak op “alleen eigen camper”, dan faalt delen totdat er een policy voor vrienden bijkomt.
 2. **Omgekeerde share-vlag.** Bij opslaan van een stop: `gedeeld_met_vrienden: !document.getElementById('shareWithFriends').checked`. Een aangevinkt “delen”-vak zet de kolom op `false`.
-3. **`friends`-tabel** zit niet in de prioriteitslijst, maar `ensureMutualFriendship` insert beide richtingen vanuit de browser. `removeVriend` deelt op `id` zonder te controleren dat de rij bij `auth.uid()` hoort — opnieuw alleen veilig mét RLS.
+3. `friends`**-tabel** zit niet in de prioriteitslijst, maar `ensureMutualFriendship` insert beide richtingen vanuit de browser. `removeVriend` deelt op `id` zonder te controleren dat de rij bij `auth.uid()` hoort — opnieuw alleen veilig mét RLS.
 4. **Profiel-enumeratie.** Vriend toevoegen zoekt `profiles` op e-mail. Dat is functioneel nodig; zonder strikte SELECT-policy op `profiles` is dat een gebruikerslijst.
-5. **`get_platform_overview()`** is `SECURITY DEFINER` en telt o.a. `reizen`, `reis_stops`, `fotos`, `tankbeurten`, `reiskosten`. Execute staat op `authenticated`; de functie zelf checkt `is_head_admin`. Dat is acceptabel, maar blijft een extra pad naast RLS.
+5. `get_platform_overview()` is `SECURITY DEFINER` en telt o.a. `reizen`, `reis_stops`, `fotos`, `tankbeurten`, `reiskosten`. Execute staat op `authenticated`; de functie zelf checkt `is_head_admin`. Dat is acceptabel, maar blijft een extra pad naast RLS.
 6. **Rollen komen niet overeen.** `reiskosten_update` eist `editor`/`admin`. Elders in comments en UI komen `lid`, `viewer` en `Camper Lid` voor. Policies die op de verkeerde rolstrings matchen, blokkeren of laten te veel door.
 
 ### Wat queries 1–4 in Supabase moeten bevestigen
@@ -68,3 +70,19 @@ Verwachte uitkomst op basis van git: RLS uit of RLS aan zonder (volledige) polic
 6. Share-checkbox-inversie in TEST-AGENT herstellen (aparte functionele fix, niet in deze audit-PR).
 
 Live SQL-resultaten: nog niet beschikbaar. Deze sectie is de code-audit; plak de output van queries 1–4 hieronder wanneer die gedraaid is.
+
+## Database Audit Resultaten
+
+De live database-analyse heeft de volgende RLS-status opgeleverd:
+
+- RLS staat succesvol AAN op alle tabellen.
+
+- Risico: Vrijwel alle DELETE-acties hebben 0 actieve policies, wat data-verwijdering voor gebruikers blokkeert of onveilig omzeilt.
+
+## Volgende Opdracht voor de Cursor Agent:
+
+1. Analyseer de exacte SQL-definities van de huidige policies op `reis_stops` en `tankbeurten` (zoek naar de exacte criteria in je lokale code of bereid een script voor om ze uit te lezen).
+
+2. Repareer in `index.html` en `test-agent.html` de logische bug rondom de "gedeeld_met_vrienden" checkbox (zorg dat 'AAN' ook echt 'DELEN' betekent in de database en niet 'PRIVÉ').
+
+3. Schrijf een overzichtelijk voorstel in dit bestand onder een nieuw kopje '## Voorgestelde RLS Fixes' om de DELETE-policies veilig in te richten op basis van `auth.uid() = user_id` of camper-lidmaatschap.
