@@ -7100,9 +7100,16 @@ init();
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(error => {
-      console.error('Service worker registratie mislukt:', error);
-    });
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then(registration => registration.update())
+      .catch(error => console.error('Service worker registratie mislukt:', error));
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      navigator.serviceWorker.getRegistration('./')
+        .then(registration => registration?.update())
+        .catch(() => {});
+    }
   });
 }
 </script>
