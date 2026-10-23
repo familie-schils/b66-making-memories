@@ -162,3 +162,28 @@ Bron: live `pg_policies` (SELECT-, INSERT- en UPDATE-regels) en kolomlijst, aang
 - Storage (foto-bestanden): bucket en policies nog niet bekeken.
 - `camper_users.role` heeft in de live database geen controleregel; migraties in de repo wijken af van de live database (o.a. `is_head_admin` bestaat daar niet).
 - Geen functie om een reis, stop, tankbeurt of kosten te verwijderen in de app (bewust uitgesteld).
+
+## Stand van zaken einde dag (2026-10-23)
+
+**Gedaan**
+- Deel 1 (`assets/meta/security/01_koppelen_afsluiten.sql`) is live gedraaid.
+- `01b_uitnodiging_fix.sql` is live gedraaid: `invitations_update` gebruikt nu `b66_my_email()` (de oude regel las `auth.users`, dat gaf "permission denied for table users").
+- `test-agent.html`: profiel aanmaken telt "bestond al" (code 23505) als gelukt (race tussen registreren en showApp). Moet nog gecommit worden op branch `security/check-rls-status`.
+- Testomgeving gecorrigeerd: `authenticated` heeft in Supabase GEEN leesrecht op `auth.users`. Lokale test 89/89.
+
+**Nog te testen (in de testversie)**
+1. Uitnodiging afronden als uitgenodigde (viewer) op eigen camper.
+2. Registreren via uitnodiging in privévenster met nieuw adres (gebruik `naam+test1@gmail.com`).
+3. Inloggen als eigenaar en testgebruiker: alleen eigen data zichtbaar.
+
+**Daarna**
+- Back-up in Supabase, dan Deel 2 (`02_gegevens_afsluiten.sql`) draaien en testen met viewer/lid/admin.
+
+**Open punten (volgorde ter bespreking)**
+- `invitations_read_by_token` staat op `true`: iedereen kan alle uitnodigingen incl. tokens lezen. Oplossing: alleen opzoeken via functie op exact token.
+- `invite_codes` INSERT `true`, `profiles` SELECT `true` (e-mails zichtbaar voor alle ingelogden).
+- `camper_users` heeft geen UPDATE/DELETE-regel (rol wijzigen / lid verwijderen).
+- Knop om nieuwe camper-eigenaren uit te nodigen bestaat niet (platform-uitnodiging); bouwen na Deel 2.
+- Delete-reis functie (door gebruiker uitgesteld), hoofdbeheerder-rechten, storage bucket `fotos`, rol-check constraint, offline PWA, apart testproject, opruimen oude HTML-bestanden, AVG/privacy.
+- Testaccounts: wachtwoord zetten via SQL (`extensions.crypt`) of plusadressen gebruiken.
+- Onbeantwoord: wie zijn de gebruikers, wat zijn Fieneke en Suus, tijd/budget.
