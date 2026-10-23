@@ -354,7 +354,7 @@ Nog geen foto geselecteerd.
 <div id="activeTripInfo" class="muted"></div><br>
 <label class="stop-share-row">
   <input id="shareWithFriends" type="checkbox">
-  <span class="stop-share-row-text">Deze stop niet delen met vrienden</span>
+  <span class="stop-share-row-text">Deze stop delen met vrienden</span>
 </label>
 <button id="saveStopBtn" class="primary" onclick="saveCurrentStop()">Stop opslaan</button>
 <button id="nextStopBtn" class="secondary hidden" onclick="prepareNextStop()">Naar stop 2</button>
@@ -2721,7 +2721,7 @@ voorzieningen:v('sFacilities'),
 ervaring:v('sNotes'),
 regio:v('sRegio')||null,
 referentie:v('sReferentie')||null,
-gedeeld_met_vrienden:!document.getElementById('shareWithFriends').checked
+gedeeld_met_vrienden:document.getElementById('shareWithFriends').checked
 };
 
 if(!stop.camperplaats){
@@ -2881,7 +2881,7 @@ window.startStopEdit=async function(stopId,tripId){
   document.getElementById('sRegio').value=stop.regio||'';
   document.getElementById('sReferentie').value=stop.referentie||'';
   document.getElementById('sNotes').value=stop.ervaring||'';
-  document.getElementById('shareWithFriends').checked=!Boolean(stop.gedeeld_met_vrienden);
+  document.getElementById('shareWithFriends').checked=Boolean(stop.gedeeld_met_vrienden);
   currentEditingStopPhotos=(fotos||[]);
   stopPhotosToDelete=[];
   renderExistingStopPhotos();
@@ -3026,7 +3026,7 @@ function clearStopFields(){
   document.getElementById('sType').value='Camperplaats';
   document.getElementById('sDate').value=today();
   document.getElementById('sDepartureDate').value=addDaysToIsoDate(today(),1);
-  document.getElementById('shareWithFriends').checked=false;
+  document.getElementById('shareWithFriends').checked=true;
   currentEditingStopPhotos=[];
   stopPhotosToDelete=[];
   renderExistingStopPhotos();
