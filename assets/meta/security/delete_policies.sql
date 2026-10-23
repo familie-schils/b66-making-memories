@@ -3,41 +3,45 @@
 -- Uitvoeren in: Supabase SQL Editor (eerst op een test-/staging-project!)
 --
 -- Principe:
---   * Een gebruiker mag alleen rijen verwijderen van een camper waar hij
---     lid van is via camper_users, met een schrijfrol (admin, editor, lid).
---   * 'viewer' mag NIET verwijderen.
+--   * Verwijderen mag alleen door de 'admin' of 'editor' van DEZE camper
+--     (via camper_users), en door de hoofdbeheerder van het platform
+--     (public.is_head_admin).
+--   * Gewone leden ('lid' / 'member') mogen NIET verwijderen.
 --   * Idempotent: DROP POLICY IF EXISTS + CREATE POLICY; veilig om
 --     opnieuw te draaien.
---   * Alles in één transactie: bij een fout (bv. onbekende kolom) wordt
+--   * Alles in een transactie: bij een fout (bv. onbekende kolom) wordt
 --     er niets doorgevoerd.
---   * Raakt GEEN data; wijzigt alleen policies en één hulpfunctie.
+--   * Raakt GEEN data; wijzigt alleen policies en hulpfuncties.
 -- =====================================================================
 
 BEGIN;
 
 -- ---------------------------------------------------------------------
--- 0. Hulpfunctie: mag de ingelogde gebruiker schrijven op deze camper?
+-- 0. Hulpfunctie: mag de ingelogde gebruiker verwijderen op deze camper?
+--    Ja als: admin of editor van de camper, OF hoofdbeheerder.
 --    SECURITY DEFINER zodat de check ook werkt als camper_users zelf
 --    strenge RLS heeft (voorkomt recursie/lege resultaten).
 -- ---------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.b66_can_write_camper(p_camper_id bigint)
+CREATE OR REPLACE FUNCTION public.b66_can_delete_camper(p_camper_id bigint)
 RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.camper_users cu
-    WHERE cu.camper_id = p_camper_id
-      AND cu.user_id   = auth.uid()
-      AND cu.role IN ('admin', 'editor', 'lid')
-  );
+  SELECT
+    public.is_head_admin(auth.uid())
+    OR EXISTS (
+      SELECT 1
+      FROM public.camper_users cu
+      WHERE cu.camper_id = p_camper_id
+        AND cu.user_id   = auth.uid()
+        AND cu.role IN ('admin', 'editor')
+    );
 $$;
 
-REVOKE ALL ON FUNCTION public.b66_can_write_camper(bigint) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.b66_can_write_camper(bigint) TO authenticated;
+REVOKE ALL ON FUNCTION public.b66_can_delete_camper(bigint) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.b66_can_delete_camper(bigint) TO authenticated;
 
 -- Variant: alleen camper-admin (voor gevoelige objecten)
 CREATE OR REPLACE FUNCTION public.b66_is_camper_admin(p_camper_id bigint)
@@ -65,7 +69,7 @@ GRANT EXECUTE ON FUNCTION public.b66_is_camper_admin(bigint) TO authenticated;
 DROP POLICY IF EXISTS reizen_delete ON public.reizen;
 CREATE POLICY reizen_delete ON public.reizen
   FOR DELETE TO authenticated
-  USING ( public.b66_can_write_camper(camper_id) );
+  USING ( public.b66_can_delete_camper(camper_id) );
 
 -- ---------------------------------------------------------------------
 -- 2. tankbeurten  (camper_id)
@@ -73,7 +77,7 @@ CREATE POLICY reizen_delete ON public.reizen
 DROP POLICY IF EXISTS tankbeurten_delete ON public.tankbeurten;
 CREATE POLICY tankbeurten_delete ON public.tankbeurten
   FOR DELETE TO authenticated
-  USING ( public.b66_can_write_camper(camper_id) );
+  USING ( public.b66_can_delete_camper(camper_id) );
 
 -- ---------------------------------------------------------------------
 -- 3. reiskosten  (camper_id + reis_id; de app vult beide)
@@ -81,7 +85,7 @@ CREATE POLICY tankbeurten_delete ON public.tankbeurten
 DROP POLICY IF EXISTS reiskosten_delete ON public.reiskosten;
 CREATE POLICY reiskosten_delete ON public.reiskosten
   FOR DELETE TO authenticated
-  USING ( public.b66_can_write_camper(camper_id) );
+  USING ( public.b66_can_delete_camper(camper_id) );
 
 -- ---------------------------------------------------------------------
 -- 4. reis_stops  (via reis_id -> reizen.camper_id)
@@ -94,7 +98,7 @@ CREATE POLICY reis_stops_delete ON public.reis_stops
       SELECT 1
       FROM public.reizen r
       WHERE r.id = reis_stops.reis_id
-        AND public.b66_can_write_camper(r.camper_id)
+        AND public.b66_can_delete_camper(r.camper_id)
     )
   );
 
@@ -110,7 +114,7 @@ CREATE POLICY fotos_delete ON public.fotos
       FROM public.reis_stops s
       JOIN public.reizen r ON r.id = s.reis_id
       WHERE s.id = fotos.stop_id
-        AND public.b66_can_write_camper(r.camper_id)
+        AND public.b66_can_delete_camper(r.camper_id)
     )
   );
 
@@ -136,7 +140,7 @@ CREATE POLICY friends_delete ON public.friends
 DROP POLICY IF EXISTS personen_delete ON public.personen;
 CREATE POLICY personen_delete ON public.personen
   FOR DELETE TO authenticated
-  USING ( public.b66_can_write_camper(camper_id) );
+  USING ( public.b66_can_delete_camper(camper_id) );
 
 -- ---------------------------------------------------------------------
 -- 8. campers: BEWUST GEEN DELETE-policy.
@@ -150,6 +154,14 @@ CREATE POLICY personen_delete ON public.personen
 --   FOR DELETE TO authenticated
 --   USING ( public.b66_is_camper_admin(id) );
 -- ---------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------
+-- 9. Opruimen: oude hulpfunctie uit een eerdere versie van dit script.
+--    Pas hier, nadat alle policies hierboven opnieuw zijn aangemaakt en
+--    dus niet meer naar de oude functie verwijzen. Bestond hij niet,
+--    dan doet dit niets.
+-- ---------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.b66_can_write_camper(bigint);
 
 COMMIT;
 
@@ -179,6 +191,6 @@ ORDER BY t.tablename;
 --   DROP POLICY IF EXISTS friend_requests_delete ON public.friend_requests;
 --   DROP POLICY IF EXISTS friends_delete         ON public.friends;
 --   DROP POLICY IF EXISTS personen_delete        ON public.personen;
---   DROP FUNCTION IF EXISTS public.b66_can_write_camper(bigint);
+--   DROP FUNCTION IF EXISTS public.b66_can_delete_camper(bigint);
 --   DROP FUNCTION IF EXISTS public.b66_is_camper_admin(bigint);
 -- =====================================================================
