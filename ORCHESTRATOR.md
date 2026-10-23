@@ -109,7 +109,9 @@ Script: `assets/meta/security/delete_policies.sql` (nog NIET uitgevoerd; eerst t
 2. Policy-definities van `reis_stops` en `tankbeurten` zijn niet uit de live database gelezen; check met `pg_policies` of er SELECT/INSERT/UPDATE-policies bestaan die dezelfde rolnamen gebruiken.
 3. Rolnamen in de app (`viewer`, `editor`, `lid`, `admin`) moeten overeenkomen met wat in `camper_users.role` staat.
 
-## Checkbox-fix gedeeld_met_vrienden (index.html + test-agent.html)
+## Checkbox-fix gedeeld_met_vrienden (test-agent.html)
+
+Alleen `test-agent.html` is aangepast (acceptatie). `index.html` (productie) blijft ongewijzigd: de workflow `sync-test-agent-release.yml` kopieert `test-agent.html` naar `index.html` zodra een wijziging op `main` komt. Test dus eerst op de branch; een merge naar `main` zet de fix live.
 
 - Opslaan: `gedeeld_met_vrienden` = checkbox aangevinkt (was omgekeerd).
 - Laden bij bewerken: checkbox = `Boolean(stop.gedeeld_met_vrienden)` (was omgekeerd).
