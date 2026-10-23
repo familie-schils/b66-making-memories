@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.33",
-  "releasedAt": "2026-10-23T18:43:30.932Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix share checkbox and add DELETE RLS policies",
+  "currentVersion": "1.0.34",
+  "releasedAt": "2026-10-23T20:54:27.945Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- kleine aanpassing",
   "latest5": [
+    {
+      "version": "1.0.34",
+      "releasedAt": "2026-10-23T20:54:27.945Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- kleine aanpassing"
+    },
     {
       "version": "1.0.33",
       "releasedAt": "2026-10-23T18:43:30.932Z",
@@ -23,14 +28,14 @@
       "version": "1.0.30",
       "releasedAt": "2026-10-14T16:16:16.458Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Apply remaining changes"
-    },
-    {
-      "version": "1.0.29",
-      "releasedAt": "2026-09-25T19:20:25.702Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine trip odometer entry"
     }
   ],
   "history": [
+    {
+      "version": "1.0.34",
+      "releasedAt": "2026-10-23T20:54:27.945Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- kleine aanpassing"
+    },
     {
       "version": "1.0.33",
       "releasedAt": "2026-10-23T18:43:30.932Z",
@@ -197,5 +202,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "b05cc79e024f1afeda7b42cae4ea886519d38f68"
+  "lastSyncedTestAgentSha": "ec1d8c03460207331c0ab14f7efde592b0e71048"
 }
