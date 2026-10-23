@@ -90,24 +90,27 @@ De live database-analyse heeft de volgende RLS-status opgeleverd:
 
 ## Voorgestelde RLS Fixes
 
-Script: `assets/meta/security/delete_policies.sql` (nog NIET uitgevoerd; eerst testen op staging, niet op productie).
+Script: `assets/meta/security/delete_policies.sql`. Let op: een eerdere versie (met rol `lid` erbij en hulpfunctie `b66_can_write_camper`) is mogelijk al in Supabase uitgevoerd. De huidige versie vervangt die en is veilig om opnieuw te draaien.
 
-**Aanpak:** DELETE alleen toestaan voor leden van de camper via `camper_users` met rol `admin`, `editor` of `lid`. Rol `viewer` mag niet verwijderen. De check zit in de hulpfunctie `b66_can_write_camper(camper_id)` (`SECURITY DEFINER`, vaste `search_path`), zodat strenge RLS op `camper_users` de policies niet breekt.
+**Aanpak (besluit Lead-Developer, 2026-10-23):** verwijderen mag alleen de `admin` of `editor` van de eigen camper (via `camper_users`) en de hoofdbeheerder van het platform (`is_head_admin`). Gewone leden (`lid` / `member`) en `viewer` mogen niet verwijderen. De check zit in de hulpfunctie `b66_can_delete_camper(camper_id)` (`SECURITY DEFINER`, vaste `search_path`), zodat strenge RLS op `camper_users` de policies niet breekt.
 
 | Tabel | DELETE-criterium |
 | --- | --- |
-| `reizen`, `tankbeurten`, `reiskosten` | `b66_can_write_camper(camper_id)` |
+| `reizen`, `tankbeurten`, `reiskosten` | `b66_can_delete_camper(camper_id)` |
 | `reis_stops` | via `reis_id` naar `reizen.camper_id` |
 | `fotos` | via `stop_id` naar `reis_stops` naar `reizen.camper_id` |
 | `friend_requests` | `auth.uid()` is requester of recipient |
 | `friends` (extra) | `user_id = auth.uid()` |
-| `personen` (extra) | `b66_can_write_camper(camper_id)` |
+| `personen` (extra) | `b66_can_delete_camper(camper_id)` |
 | `campers` | bewust geen policy (cascade-risico); optioneel alleen camper-admin, staat uitgecommentarieerd in het script |
+
+**Live bevinding (2026-10-23):** `tankbeurten` ("Authenticated users can delete tankbeurten") en `personen` ("personen delete") hebben al een DELETE-regel met `true`: elke ingelogde gebruiker kan daar alles van iedereen verwijderen. `friends` heeft `user_id = auth.uid()` (goed). Het script verwijdert de open regels (op exacte naam) en vervangt ze. Het script zelf was op dat moment nog niet toegepast (geen `b66_`-functies in de database).
 
 **Nog open:**
 1. Storage-policies voor bucket `fotos` (`storage.objects` DELETE) zijn niet meegenomen; de app verwijdert daar bestanden met `storage.remove()`.
 2. Policy-definities van `reis_stops` en `tankbeurten` zijn niet uit de live database gelezen; check met `pg_policies` of er SELECT/INSERT/UPDATE-policies bestaan die dezelfde rolnamen gebruiken.
-3. Rolnamen in de app (`viewer`, `editor`, `lid`, `admin`) moeten overeenkomen met wat in `camper_users.role` staat.
+3. Rollen in gebruik (live, 2026-10-23): `admin` 9, `lid` 2, `editor` 1, `viewer` 1. Er is in de live database **geen** controleregel op `camper_users.role` (de regel uit migratie `202609050545` is niet toegepast), dus elke tekst is als rol toegestaan. Voorstel: `check (role in ('admin','editor','lid','viewer'))` toevoegen als aparte migratie en de oude migratie corrigeren (die zou falen door de `viewer`-rij).
+4. `reiskosten_update_policy.sql` (alleen `editor`/`admin`) sluit al aan op het nieuwe uitgangspunt; SELECT- en INSERT-policies zijn nog niet gecontroleerd.
 
 ## Checkbox-fix gedeeld_met_vrienden (test-agent.html)
 
