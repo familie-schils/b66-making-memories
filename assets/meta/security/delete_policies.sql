@@ -74,6 +74,9 @@ CREATE POLICY reizen_delete ON public.reizen
 -- ---------------------------------------------------------------------
 -- 2. tankbeurten  (camper_id)
 -- ---------------------------------------------------------------------
+-- Bestaande OPEN regel (staat nu met 'true': iedereen mag alles verwijderen).
+-- Regels in Postgres tellen bij elkaar op; deze moet dus eerst weg.
+DROP POLICY IF EXISTS "Authenticated users can delete tankbeurten" ON public.tankbeurten;
 DROP POLICY IF EXISTS tankbeurten_delete ON public.tankbeurten;
 CREATE POLICY tankbeurten_delete ON public.tankbeurten
   FOR DELETE TO authenticated
@@ -132,11 +135,15 @@ CREATE POLICY friend_requests_delete ON public.friend_requests
 --    - friends   : removeVriend()  -> alleen eigen rij
 --    - personen  : persoon verwijderen op camper
 -- ---------------------------------------------------------------------
+-- Bestaande regel met dezelfde werking; vervangen zodat er maar een is.
+DROP POLICY IF EXISTS "users can delete own friends" ON public.friends;
 DROP POLICY IF EXISTS friends_delete ON public.friends;
 CREATE POLICY friends_delete ON public.friends
   FOR DELETE TO authenticated
   USING ( user_id = auth.uid() );
 
+-- Bestaande OPEN regel (staat nu met 'true'): eerst weg, zie hierboven.
+DROP POLICY IF EXISTS "personen delete" ON public.personen;
 DROP POLICY IF EXISTS personen_delete ON public.personen;
 CREATE POLICY personen_delete ON public.personen
   FOR DELETE TO authenticated
@@ -166,8 +173,9 @@ DROP FUNCTION IF EXISTS public.b66_can_write_camper(bigint);
 COMMIT;
 
 -- =====================================================================
--- CONTROLE (los uitvoeren na COMMIT): moeten allemaal policy_count >= 1
--- zijn, behalve campers (bewust 0).
+-- CONTROLE (los uitvoeren na COMMIT): elke tabel moet precies 1 DELETE-regel
+-- hebben, behalve campers (bewust 0). Staat er 2, dan is er nog een oude
+-- (open) regel over; stuur de uitkomst door.
 -- =====================================================================
 SELECT t.tablename,
        COUNT(p.policyname) AS delete_policies

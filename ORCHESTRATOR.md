@@ -104,6 +104,8 @@ Script: `assets/meta/security/delete_policies.sql`. Let op: een eerdere versie (
 | `personen` (extra) | `b66_can_delete_camper(camper_id)` |
 | `campers` | bewust geen policy (cascade-risico); optioneel alleen camper-admin, staat uitgecommentarieerd in het script |
 
+**Live bevinding (2026-10-23):** `tankbeurten` ("Authenticated users can delete tankbeurten") en `personen` ("personen delete") hebben al een DELETE-regel met `true`: elke ingelogde gebruiker kan daar alles van iedereen verwijderen. `friends` heeft `user_id = auth.uid()` (goed). Het script verwijdert de open regels (op exacte naam) en vervangt ze. Het script zelf was op dat moment nog niet toegepast (geen `b66_`-functies in de database).
+
 **Nog open:**
 1. Storage-policies voor bucket `fotos` (`storage.objects` DELETE) zijn niet meegenomen; de app verwijdert daar bestanden met `storage.remove()`.
 2. Policy-definities van `reis_stops` en `tankbeurten` zijn niet uit de live database gelezen; check met `pg_policies` of er SELECT/INSERT/UPDATE-policies bestaan die dezelfde rolnamen gebruiken.
