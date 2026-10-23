@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.32",
-  "releasedAt": "2026-10-21T13:53:19.762Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix release metadata workflow and accelerate PWA updates",
+  "currentVersion": "1.0.33",
+  "releasedAt": "2026-10-23T18:43:30.932Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix share checkbox and add DELETE RLS policies",
   "latest5": [
+    {
+      "version": "1.0.33",
+      "releasedAt": "2026-10-23T18:43:30.932Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix share checkbox and add DELETE RLS policies"
+    },
     {
       "version": "1.0.32",
       "releasedAt": "2026-10-21T13:53:19.762Z",
@@ -23,14 +28,14 @@
       "version": "1.0.29",
       "releasedAt": "2026-09-25T19:20:25.702Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine trip odometer entry"
-    },
-    {
-      "version": "1.0.28",
-      "releasedAt": "2026-09-25T19:16:56.475Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Refine travel detail hierarchy"
     }
   ],
   "history": [
+    {
+      "version": "1.0.33",
+      "releasedAt": "2026-10-23T18:43:30.932Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix share checkbox and add DELETE RLS policies"
+    },
     {
       "version": "1.0.32",
       "releasedAt": "2026-10-21T13:53:19.762Z",
@@ -192,5 +197,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "9864f6e44ee0777b8038dc4a185600eb13f92459"
+  "lastSyncedTestAgentSha": "b05cc79e024f1afeda7b42cae4ea886519d38f68"
 }
