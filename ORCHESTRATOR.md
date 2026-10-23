@@ -86,3 +86,33 @@ De live database-analyse heeft de volgende RLS-status opgeleverd:
 2. Repareer in `index.html` en `test-agent.html` de logische bug rondom de "gedeeld_met_vrienden" checkbox (zorg dat 'AAN' ook echt 'DELEN' betekent in de database en niet 'PRIVÉ').
 
 3. Schrijf een overzichtelijk voorstel in dit bestand onder een nieuw kopje '## Voorgestelde RLS Fixes' om de DELETE-policies veilig in te richten op basis van `auth.uid() = user_id` of camper-lidmaatschap.
+
+
+## Voorgestelde RLS Fixes
+
+Script: `assets/meta/security/delete_policies.sql` (nog NIET uitgevoerd; eerst testen op staging, niet op productie).
+
+**Aanpak:** DELETE alleen toestaan voor leden van de camper via `camper_users` met rol `admin`, `editor` of `lid`. Rol `viewer` mag niet verwijderen. De check zit in de hulpfunctie `b66_can_write_camper(camper_id)` (`SECURITY DEFINER`, vaste `search_path`), zodat strenge RLS op `camper_users` de policies niet breekt.
+
+| Tabel | DELETE-criterium |
+| --- | --- |
+| `reizen`, `tankbeurten`, `reiskosten` | `b66_can_write_camper(camper_id)` |
+| `reis_stops` | via `reis_id` naar `reizen.camper_id` |
+| `fotos` | via `stop_id` naar `reis_stops` naar `reizen.camper_id` |
+| `friend_requests` | `auth.uid()` is requester of recipient |
+| `friends` (extra) | `user_id = auth.uid()` |
+| `personen` (extra) | `b66_can_write_camper(camper_id)` |
+| `campers` | bewust geen policy (cascade-risico); optioneel alleen camper-admin, staat uitgecommentarieerd in het script |
+
+**Nog open:**
+1. Storage-policies voor bucket `fotos` (`storage.objects` DELETE) zijn niet meegenomen; de app verwijdert daar bestanden met `storage.remove()`.
+2. Policy-definities van `reis_stops` en `tankbeurten` zijn niet uit de live database gelezen; check met `pg_policies` of er SELECT/INSERT/UPDATE-policies bestaan die dezelfde rolnamen gebruiken.
+3. Rolnamen in de app (`viewer`, `editor`, `lid`, `admin`) moeten overeenkomen met wat in `camper_users.role` staat.
+
+## Checkbox-fix gedeeld_met_vrienden (index.html + test-agent.html)
+
+- Opslaan: `gedeeld_met_vrienden` = checkbox aangevinkt (was omgekeerd).
+- Laden bij bewerken: checkbox = `Boolean(stop.gedeeld_met_vrienden)` (was omgekeerd).
+- Label: "Deze stop delen met vrienden" (was "niet delen").
+- Nieuwe stop: checkbox standaard aan (gedrag blijft zoals het was: standaard gedeeld).
+- Bestaande data hoeft niet gemigreerd te worden: de oude UI was consistent omgekeerd, dus `true` in de database betekende al "gedeeld".
