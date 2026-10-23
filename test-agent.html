@@ -1748,6 +1748,8 @@ async function ensureProfileRecordForUser(user){
     .from('profiles')
     .insert({user_id:userId,email,display_name:email});
   if(insertError){
+    // 23505 = profiel bestond al (twee aanroepen tegelijk): dat is geen fout
+    if(insertError.code==='23505')return {ok:true,action:'existing'};
     return {ok:false,error:insertError};
   }
   return {ok:true,action:'created'};
