@@ -92,7 +92,7 @@ De live database-analyse heeft de volgende RLS-status opgeleverd:
 
 Script: `assets/meta/security/delete_policies.sql`. Let op: een eerdere versie (met rol `lid` erbij en hulpfunctie `b66_can_write_camper`) is mogelijk al in Supabase uitgevoerd. De huidige versie vervangt die en is veilig om opnieuw te draaien.
 
-**Aanpak (besluit Lead-Developer, 2026-10-23):** verwijderen mag alleen de `admin` of `editor` van de eigen camper (via `camper_users`) en de hoofdbeheerder van het platform (`is_head_admin`). Gewone leden (`lid` / `member`) en `viewer` mogen niet verwijderen. De check zit in de hulpfunctie `b66_can_delete_camper(camper_id)` (`SECURITY DEFINER`, vaste `search_path`), zodat strenge RLS op `camper_users` de policies niet breekt.
+**Aanpak (besluit Lead-Developer, 2026-10-23):** verwijderen mag alleen de `admin` of `editor` van de eigen camper (via `camper_users`) en de hoofdbeheerder van het platform (tabel `platform_admins`, zoals de app die ook gebruikt). Gewone leden (`lid` / `member`) en `viewer` mogen niet verwijderen. De check zit in de hulpfunctie `b66_can_delete_camper(camper_id)` (`SECURITY DEFINER`, vaste `search_path`), zodat strenge RLS op `camper_users` de policies niet breekt.
 
 | Tabel | DELETE-criterium |
 | --- | --- |
@@ -104,7 +104,7 @@ Script: `assets/meta/security/delete_policies.sql`. Let op: een eerdere versie (
 | `personen` (extra) | `b66_can_delete_camper(camper_id)` |
 | `campers` | bewust geen policy (cascade-risico); optioneel alleen camper-admin, staat uitgecommentarieerd in het script |
 
-**Live bevinding (2026-10-23):** `tankbeurten` ("Authenticated users can delete tankbeurten") en `personen` ("personen delete") hebben al een DELETE-regel met `true`: elke ingelogde gebruiker kan daar alles van iedereen verwijderen. `friends` heeft `user_id = auth.uid()` (goed). Het script verwijdert de open regels (op exacte naam) en vervangt ze. Het script zelf was op dat moment nog niet toegepast (geen `b66_`-functies in de database).
+**Live bevinding (2026-10-23):** `tankbeurten` ("Authenticated users can delete tankbeurten") en `personen` ("personen delete") hebben al een DELETE-regel met `true`: elke ingelogde gebruiker kan daar alles van iedereen verwijderen. `friends` heeft `user_id = auth.uid()` (goed). Het script verwijdert de open regels (op exacte naam) en vervangt ze. Het script zelf was op dat moment nog niet toegepast: de eerste poging stopte omdat `public.is_head_admin(uuid)` in de live database niet bestaat (migratie `202609050545` is daar nooit toegepast). Het script gebruikt nu direct de tabel `platform_admins` en werkt ook als die tabel ontbreekt. Gevolg: repo-migraties en live database lopen uiteen; later gelijktrekken.
 
 **Nog open:**
 1. Storage-policies voor bucket `fotos` (`storage.objects` DELETE) zijn niet meegenomen; de app verwijdert daar bestanden met `storage.remove()`.
@@ -121,3 +121,44 @@ Alleen `test-agent.html` is aangepast (acceptatie). `index.html` (productie) bli
 - Label: "Deze stop delen met vrienden" (was "niet delen").
 - Nieuwe stop: checkbox standaard aan (gedrag blijft zoals het was: standaard gedeeld).
 - Bestaande data hoeft niet gemigreerd te worden: de oude UI was consistent omgekeerd, dus `true` in de database betekende al "gedeeld".
+
+## Leesregels-audit en afsluiten (2026-10-23)
+
+Bron: live `pg_policies` (SELECT-, INSERT- en UPDATE-regels) en kolomlijst, aangeleverd door de Lead-Developer.
+
+### Besluiten van de Lead-Developer
+- **Lezen:** alleen leden van de camper (elke rol). Vrienden zien alleen stops met `gedeeld_met_vrienden = true` (plus de reis en foto's die daarbij horen).
+- **Toevoegen en wijzigen:** `admin`, `editor` en `lid`. Een `viewer` kijkt alleen.
+- **Verwijderen:** alleen `admin` en `editor` (al toegepast in Supabase, zie "Voorgestelde RLS Fixes").
+- Hoofdbeheerder: mag verwijderen overal (via `platform_admins`). Lezen/wijzigen over alle campers is nog niet geregeld; open punt.
+
+### Bevindingen (live, vóór de scripts)
+1. **Ernstig:** `camper_users` INSERT controleert alleen `user_id = auth.uid()`. Elke ingelogde gebruiker kon zichzelf met elke rol (ook `admin`) aan elke camper koppelen. Camper-nummers zijn oplopende getallen.
+2. **Ernstig:** `campers` INSERT had vijf ruime regels, waaronder `test_anon_insert` (niet-ingelogd, `true`).
+3. Naast de strenge regels staat op `reizen`, `reis_stops`, `fotos`, `tankbeurten`, `reiskosten` en `personen` een SELECT-regel met `true`: elke ingelogde gebruiker kon alles lezen. De app filtert wel op camper, de database niet.
+4. INSERT met `true` op `reizen`, `reis_stops`, `fotos`, `tankbeurten`, `reiskosten`, `personen` en `onderhoud`.
+5. UPDATE met `true` op `personen` en `tankbeurten`. Op `reizen` en `reis_stops` mocht elk lid (ook `viewer`) wijzigen. `reiskosten_update` stond op `admin` en `lid` (geen `editor`).
+6. `invitations_update`: de uitgenodigde kon zijn eigen uitnodiging wijzigen, ook de rol (en daarmee zichzelf als admin laten koppelen).
+7. `invite_codes` INSERT met `true`; `profiles` SELECT met `true` (alle e-mailadressen leesbaar).
+8. Geen aanwijzing van misbruik: in `camper_users` heeft elke gebruiker maximaal een koppeling met een logische rol.
+
+### Scripts (volgorde is belangrijk)
+1. `assets/meta/security/01_koppelen_afsluiten.sql`: sluit punt 1, 2 en 6. Koppelen mag alleen door een admin van die camper, als eigenaar van een nieuwe camper zonder leden, of met een openstaande uitnodiging op het eigen e-mailadres met precies die rol (oude `camper_invites`: alleen rol `lid` op het eigen e-mailadres; een code zonder e-mailadres geeft geen toegang). Campers aanmaken alleen met jezelf als eigenaar (`owner_id` krijgt al standaard `auth.uid()`). Trigger op `invitations`: een uitgenodigde mag alleen de status op `accepted` zetten.
+2. `assets/meta/security/02_gegevens_afsluiten.sql`: sluit punt 3, 4 en 5 volgens de besluiten hierboven. Vervangt alle bestaande SELECT/INSERT/UPDATE-regels op `campers`, `reizen`, `reis_stops`, `fotos`, `tankbeurten`, `reiskosten`, `personen` en `onderhoud` en maakt `onderhoud_delete` aan.
+- Beide scripts leggen eerst de bestaande regels vast in `b66_policy_backup` (niet leesbaar via de app), draaien in een transactie, wijzigen geen gegevens en zijn veilig om opnieuw te draaien.
+- Getest op een nagebouwde Postgres 16 met alle regels uit de live-lijsten, proefgebruikers in elke rol (admin, editor, lid, viewer, buitenstaander, vriend, uitgenodigde, nieuwe gebruiker, niet-ingelogd): 89 controles, alle goed, ook bij opnieuw draaien. De test kent beperkingen: aannames over regels die niet in de lijsten stonden (`invitations` SELECT, `camper_invites` SELECT) zijn nagebootst.
+- **Status:** nog NIET uitgevoerd in Supabase.
+
+### Let op bij uitvoeren
+- Draai deel 1, test aanmelden en uitnodigen (nieuwe gebruiker met uitnodiging, nieuwe camper), draai daarna deel 2.
+- Na deel 2 zien vrienden alleen gedeelde stops; de reis (inclusief crew-gegevens) is zichtbaar als er minstens een gedeelde stop is.
+- Oude camper-links zonder e-mailadres werken niet meer; een admin maakt dan een nieuwe uitnodiging.
+
+### Nog open
+- `invitations` SELECT en DELETE, `camper_invites` en `invite_codes` (INSERT `true`): regels niet bekeken/aangepast.
+- `profiles` SELECT `true`: alle ingelogde gebruikers kunnen alle e-mailadressen lezen. De app zoekt vrienden op e-mail; aanpassen vraagt een alternatief (bijvoorbeeld een zoekfunctie).
+- `camper_users` heeft geen UPDATE- of DELETE-regel: rol wijzigen en leden verwijderen in Leden beheren lukt waarschijnlijk niet.
+- Hoofdbeheerder: lezen en wijzigen over alle campers (bijvoorbeeld voor ondersteuning) is niet geregeld; het beheerscherm toont nu alleen eigen gegevens.
+- Storage (foto-bestanden): bucket en policies nog niet bekeken.
+- `camper_users.role` heeft in de live database geen controleregel; migraties in de repo wijken af van de live database (o.a. `is_head_admin` bestaat daar niet).
+- Geen functie om een reis, stop, tankbeurt of kosten te verwijderen in de app (bewust uitgesteld).
