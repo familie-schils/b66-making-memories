@@ -5,7 +5,7 @@
 -- Principe:
 --   * Verwijderen mag alleen door de 'admin' of 'editor' van DEZE camper
 --     (via camper_users), en door de hoofdbeheerder van het platform
---     (public.is_head_admin).
+--     (tabel public.platform_admins, zoals de app dat ook doet).
 --   * Gewone leden ('lid' / 'member') mogen NIET verwijderen.
 --   * Idempotent: DROP POLICY IF EXISTS + CREATE POLICY; veilig om
 --     opnieuw te draaien.
@@ -24,20 +24,37 @@ BEGIN;
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.b66_can_delete_camper(p_camper_id bigint)
 RETURNS boolean
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT
-    public.is_head_admin(auth.uid())
-    OR EXISTS (
+BEGIN
+  -- 1. admin of editor van deze camper
+  IF EXISTS (
+    SELECT 1
+    FROM public.camper_users cu
+    WHERE cu.camper_id = p_camper_id
+      AND cu.user_id   = auth.uid()
+      AND cu.role IN ('admin', 'editor')
+  ) THEN
+    RETURN true;
+  END IF;
+
+  -- 2. hoofdbeheerder van het platform (tabel platform_admins, net als de app).
+  --    Bestaat die tabel (nog) niet, dan geldt alleen regel 1.
+  BEGIN
+    RETURN EXISTS (
       SELECT 1
-      FROM public.camper_users cu
-      WHERE cu.camper_id = p_camper_id
-        AND cu.user_id   = auth.uid()
-        AND cu.role IN ('admin', 'editor')
+      FROM public.platform_admins pa
+      WHERE pa.user_id = auth.uid()
+        AND pa.active  = true
+        AND pa.role    = 'head_admin'
     );
+  EXCEPTION WHEN undefined_table THEN
+    RETURN false;
+  END;
+END;
 $$;
 
 REVOKE ALL ON FUNCTION public.b66_can_delete_camper(bigint) FROM PUBLIC, anon;
