@@ -6123,8 +6123,16 @@ window.rejectVriendVerzoek=async function(requestId){
 
 window.removeVriend=async function(id){
   if(!confirm('Vriend verwijderen?'))return;
-  const {error}=await supabase.from('friends').delete().eq('id',id);
+  const {data:rij,error:rijError}=await supabase.from('friends').select('user_id,friend_user_id').eq('id',id).maybeSingle();
+  if(rijError||!rij){alert('Verwijderen mislukt: vriend niet gevonden.');return;}
+  const a=rij.user_id,b=rij.friend_user_id;
+  // Beide kanten van de vriendschap verwijderen, anders blijft de ander nog meekijken.
+  const {error}=await supabase.from('friends').delete()
+    .or(`and(user_id.eq.${a},friend_user_id.eq.${b}),and(user_id.eq.${b},friend_user_id.eq.${a})`);
   if(error){alert('Verwijderen mislukt: '+error.message);return;}
+  // Ook het oude vriendenverzoek opruimen, zodat de vriendschap niet ongevraagd terugkomt.
+  await supabase.from('friend_requests').delete()
+    .or(`and(requester_user_id.eq.${a},recipient_user_id.eq.${b}),and(requester_user_id.eq.${b},recipient_user_id.eq.${a})`);
   await loadVrienden();
 };
 
