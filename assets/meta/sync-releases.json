@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.34",
-  "releasedAt": "2026-10-23T20:54:27.945Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- kleine aanpassing",
+  "currentVersion": "1.0.35",
+  "releasedAt": "2026-10-24T06:44:59.566Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- update orch",
   "latest5": [
+    {
+      "version": "1.0.35",
+      "releasedAt": "2026-10-24T06:44:59.566Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- update orch"
+    },
     {
       "version": "1.0.34",
       "releasedAt": "2026-10-23T20:54:27.945Z",
@@ -23,14 +28,14 @@
       "version": "1.0.31",
       "releasedAt": "2026-10-14T17:59:41.195Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Block admin roles in TEST-AGENT invites"
-    },
-    {
-      "version": "1.0.30",
-      "releasedAt": "2026-10-14T16:16:16.458Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Apply remaining changes"
     }
   ],
   "history": [
+    {
+      "version": "1.0.35",
+      "releasedAt": "2026-10-24T06:44:59.566Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- update orch"
+    },
     {
       "version": "1.0.34",
       "releasedAt": "2026-10-23T20:54:27.945Z",
@@ -202,5 +207,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "ec1d8c03460207331c0ab14f7efde592b0e71048"
+  "lastSyncedTestAgentSha": "bf8648b0b0f7274c0b9602549c18a9be40bbc928"
 }
