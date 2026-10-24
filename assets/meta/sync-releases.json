@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.41",
-  "releasedAt": "2026-10-24T11:45:01.249Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Kilometerstand per stop in reisformulier",
+  "currentVersion": "1.0.42",
+  "releasedAt": "2026-10-24T11:58:11.930Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Hide trip start fields once a stop exists",
   "latest5": [
+    {
+      "version": "1.0.42",
+      "releasedAt": "2026-10-24T11:58:11.930Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Hide trip start fields once a stop exists"
+    },
     {
       "version": "1.0.41",
       "releasedAt": "2026-10-24T11:45:01.249Z",
@@ -23,14 +28,14 @@
       "version": "1.0.38",
       "releasedAt": "2026-10-24T09:58:06.348Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Add profile, invite and photo storage security"
-    },
-    {
-      "version": "1.0.37",
-      "releasedAt": "2026-10-24T07:57:37.227Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Secure friends, requests and camper members"
     }
   ],
   "history": [
+    {
+      "version": "1.0.42",
+      "releasedAt": "2026-10-24T11:58:11.930Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Hide trip start fields once a stop exists"
+    },
     {
       "version": "1.0.41",
       "releasedAt": "2026-10-24T11:45:01.249Z",
@@ -237,5 +242,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "8962038e6b66769daf5f8040337628110a8ff179"
+  "lastSyncedTestAgentSha": "8afb98dd4e24b6154d373c03bc6253af08b94b09"
 }
