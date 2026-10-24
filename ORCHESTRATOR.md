@@ -239,3 +239,26 @@ Gemiddeld ca. 1 uur per dag (vaste baan); in het weekend en op vrije dagen meerd
 5. Testaccounts: wachtwoord zetten via SQL of plusadressen (`msc.schils+testN@gmail.com`).
 
 **Volgende stap:** `invitations_read_by_token` (SELECT `true`) dichtzetten: iedereen kan nu alle uitnodigingen incl. tokens lezen.
+
+## Live controle Deel 3 en Deel 4 (2026-10-24, 10:30)
+
+Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_policy_backup`, `pg_policies` op `invitations`, `friends`, `friend_requests`, `camper_users`).
+
+**Live gedraaid:** Deel 3 (`03_uitnodigingen_afsluiten.sql`) en Deel 4 (`04_vrienden_en_leden.sql`). Backup-stappen aanwezig: 01 (16), 01b (4), 02 (36), 03 (4), 04 (24).
+
+- **Uitnodigingen:** `invitations_read_by_token` is weg. Lezen mag alleen de admin van de camper of de uitgenodigde zelf (`b66_my_email()`). Opzoeken via exacte code: `b66_get_invitation` (security definer). Trigger `b66_invitations_guard` actief.
+- **Vriendenverzoeken:** lezen, wijzigen en verwijderen alleen door afzender of ontvanger. Nieuw verzoek alleen als `pending`, niet aan jezelf. Trigger `b66_friend_requests_guard` actief.
+- **Vrienden:** aanmaken alleen vanuit een vriendenverzoek. Beide kanten mogen zien en verwijderen.
+- **Camperleden:** leden zien elkaar (en vrienden zien elkaars lidmaatschap). Admin wijzigt rol (alleen viewer/editor/lid) of verwijdert anderen, niet zichzelf (`b66_is_admin`).
+- De live regels voor `camper_users` komen overeen met de lokale versie van het script (ook na de wijziging van 10:11). Die wijziging moet nog gecommit worden.
+
+**Vervalt in de open punten:** `invitations_read_by_token`, `camper_users` zonder UPDATE/DELETE.
+
+**Nog open (veiligheid):**
+1. `invite_codes` INSERT `true`.
+2. `profiles` SELECT `true` (alle e-mailadressen leesbaar voor elke ingelogde gebruiker).
+3. Storage-bucket `fotos` (policies).
+4. `invitations` heeft geen DELETE-regel (uitnodiging intrekken kan niet).
+5. Rol-controleregel op `camper_users.role`; repo-migraties gelijktrekken met live.
+
+**Nog te testen in de testversie:** vriend verwijderen (beide kanten weg, gedeelde stops niet meer zichtbaar), vriendenverzoek accepteren/afwijzen, rol wijzigen en lid verwijderen in Leden beheren.

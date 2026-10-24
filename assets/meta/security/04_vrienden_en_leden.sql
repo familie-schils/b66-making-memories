@@ -17,7 +17,7 @@
 --      afgewezen verzoek opnieuw versturen.
 --   3. VRIEND VERWIJDEREN. Nu verwijdert de een alleen zijn eigen kant;
 --      de ander blijft daardoor nog meekijken. Straks mag elk van beiden
---      beide kanten verwijderen.
+--      beide kanten zien en verwijderen.
 --   4. CAMPERLEDEN. Nu ziet een admin alleen zichzelf in de ledenlijst en
 --      kan hij leden niet wijzigen of verwijderen. Straks: leden van een
 --      camper zien elkaar, en een admin kan de rol van anderen wijzigen
@@ -178,6 +178,23 @@ CREATE POLICY friends_insert ON public.friends
 
 CREATE POLICY friends_delete ON public.friends
   FOR DELETE TO authenticated
+  USING (user_id = auth.uid() OR friend_user_id = auth.uid());
+
+-- Lezen: je ziet de rijen waarin je zelf voorkomt (als eigenaar of als vriend).
+-- Dat is nodig om een vriendschap helemaal te kunnen verwijderen: een rij
+-- die je niet kunt zien, kun je ook niet verwijderen.
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN SELECT policyname FROM pg_policies
+           WHERE schemaname='public' AND tablename='friends' AND cmd IN ('SELECT')
+  LOOP
+    EXECUTE format('DROP POLICY %I ON public.friends', r.policyname);
+  END LOOP;
+END $$;
+
+CREATE POLICY friends_select ON public.friends
+  FOR SELECT TO authenticated
   USING (user_id = auth.uid() OR friend_user_id = auth.uid());
 
 -- ---------------------------------------------------------------------

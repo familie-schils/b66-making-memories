@@ -1241,13 +1241,117 @@ let stopPhotosToDelete=[];
   let latestReleaseMetadata = null;
   const PHOTO_UPLOAD_ALLOWED_TYPES=['image/jpeg','image/png','image/webp'];
   const PHOTO_UPLOAD_MAX_SOURCE_FILE_SIZE_BYTES=20*1024*1024;
-  const PHOTO_UPLOAD_TARGET_FILE_SIZE_BYTES=3*1024*1024;
+  // Kleine versie voor het logboek; het origineel blijft op de telefoon/computer van de gebruiker.
+  const PHOTO_UPLOAD_TARGET_FILE_SIZE_BYTES=400*1024;
   const PHOTO_UPLOAD_MAX_COUNT=10;
-  const PHOTO_UPLOAD_MAX_DIMENSION=2000;
-  const PHOTO_UPLOAD_INITIAL_QUALITY=0.86;
-  const PHOTO_UPLOAD_MIN_QUALITY=0.5;
+  const PHOTO_UPLOAD_MAX_DIMENSION=1280;
+  const PHOTO_UPLOAD_INITIAL_QUALITY=0.8;
+  const PHOTO_UPLOAD_MIN_QUALITY=0.6;
   const PHOTO_UPLOAD_DIMENSION_REDUCTION_FACTOR=0.85;
-  const PHOTO_UPLOAD_MIN_DIMENSION=1280;
+  const PHOTO_UPLOAD_MIN_DIMENSION=800;
+
+  // --- Beveiligde foto-links (deel 5) -------------------------------------
+  // fotos.url bevat de openbare link van bucket 'fotos'. Zodra de bucket
+  // privé is (deel 5b) werkt die link niet meer. Daarom vervangt de app elke
+  // foto-link op het scherm door een tijdelijke beveiligde link (1 uur).
+  // Lukt dat niet (bijv. zolang deel 5a nog niet gedraaid is), dan blijft de
+  // oude link gewoon staan.
+  const PHOTO_PUBLIC_MARKER='/storage/v1/object/public/fotos/';
+  const PHOTO_SIGNED_TTL_SECONDS=3600;
+  const photoSignedUrlCache=new Map();
+  let photoSignQueue=new Map();
+  let photoSignTimer=null;
+
+  function photoStoragePathFromUrl(url){
+    const text=String(url||'');
+    const index=text.indexOf(PHOTO_PUBLIC_MARKER);
+    if(index<0)return '';
+    try{
+      return decodeURIComponent(text.slice(index+PHOTO_PUBLIC_MARKER.length).split(/[?#]/)[0]);
+    }catch(error){
+      return '';
+    }
+  }
+  async function flushPhotoSignQueue(){
+    photoSignTimer=null;
+    const queue=photoSignQueue;
+    photoSignQueue=new Map();
+    const paths=[...queue.keys()];
+    let results=[];
+    try{
+      const {data,error}=await supabase.storage.from('fotos').createSignedUrls(paths,PHOTO_SIGNED_TTL_SECONDS);
+      if(error)throw error;
+      results=Array.isArray(data)?data:[];
+    }catch(error){
+      console.warn('Beveiligde foto-links maken mislukt:',error);
+    }
+    const signedByPath=new Map();
+    results.forEach((result,index)=>{
+      if(result&&!result.error&&result.signedUrl){
+        signedByPath.set(result.path||paths[index],result.signedUrl);
+      }
+    });
+    for(const [path,resolvers] of queue){
+      const signed=signedByPath.get(path)||'';
+      if(signed){
+        photoSignedUrlCache.set(path,{url:signed,expires:Date.now()+(PHOTO_SIGNED_TTL_SECONDS-300)*1000});
+      }
+      resolvers.forEach(resolve=>resolve(signed));
+    }
+  }
+  function signPhotoPath(path){
+    const cached=photoSignedUrlCache.get(path);
+    if(cached&&cached.expires>Date.now())return Promise.resolve(cached.url);
+    return new Promise(resolve=>{
+      if(!photoSignQueue.has(path))photoSignQueue.set(path,[]);
+      photoSignQueue.get(path).push(resolve);
+      if(!photoSignTimer)photoSignTimer=setTimeout(flushPhotoSignQueue,0);
+    });
+  }
+  // Bruikbare link voor een foto: beveiligd als dat lukt, anders de originele.
+  async function resolvePhotoUrl(url){
+    const path=photoStoragePathFromUrl(url);
+    if(!path)return url;
+    const signed=await signPhotoPath(path);
+    return signed||url;
+  }
+  async function secureImageElement(image){
+    const src=image.getAttribute('src')||'';
+    const path=photoStoragePathFromUrl(src);
+    if(!path||image.dataset.photoSigning===src)return;
+    image.dataset.photoSigning=src;
+    const hadInlineVisibility=image.style.visibility;
+    if(!hadInlineVisibility)image.style.visibility='hidden';
+    try{
+      const signed=await signPhotoPath(path);
+      if(signed&&image.getAttribute('src')===src){
+        image.setAttribute('src',signed);
+      }
+    }finally{
+      if(!hadInlineVisibility)image.style.visibility='';
+    }
+  }
+  function secureImagesIn(root){
+    if(!root||root.nodeType!==1)return;
+    if(root.tagName==='IMG'){
+      secureImageElement(root);
+      return;
+    }
+    root.querySelectorAll('img[src*="'+PHOTO_PUBLIC_MARKER+'"]').forEach(secureImageElement);
+  }
+  new MutationObserver(mutations=>{
+    for(const mutation of mutations){
+      if(mutation.type==='attributes'){
+        secureImagesIn(mutation.target);
+      }else{
+        mutation.addedNodes.forEach(secureImagesIn);
+      }
+    }
+  }).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['src']});
+  // Nieuwe stopfoto's komen in de map van de camper (nodig voor de uploadregel van deel 5b).
+  function photoUploadFolder(){
+    return activeCamperId?`stops/${activeCamperId}/`:'';
+  }
   const CAMPER_UITLEG_CATEGORIES = ['Voor de reis','Tijdens de reis','Na de reis'];
 
   function asDateInputValue(value){
@@ -1841,12 +1945,21 @@ async function fetchInviteByCode(inviteCode){
   if(memberInvite){
     return {type:'member-invite',...memberInvite};
   }
-  const {data:platformInvite,error:platformInviteError}=await supabase
-    .from('invite_codes')
-    .select('id,email,invite_code,used')
-    .eq('invite_code',inviteCode)
-    .maybeSingle();
-  if(!platformInviteError&&platformInvite){
+  // Opzoeken op exacte code via b66_get_platform_invite (deel 5 van de beveiliging);
+  // valt terug op de oude manier zolang die functie nog niet bestaat.
+  let platformInvite=null;
+  const {data:platformRows,error:platformRpcError}=await supabase.rpc('b66_get_platform_invite',{p_code:inviteCode});
+  if(!platformRpcError){
+    platformInvite=Array.isArray(platformRows)?(platformRows[0]||null):(platformRows||null);
+  }else{
+    const {data:legacyPlatform,error:legacyPlatformError}=await supabase
+      .from('invite_codes')
+      .select('id,email,invite_code,used')
+      .eq('invite_code',inviteCode)
+      .maybeSingle();
+    if(!legacyPlatformError)platformInvite=legacyPlatform;
+  }
+  if(platformInvite){
     return {type:'platform',...platformInvite};
   }
   return null;
@@ -2792,22 +2905,21 @@ if(editingStopId){
 if(stopPhotosToDelete.length){
   for(const photoId of stopPhotosToDelete){
     const photo=currentEditingStopPhotos.find(x=>x.id===photoId);
-    const { error: deletePhotoError } = await supabase
+    const { data: deletedPhotos, error: deletePhotoError } = await supabase
       .from('fotos')
       .delete()
-      .eq('id',photoId);
+      .eq('id',photoId)
+      .select('id');
     if(deletePhotoError){
       console.error('Foto verwijderen mislukt:', deletePhotoError);
       continue;
     }
-    let storageName=photo?.bestandsnaam||'';
-    if(!storageName&&photo?.url){
-      try{
-        storageName=decodeURIComponent(new URL(photo.url).pathname.split('/').pop()||'');
-      }catch(error){
-        console.warn('Foto bestandsnaam uit URL halen mislukt:',error);
-      }
+    if(!deletedPhotos?.length){
+      console.warn('Foto niet verwijderd (geen recht via RLS):', photoId);
+      continue;
     }
+    // bestandsnaam is de originele naam van de gebruiker; het echte pad staat in de url.
+    const storageName=photoStoragePathFromUrl(photo?.url);
     if(storageName){
       const {error:storageError}=await supabase.storage.from('fotos').remove([storageName]);
       if(storageError){
@@ -4184,7 +4296,7 @@ function buildTripReportFilename(trip,extension){
   return `reisrapport-${title}${start?`-${start}`:''}${end?`-${end}`:''}.${extension}`;
 }
 async function imageUrlToJpegDataUrl(url,maxDimension=1400,quality=0.82){
-  const response=await fetch(url);
+  const response=await fetch(await resolvePhotoUrl(url));
   if(!response.ok){
     throw new Error('Foto laden mislukt');
   }
@@ -4327,7 +4439,7 @@ async function optimizePhotoForUpload(file){
   }finally{
     imageSource.cleanup();
   }
-  throw new Error(`"${file.name}": kon niet voldoende verkleind worden voor upload (maximaal 3 MB na optimalisatie).`);
+  throw new Error(`"${file.name}": kon niet voldoende verkleind worden voor upload (maximaal ${Math.round(PHOTO_UPLOAD_TARGET_FILE_SIZE_BYTES/1024)} KB na optimalisatie).`);
 }
 async function loadTripReportData(tripId){
   const {data:trip,error}=await supabase.from('reizen').select('*').eq('id',tripId).single();
@@ -5040,7 +5152,7 @@ async function uploadPhotos() {
        optimizedCount+=1;
        savedBytes+=Math.max(0,optimized.originalSize-optimized.optimizedSize);
      }
-     const filename=createPhotoUploadFilename(optimizedFile);
+     const filename=photoUploadFolder()+createPhotoUploadFilename(optimizedFile);
      if(typeof optimizedFile.arrayBuffer!=='function'){
        throw new Error(`"${file.name}": bestand kon niet gelezen worden. Kies de foto opnieuw en probeer opnieuw.`);
      }
@@ -5940,11 +6052,16 @@ window.addVriend=async function(){
     status.className='status err';return;
   }
   // Zoek friend_user_id via profiles tabel
-  const {data:profileData,error:profileErr}=await supabase
-    .from('profiles')
-    .select('user_id')
-    .eq('email',friendEmail)
-    .maybeSingle();
+  // Zoeken op exact e-mailadres via b66_find_user_by_email (deel 5); valt terug op de oude manier.
+  let profileData=null,profileErr=null;
+  const {data:foundUserId,error:findRpcError}=await supabase.rpc('b66_find_user_by_email',{p_email:friendEmail});
+  if(!findRpcError){
+    profileData=foundUserId?{user_id:foundUserId}:null;
+  }else{
+    const legacy=await supabase.from('profiles').select('user_id').eq('email',friendEmail).maybeSingle();
+    profileData=legacy.data;
+    profileErr=legacy.error;
+  }
   if(profileErr){status.textContent='Fout bij zoeken: '+esc(profileErr.message);status.className='status err';return;}
   if(!profileData){status.textContent='Geen gebruiker gevonden met dit e-mailadres.';status.className='status err';return;}
   const friendUserId=profileData.user_id;
