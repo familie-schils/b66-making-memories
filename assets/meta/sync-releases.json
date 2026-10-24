@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.43",
-  "releasedAt": "2026-10-24T12:37:22.942Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix invite registration screen staying stuck\n- Fix km hint cleared on new trip form",
+  "currentVersion": "1.0.44",
+  "releasedAt": "2026-10-24T12:54:03.256Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Toon TESTVERSIE-label alleen in test-agent.html",
   "latest5": [
+    {
+      "version": "1.0.44",
+      "releasedAt": "2026-10-24T12:54:03.256Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Toon TESTVERSIE-label alleen in test-agent.html"
+    },
     {
       "version": "1.0.43",
       "releasedAt": "2026-10-24T12:37:22.942Z",
@@ -23,14 +28,14 @@
       "version": "1.0.40",
       "releasedAt": "2026-10-24T10:53:54.489Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Load active trip stops on app reopen"
-    },
-    {
-      "version": "1.0.39",
-      "releasedAt": "2026-10-24T10:47:18.477Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Update test-agent.html\n- Hernummer foto-scripts naar deel 6, docs foto-opslag"
     }
   ],
   "history": [
+    {
+      "version": "1.0.44",
+      "releasedAt": "2026-10-24T12:54:03.256Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Toon TESTVERSIE-label alleen in test-agent.html"
+    },
     {
       "version": "1.0.43",
       "releasedAt": "2026-10-24T12:37:22.942Z",
@@ -247,5 +252,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "cbd9fe458ffbc215c34fccd862cbb5fab411d9a3"
+  "lastSyncedTestAgentSha": "c8a4a5842c09732458f1b93db9abc5bc800403fd"
 }
