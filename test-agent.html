@@ -968,6 +968,13 @@ Nog geen onderhoud geregistreerd.
     <label>E-mailadres</label>
     <input id="camperInviteEmail" type="email" placeholder="naam@example.com">
   </div>
+  <div>
+    <label>Rol</label>
+    <select id="camperInviteRole">
+      <option value="viewer">Viewer – kan meekijken</option>
+      <option value="editor">Editor – kan toevoegen en aanpassen</option>
+    </select>
+  </div>
   <div style="flex:0 0 auto;display:flex;gap:8px;align-items:flex-end">
     <button class="primary" onclick="createCamperInvitation()">Uitnodigen</button>
     <button class="secondary" onclick="generateCamperInvitationLink()">Link genereren</button>
@@ -5609,13 +5616,15 @@ async function saveCamperInvitation(email){
     .maybeSingle();
   if(existingInviteError){status.textContent='Bestaande uitnodiging controleren mislukt: '+existingInviteError.message;status.className='status err';return null;}
   if(existingInvite){status.textContent='Er staat al een openstaande uitnodiging voor dit e-mailadres.';status.className='status err';return null;}
+  const roleValue=document.getElementById('camperInviteRole')?.value;
+  const inviteRole=ALLOWED_INVITE_ROLES.includes(roleValue)?roleValue:'viewer';
   const expiresAt=new Date(Date.now()+7*24*60*60*1000).toISOString();
   let result=null;
   for(let attempt=0;attempt<5;attempt++){
     const token=generateInviteCode(12);
     result=await supabase
       .from('invitations')
-      .insert({camper_id:activeCamperId,email,role:'viewer',invitation_token:token,status:'pending',expires_at:expiresAt,created_by:currentUser?.id||null})
+      .insert({camper_id:activeCamperId,email,role:inviteRole,invitation_token:token,status:'pending',expires_at:expiresAt,created_by:currentUser?.id||null})
       .select('id,email,role,invitation_token,created_at')
       .single();
     if(!result.error)break;
