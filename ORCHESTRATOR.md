@@ -372,3 +372,8 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
 - Fix: klein script in `<head>` zet class `is-testversie` alleen als het adres eindigt op `test-agent.html`; het label (`body::before`) hangt daaraan. Bestanden blijven identiek, workflow ongewijzigd.
 - Getest in Chromium: `/test-agent.html` (ook met `?invite_code=`) toont het label; `/index.html` en `/` niet.
 - Let op: de lokale `index.html` in de map is nog de versie van september (git pull nodig om lokaal gelijk te lopen; online is wel gelijk).
+
+## Groeiplan en financiën (Fieneke, 2026-10-24, 15:10)
+- Financiële agent heeft kosten, betalen, btw en prijs doorgerekend; samengevat in het document "B66 – Groeiplan en financiën" (Claude Docs).
+- Kern: techniek ca. €10/jaar nu, ca. €270/jaar vanaf de eerste betaler (Supabase Pro), < €350/jaar bij 2.000 campers. Voorstel €19/jaar per camper; break-even 18 betalers (techniek) / 77 (met boekhouder).
+- Eerste noodzakelijke stap: eigen domein + Brevo als SMTP in Supabase (anders bereikt "wachtwoord vergeten" echte gebruikers niet). Vóór betalen: verhuizen naar Cloudflare Pages (GitHub Pages niet bedoeld voor betaalde dienst), privacyverklaring/voorwaarden, één gesprek met een boekhouder.
