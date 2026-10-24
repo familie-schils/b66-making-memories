@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.35",
-  "releasedAt": "2026-10-24T06:44:59.566Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- update orch",
+  "currentVersion": "1.0.36",
+  "releasedAt": "2026-10-24T07:39:04.447Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Restrict invitation reads to exact-token lookup",
   "latest5": [
+    {
+      "version": "1.0.36",
+      "releasedAt": "2026-10-24T07:39:04.447Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Restrict invitation reads to exact-token lookup"
+    },
     {
       "version": "1.0.35",
       "releasedAt": "2026-10-24T06:44:59.566Z",
@@ -23,14 +28,14 @@
       "version": "1.0.32",
       "releasedAt": "2026-10-21T13:53:19.762Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix release metadata workflow and accelerate PWA updates"
-    },
-    {
-      "version": "1.0.31",
-      "releasedAt": "2026-10-14T17:59:41.195Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Block admin roles in TEST-AGENT invites"
     }
   ],
   "history": [
+    {
+      "version": "1.0.36",
+      "releasedAt": "2026-10-24T07:39:04.447Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Restrict invitation reads to exact-token lookup"
+    },
     {
       "version": "1.0.35",
       "releasedAt": "2026-10-24T06:44:59.566Z",
@@ -207,5 +212,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "bf8648b0b0f7274c0b9602549c18a9be40bbc928"
+  "lastSyncedTestAgentSha": "dec686b5856ddf6f16133cac426ca48b1e7cec0f"
 }
