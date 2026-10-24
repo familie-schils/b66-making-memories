@@ -187,3 +187,28 @@ Bron: live `pg_policies` (SELECT-, INSERT- en UPDATE-regels) en kolomlijst, aang
 - Delete-reis functie (door gebruiker uitgesteld), hoofdbeheerder-rechten, storage bucket `fotos`, rol-check constraint, offline PWA, apart testproject, opruimen oude HTML-bestanden, AVG/privacy.
 - Testaccounts: wachtwoord zetten via SQL (`extensions.crypt`) of plusadressen gebruiken.
 - Onbeantwoord: wie zijn de gebruikers, wat zijn Fieneke en Suus, tijd/budget.
+
+## Visie, doelgroep en werkwijze (2026-10-24)
+
+**Wat de app is**
+Een privé-logboek voor camperbezitters: de hele reis van begin tot eind (stops, kosten, tankbeurten, onderhoud) in plaats van het papieren schriftje. Delen met vrienden gebeurt alleen per stop en alleen als de eigenaar dat zelf wil. Er is bewust géén openbaar platform met beoordelingen van onbekenden. Dat is het verschil met grote camperapps.
+
+**Doelgroep**
+Camperbezitters en hun vrienden (kleine, vertrouwde kring). Niet bedoeld voor een massa onbekende gebruikers.
+
+**Verdienmodel (nog ideeën, niets besloten)**
+Gratis basis plus betaald voor meer opslag/campers/rapporten, of jaarabonnement voor het logboek, of koppeling met camperclub/verhuurder. Eerst valideren met 10 à 20 echte camperbezitters een seizoen lang. Privacy als verkoopargument; voor echte lancering AVG-regels op orde.
+
+**De "agents" (bedoeld als rollen die ik aanstuur)**
+- Orchestrator (Claude): overzicht, plan, rapportage aan Mat. Ook de code en beveiliging.
+- Fieneke (financieel): als de app live gaat, onderzoeken hoe betalingen werken en wat het kost/oplevert, en dat in gewone taal terugkoppelen. Nog niet gestart.
+- Suus (sociaal): de app bekendmaken (Facebook/social media): teksten, ideeën. Nog niet gestart.
+Fieneke en Suus zijn nog geen aparte programma's: ze worden pas ingezet als de app klaar is voor gebruikers.
+
+**Tijd**
+Gemiddeld ca. 1 uur per dag (vaste baan); in het weekend en op vrije dagen meerdere uren (4 à 6 mogelijk). De orchestrator houdt het kort: elke sessie één duidelijk stapje, één samenvatting, één vraag.
+
+**Volgorde**
+1. Veiligheid afmaken (Deel 1 klaar, Deel 2 nog te draaien, uitnodigingen dichtzetten).
+2. Testen met enkele echte gebruikers.
+3. Pas daarna Fieneke (betalingen/prijs) en Suus (bekendheid).
