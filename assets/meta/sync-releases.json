@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.37",
-  "releasedAt": "2026-10-24T07:57:37.227Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Secure friends, requests and camper members",
+  "currentVersion": "1.0.38",
+  "releasedAt": "2026-10-24T09:58:06.348Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Add profile, invite and photo storage security",
   "latest5": [
+    {
+      "version": "1.0.38",
+      "releasedAt": "2026-10-24T09:58:06.348Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Add profile, invite and photo storage security"
+    },
     {
       "version": "1.0.37",
       "releasedAt": "2026-10-24T07:57:37.227Z",
@@ -23,14 +28,14 @@
       "version": "1.0.34",
       "releasedAt": "2026-10-23T20:54:27.945Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- kleine aanpassing"
-    },
-    {
-      "version": "1.0.33",
-      "releasedAt": "2026-10-23T18:43:30.932Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix share checkbox and add DELETE RLS policies"
     }
   ],
   "history": [
+    {
+      "version": "1.0.38",
+      "releasedAt": "2026-10-24T09:58:06.348Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Add profile, invite and photo storage security"
+    },
     {
       "version": "1.0.37",
       "releasedAt": "2026-10-24T07:57:37.227Z",
@@ -217,5 +222,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "aebad74193a95c65a9cd4a08c957950163c43aee"
+  "lastSyncedTestAgentSha": "d7aa8277a8f635cdd4a951ec9bb4174de345921b"
 }
