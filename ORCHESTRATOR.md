@@ -377,3 +377,14 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
 - Financiële agent heeft kosten, betalen, btw en prijs doorgerekend; samengevat in het document "B66 – Groeiplan en financiën" (Claude Docs).
 - Kern: techniek ca. €10/jaar nu, ca. €270/jaar vanaf de eerste betaler (Supabase Pro), < €350/jaar bij 2.000 campers. Voorstel €19/jaar per camper; break-even 18 betalers (techniek) / 77 (met boekhouder).
 - Eerste noodzakelijke stap: eigen domein + Brevo als SMTP in Supabase (anders bereikt "wachtwoord vergeten" echte gebruikers niet). Vóór betalen: verhuizen naar Cloudflare Pages (GitHub Pages niet bedoeld voor betaalde dienst), privacyverklaring/voorwaarden, één gesprek met een boekhouder.
+
+## Mail via Brevo (2026-10-24, 15:45)
+- Nu: Supabase-standaardmail stuurt alleen naar leden van het Supabase-team, max. 2 per uur → "wachtwoord vergeten" werkt niet voor echte gebruikers.
+- Brevo accepteert geen Gmail/Hotmail als afzender (vervangt door brevosend-adres, spamrisico); eigen domein met DKIM + DMARC nodig.
+- Domeinnaam gekozen: **makingmemories.be** (24 okt nog vrij volgens de Lead-Developer). Kopen bij een registrar met DNS-beheer (bijv. OVH, ca. €9,55/jaar).
+- Stappen: domein kopen → Brevo-account → domein verifiëren (DNS: Brevo-code, DKIM, DMARC; 24–48 u) → afzender no-reply@makingmemories.be + SMTP-sleutel → Supabase › Authentication › Emails › SMTP (smtp-relay.brevo.com, 587) → rate limit (30/u) → test "wachtwoord vergeten". Account, betaling en sleutel doet de Lead-Developer zelf.
+- Daarna nakijken: Site URL en Redirect URLs in Supabase (link in de resetmail moet naar de app wijzen).
+- 16:03 domein makingmemories.be gekocht bij OVH. 16:20 Brevo: domein "Authenticated" (er staat ook een tikfout-domein makimgmemories.be: verwijderen).
+- 16:35 Supabase SMTP ingesteld en gecontroleerd: aan; afzender no-reply@makingmemories.be, naam Making Memories, smtp-relay.brevo.com:587, gebruiker = Brevo SMTP-login, wachtwoord opgeslagen (verborgen).
+- **Nog niet live op internet:** NS van makingmemories.be staan om 16:35 nog op parking1/parking2.ovh.net; DKIM/DMARC daardoor nog niet zichtbaar voor Gmail/Hotmail. Testen ("wachtwoord vergeten" op plus-adres) zodra OVH overschakelt naar dns*.ovh.net.
+- Supabase Site URL = …/b66-making-memories/index.html; Redirect URLs alleen die. Tip: `https://familie-schils.github.io/b66-making-memories/**` toevoegen voor testen vanuit test-agent.html.
