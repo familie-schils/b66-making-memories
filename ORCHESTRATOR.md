@@ -366,3 +366,9 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
 - 2e poging via Beheer: uitnodiging gemaakt voor `msc.schils+eigenaar2@gmail.co` (tikfout, zonder m). Registratie met dat adres: camper 28 "Camper van …" aangemaakt, admin, code als gebruikt gemarkeerd. **Werkt na deel 1 en 5.**
 - Er is ook een account `msc.schils+eigenaar2@gmail.com` (12:28) zonder camper; hoe dat ontstond is niet duidelijk. Opruimen in Supabase › Authentication.
 **Fix (in `test-agent.html`, nog niet gecommit):** na registreren bleef "Bezig met registreren..." staan (de app opende eronder, het uitnodigingsblok werd nooit gesloten). Nu: melding "Welkom! Je account is klaar…", uitnodigingsblok dicht, code uit de adresbalk, app opent. Bij een foutmelding blijft het scherm staan.
+
+## Label TESTVERSIE alleen in de testversie (2026-10-24, 14:55) – in `test-agent.html`, nog niet gecommit
+- Live gecontroleerd vóór de wijziging: `test-agent.html`, `index.html` en het gewone adres zijn online byte voor byte gelijk (296.246 tekens, zelfde hash) en gelijk aan de laatst aangeleverde versie (v1.0.43).
+- Fix: klein script in `<head>` zet class `is-testversie` alleen als het adres eindigt op `test-agent.html`; het label (`body::before`) hangt daaraan. Bestanden blijven identiek, workflow ongewijzigd.
+- Getest in Chromium: `/test-agent.html` (ook met `?invite_code=`) toont het label; `/index.html` en `/` niet.
+- Let op: de lokale `index.html` in de map is nog de versie van september (git pull nodig om lokaal gelijk te lopen; online is wel gelijk).
