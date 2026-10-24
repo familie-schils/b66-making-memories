@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.36",
-  "releasedAt": "2026-10-24T07:39:04.447Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Restrict invitation reads to exact-token lookup",
+  "currentVersion": "1.0.37",
+  "releasedAt": "2026-10-24T07:57:37.227Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Secure friends, requests and camper members",
   "latest5": [
+    {
+      "version": "1.0.37",
+      "releasedAt": "2026-10-24T07:57:37.227Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Secure friends, requests and camper members"
+    },
     {
       "version": "1.0.36",
       "releasedAt": "2026-10-24T07:39:04.447Z",
@@ -23,14 +28,14 @@
       "version": "1.0.33",
       "releasedAt": "2026-10-23T18:43:30.932Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix share checkbox and add DELETE RLS policies"
-    },
-    {
-      "version": "1.0.32",
-      "releasedAt": "2026-10-21T13:53:19.762Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix release metadata workflow and accelerate PWA updates"
     }
   ],
   "history": [
+    {
+      "version": "1.0.37",
+      "releasedAt": "2026-10-24T07:57:37.227Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Secure friends, requests and camper members"
+    },
     {
       "version": "1.0.36",
       "releasedAt": "2026-10-24T07:39:04.447Z",
@@ -212,5 +217,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "dec686b5856ddf6f16133cac426ca48b1e7cec0f"
+  "lastSyncedTestAgentSha": "aebad74193a95c65a9cd4a08c957950163c43aee"
 }
