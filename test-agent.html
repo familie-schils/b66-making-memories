@@ -2256,6 +2256,21 @@ function showLogin(){
   loginView.classList.remove('hidden');
   appView.classList.add('hidden');
 }
+// Na registreren/inloggen via een uitnodiging: uitnodigingsscherm sluiten en code uit de adresbalk halen.
+function closeInviteRouteView(){
+  const box=document.getElementById('inviteRouteView');
+  if(box)box.classList.add('hidden');
+  try{
+    const url=new URL(window.location.href);
+    let changed=false;
+    ['invite_code','invite','code'].forEach(param=>{
+      if(url.searchParams.has(param)){url.searchParams.delete(param);changed=true;}
+    });
+    if(changed)window.history.replaceState(null,'',url.pathname+url.search+url.hash);
+  }catch(error){
+    console.warn('Uitnodigingscode uit adres halen mislukt:',error);
+  }
+}
 async function showApp(sessionUser=null){
 const fallbackUserData=await supabase.auth.getUser();
 const authUser=fallbackUserData?.data?.user||null;
@@ -2275,6 +2290,7 @@ if(profileUser){
 }
 renderProfileIdentity(profileUser||currentUser);
 loginView.classList.add('hidden');
+closeInviteRouteView();
 appView.classList.remove('hidden');
 populateCountrySelects();
 
@@ -2536,6 +2552,17 @@ async function processInvite(userId,inviteOverride=null,suppressNavigation=false
   }
 }
 
+// Afronden na registreren/inloggen via uitnodiging. Bij een foutmelding blijft het scherm staan.
+async function finishInviteRouteForUser(user,setStatus){
+  const statusEl=document.getElementById('inviteRouteStatus');
+  if(statusEl&&statusEl.className.includes('err'))return;
+  setStatus('Welkom! Je account is klaar. De app wordt geopend...','ok');
+  document.getElementById('inviteRouteForms')?.classList.add('hidden');
+  await new Promise(resolve=>setTimeout(resolve,1200));
+  closeInviteRouteView();
+  await showApp(user);
+}
+
 window.inviteRegister=async()=>{
   const statusEl=document.getElementById('inviteRouteStatus');
   function setStatus(msg,cls){if(statusEl){statusEl.textContent=msg;statusEl.className='status '+cls;}}
@@ -2570,6 +2597,7 @@ window.inviteRegister=async()=>{
     return;
   }
   await processInviteOnboardingForUser(user);
+  await finishInviteRouteForUser(user,setStatus);
 };
 
 window.inviteLogin=async()=>{
@@ -2594,6 +2622,7 @@ window.inviteLogin=async()=>{
     return;
   }
   await processInviteOnboardingForUser(user);
+  await finishInviteRouteForUser(user,setStatus);
 };
 
 let currentStopSaved=false;
