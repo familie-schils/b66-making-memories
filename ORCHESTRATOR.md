@@ -355,3 +355,14 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
 - **Werkwijze bevestigd door Lead-Developer (13:52):** km bij vertrek bij de start van de reis, per stop alleen km bij aankomst (geen vertrek-km per stop; tussendoor rijden wordt opgevangen doordat je de voorgestelde stand verhoogt), eind-km bij afsluiten.
 - Fix: bij het opnieuw openen van een lopende reis met stops bleef "Start van de reis" (met km bij vertrek) zichtbaar boven de volgende stop. Nu verborgen zodra er een stop is (de waarde blijft gebruikt voor berekeningen; aanpassen via Reis bewerken).
 - Klein punt voor de lijst: 2× 400 in de console bij openen (waarschijnlijk foto's die even de oude openbare link proberen vóór de beveiligde link).
+- Testreis 70 afgesloten door Lead-Developer (14:00): start 100, stop 1 en 2 op 101, eind 102. Klopt met de nieuwe logica.
+- Kleine fix: bij "Nieuwe reis" verdween de uitleg onder het km-veld van de eerste stop (werd direct weer leeggemaakt). Staat nu na het leegmaken.
+
+## Nieuwe camper-eigenaar via uitnodiging (2026-10-24, 14:15–14:40)
+**Hoe het werkt (bestond al, nooit eerder gebruikt):** hoofdbeheerder (`m.schils@hotmail.com`, enige in `platform_admins`) → Meer › Beheer › e-mail invullen › "Uitnodiging maken" → link met `?invite_code=` zelf versturen → ontvanger registreert → krijgt eigen lege camper en is daar admin. Zonder uitnodiging kan niemand een account aanmaken (alleen inlogscherm). Hoofdbeheerder worden kan alleen via de database.
+- Niet verwarren met Meer › Leden beheren (lid toevoegen aan je eigen camper als viewer/editor).
+**Test:**
+- 1e poging ging via Leden beheren: `msc.schils+eigenaar1@gmail.com` werd editor van camper 22 (geen eigen camper). Testaccount mag weg via Leden beheren.
+- 2e poging via Beheer: uitnodiging gemaakt voor `msc.schils+eigenaar2@gmail.co` (tikfout, zonder m). Registratie met dat adres: camper 28 "Camper van …" aangemaakt, admin, code als gebruikt gemarkeerd. **Werkt na deel 1 en 5.**
+- Er is ook een account `msc.schils+eigenaar2@gmail.com` (12:28) zonder camper; hoe dat ontstond is niet duidelijk. Opruimen in Supabase › Authentication.
+**Fix (in `test-agent.html`, nog niet gecommit):** na registreren bleef "Bezig met registreren..." staan (de app opende eronder, het uitnodigingsblok werd nooit gesloten). Nu: melding "Welkom! Je account is klaar…", uitnodigingsblok dicht, code uit de adresbalk, app opent. Bij een foutmelding blijft het scherm staan.
