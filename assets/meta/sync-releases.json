@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.40",
-  "releasedAt": "2026-10-24T10:53:54.489Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Load active trip stops on app reopen",
+  "currentVersion": "1.0.41",
+  "releasedAt": "2026-10-24T11:45:01.249Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Kilometerstand per stop in reisformulier",
   "latest5": [
+    {
+      "version": "1.0.41",
+      "releasedAt": "2026-10-24T11:45:01.249Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Kilometerstand per stop in reisformulier"
+    },
     {
       "version": "1.0.40",
       "releasedAt": "2026-10-24T10:53:54.489Z",
@@ -23,14 +28,14 @@
       "version": "1.0.37",
       "releasedAt": "2026-10-24T07:57:37.227Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Secure friends, requests and camper members"
-    },
-    {
-      "version": "1.0.36",
-      "releasedAt": "2026-10-24T07:39:04.447Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Restrict invitation reads to exact-token lookup"
     }
   ],
   "history": [
+    {
+      "version": "1.0.41",
+      "releasedAt": "2026-10-24T11:45:01.249Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Kilometerstand per stop in reisformulier"
+    },
     {
       "version": "1.0.40",
       "releasedAt": "2026-10-24T10:53:54.489Z",
@@ -232,5 +237,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "132a76a1c5cdeea758c021229884499b5f0c1f34"
+  "lastSyncedTestAgentSha": "8962038e6b66769daf5f8040337628110a8ff179"
 }
