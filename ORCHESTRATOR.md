@@ -314,3 +314,40 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
 - Opgemerkt: productie toont het label "TESTVERSIE" (de workflow kopieert test-agent.html ongewijzigd naar index.html). Later oplossen.
 - Oud probleem opgelost (12:55): na opnieuw openen van de app bleef "Stops in deze reis" verborgen (de lijst werd alleen geladen na opslaan of bewerken van een stop). `loadActiveTrip()` laadt de lijst nu ook.
 - Opgemerkt, nog niet onderzocht: in het reisoverzicht (Reis openen > Reislog) van de actieve reis stond alleen de tankbeurt, niet stop "test foto".
+
+## Deel 5 en 6a live (2026-10-24, 12:57)
+- Gedraaid door Lead-Developer: `05_profielen_en_platformuitnodigingen.sql` (backup-stap 05) en `06a_fotos_regels.sql` (backup-stap 06a). Regels op storage.objects aanmaken via de SQL Editor werkte.
+- Controle live: `profiles` en `invite_codes` hebben nieuwe regels; storage.objects heeft `b66_fotos_select`, `b66_fotos_delete` en (nog) de oude uploadregel; bucket `fotos` openbaar, max. 5 MB, alleen jpg/png/webp.
+- App: foto's komen nu via beveiligde links (`/object/sign/`). Als camperlogboek (admin camper 22): alle 29 zichtbare fotoregels krijgen een beveiligde link, 0 fouten; dat zijn 2 eigen foto's (camper 22) en 27 gedeelde foto's van camper 1 (vriendschap).
+- **Volgende:** foto verwijderen testen (bestand moet ook uit de opslag verdwijnen), daarna `06b` (privé + uploadregel + 1 MB), daarna 53 losse bestanden opruimen in het dashboard.
+- Verwijdertest (13:06): foto bij stop 116 verwijderd in de app. Regel in `fotos` weg én bestand `stops/22/89444b80-...jpg` weg uit de opslag. Verwijderen werkt nu echt. Opslag weer 90 bestanden / 160 MB.
+
+## Deel 6b live (2026-10-24, 13:11)
+- `06b_fotos_prive.sql` gedraaid (backup-stap 06b). Bucket `fotos`: **privé**, max. 1 MB. Storage-regels: `b66_fotos_select`, `b66_fotos_insert`, `b66_fotos_delete` (oude uploadregel weg).
+- Test: nieuwe foto na 6b geüpload (stop 117) → `stops/22/2722ccb0-...jpg`, 9,5 KB, zichtbaar in de app. Openbare link geeft nu 400 (afgeschermd, zoals bedoeld).
+- **Foto-beveiliging is daarmee af.** Nog open: 53 losse bestanden (87 MB) opruimen via Storage > fotos (lijst: query onderaan `06a`).
+
+## Opruimen losse bestanden (2026-10-24, 13:33)
+- 47 losse bestanden van m.schils@hotmail.com in één keer verwijderd via console-script (`storage.remove`, eigen uploads). 2 eerder met de hand.
+- Opslag nu: 42 bestanden, 80 MB (was 90 / 160 MB). Alle 29 stopfoto's en 9 gidsfoto's hebben nog hun bestand (0 ontbrekend).
+- Nog 4 losse bestanden van andere accounts, met de hand weghalen in Storage > fotos: `camper 12.jpg`, `1786897942430_image.jpg`, `bffd20d4-8e7a-458b-b5c5-cdfe3e3d88bf.png`, `cd889ad0-a2cd-46cd-86ac-f61e0d793834.jpeg`.
+- Resterende 80 MB zijn foto's in gebruik, van vóór het verkleinen (gemiddeld ca. 2 MB). Eventueel later eenmalig verkleinen.
+
+## Takenlijst (bijgewerkt 2026-10-24, 13:40)
+1. **Viewer-melding:** formulieren verbergen voor viewers en een nette melding "Je mag hier alleen meekijken" in plaats van de technische RLS-fout. (Uitgesteld op verzoek, eerst kilometerstand.)
+2. Reislog van de actieve reis toonde alleen de tankbeurt, niet de stop: uitzoeken.
+3. Label "TESTVERSIE" in productie (workflow kopieert test-agent.html ongewijzigd).
+4. Open vriendenverzoek zichtbaar op startscherm; uitnodigingslink naar juiste versie; knop voor nieuwe camper-eigenaren.
+5. 4 losse fotobestanden met de hand verwijderen; eventueel oude grote foto's eenmalig verkleinen.
+6. Apart testproject (test en productie delen nu dezelfde database en dezelfde code op main).
+
+## Kilometerstand in het reisformulier (2026-10-24, 13:50) – in `test-agent.html`, nog niet gecommit
+**Wens Lead-Developer:** km niet bovenaan los van alles, maar logisch per moment: stand bij vertrek bij de start van de reis, en per stop de stand bij aankomst, voorgesteld vanuit de laatste stand in dezelfde reis, aan te passen (verhogen), niet verplicht.
+- Blok "Kilometerstand van deze reis" bovenaan is weg.
+- "Kilometerstand bij vertrek" staat nu bij **Start van de reis** (verplicht, zoals voorheen).
+- Elke stop begint met **"Kilometerstand bij aankomst (optioneel)"**, groot veld bovenaan de stop, met eronder "Laatst bekend in deze reis: X km · stop N, plaats".
+  - Eerste stop: volgt de stand bij vertrek zolang je het veld niet zelf aanpast.
+  - Volgende stop / app opnieuw openen: vooraf ingevuld met de hoogste bekende stand in deze reis (eerdere stops, anders vertrek).
+  - Leeg laten mag. Lager dan de laatst bekende stand wordt geweigerd met een duidelijke melding (bij bewerken: vergeleken met eerdere stops).
+- Einde reis: Eind KM vooraf ingevuld met de laatst bekende stand; "KM gereden" staat nu daar.
+- Getest: syntax; logica in Chromium met nagebootste stops (voorstel, volgen, niet overschrijven, bewerken, eind-km); weergave op telefoonbreedte.

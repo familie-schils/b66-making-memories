@@ -75,7 +75,10 @@ button{font:inherit}
 .status{padding:10px;border-radius:8px;margin:10px 0}
 .ok{background:#eaf7ed}.err{background:#fff0f0;color:#9d2222}
 .hidden{display:none!important}.login{max-width:430px;margin:30px auto}
-.km-result{font-size:21px;font-weight:800;padding-top:24px}
+.km-result{font-size:21px;font-weight:800;padding:8px 0 14px}
+.stop-km-row{background:#f7f7f7;border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.stop-km-row input{max-width:220px;font-size:18px;font-weight:700}
+.stop-km-hint{margin-top:6px}
 .trip-stop{border-left:4px solid #ddd;padding-left:12px;margin:10px 0}
 .end-box{background:#f7f7f7;border-radius:12px;padding:14px;margin-top:18px}
 .trip-header{background:#f7f7f7;border-radius:12px;padding:14px;margin-bottom:18px}
@@ -287,21 +290,13 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <h2 id="tripTitle">Nieuwe reis</h2>
 <div id="tripStatus" class="status hidden"></div>
 
-<div class="trip-header">
-<h3 style="margin-top:0">Kilometerstand van deze reis</h3>
-<div class="grid">
-<div><label>Huidige kilometerstand</label><input id="tStartKm" type="number" min="0" step="1" required></div>
-
-<div><div id="kmResult" class="km-result">Wordt berekend bij het afsluiten van de reis</div></div>
-</div>
-</div>
-
 <div id="tripStartFields">
 <h3>Start van de reis</h3>
 <div class="grid">
 <div><label>Bestuurder</label><select id="tBestuurder"></select></div>
 <div><label>Passagier</label><select id="tPassagier"><option value="">— geen —</option></select></div>
 <div><label>Startdatum</label><input id="tStartDate" type="date"></div>
+<div><label>Kilometerstand bij vertrek</label><input id="tStartKm" type="number" min="0" step="1" inputmode="numeric" required></div>
 </div>
 </div>
 <div id="tripEditActions" class="edit-actions hidden">
@@ -312,6 +307,11 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 <hr>
 
 <h3 id="stopHeading">Eerste stop</h3>
+<div class="stop-km-row">
+<label for="sKm">Kilometerstand bij aankomst <span class="muted" style="font-weight:normal">(optioneel)</span></label>
+<input id="sKm" type="number" min="0" step="1" inputmode="numeric">
+<div id="sKmHint" class="muted stop-km-hint"></div>
+</div>
 <div class="grid">
 <div><label>Aankomstdatum</label><input id="sDate" type="date"></div>
 <div><label>Vertrekdatum</label><input id="sDepartureDate" type="date"></div>
@@ -323,10 +323,6 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 </select></div>
 <div><label>Naam / plaats</label><input id="sPlace"></div>
 <div><label>Land</label><select id="sCountry"></select></div>
-<div>
-<label>KM bij aankomst</label>
-<input id="sKm" type="number" min="0" step="1">
-</div>
 
   
   <div><label>Prijs per nacht (€)</label><input id="sPrice" type="number" min="0" step=".01"></div>
@@ -378,6 +374,7 @@ Nog geen foto geselecteerd.
 <div><label>Eind KM</label><input id="tEndKmEndBox" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Bij thuiskomst"></div>
 </div>
 <p class="muted">De Eind KM is de kilometerstand bij thuiskomst / einde van deze reis.</p>
+<div id="kmResult" class="km-result">Wordt berekend bij het afsluiten van de reis</div>
 <button class="primary" onclick="finishTrip()">Reis beëindigen</button>
 <button class="secondary" onclick="addStopBeforeEndingTrip()">Eerst stop toevoegen</button>
 <button class="secondary" onclick="hideEndTrip()">Terug</button>
@@ -2709,6 +2706,8 @@ document.getElementById('tStartKm').readOnly=false;
 
 document.getElementById('tEndKmEndBox').value='';
 document.getElementById('kmResult').textContent='Wordt berekend bij het afsluiten van de reis';
+document.getElementById('sKm').dataset.autoFilled='';
+document.getElementById('sKmHint').textContent='Vul eerst de kilometerstand bij vertrek in; die komt hier dan vanzelf te staan.';
 document.getElementById('activeTripInfo').textContent='';
 document.getElementById('saveStopBtn').classList.remove('hidden');
 document.getElementById('nextStopBtn').classList.add('hidden');
@@ -2811,6 +2810,66 @@ if(diff<0){el.textContent='Eind KM is lager dan Start KM';return}
 el.textContent='KM gereden: '+diff.toLocaleString('nl-BE')+' km';
 }
 
+// --- Kilometerstand per stop ---------------------------------------------
+// Laatst bekende stand in deze reis: hoogste km van eerdere stops, anders de stand bij vertrek.
+async function getLastKnownTripKm(beforeStopNumber=null){
+  const startText=v('tStartKm');
+  const startKm=startText!==''&&Number.isFinite(Number(startText))?Number(startText):null;
+  let best=startKm!=null?{km:startKm,label:'bij vertrek'}:null;
+  if(!activeTripId)return best;
+  let query=supabase
+    .from('reis_stops')
+    .select('volgorde,camperplaats,km_aankomst')
+    .eq('reis_id',activeTripId)
+    .not('km_aankomst','is',null);
+  if(beforeStopNumber!=null)query=query.lt('volgorde',beforeStopNumber);
+  const {data,error}=await query;
+  if(error){
+    console.warn('Laatste kilometerstand ophalen mislukt:',error);
+    return best;
+  }
+  (data||[]).forEach(row=>{
+    const km=Number(row.km_aankomst);
+    if(Number.isFinite(km)&&(!best||km>=best.km)){
+      best={km,label:'stop '+(row.volgorde||'?')+(row.camperplaats?', '+row.camperplaats:'')};
+    }
+  });
+  return best;
+}
+function formatKmValue(km){
+  return Number(km).toLocaleString('nl-BE')+' km';
+}
+// Toont "laatst bekend" onder het km-veld en vult het veld voor als het leeg is (fill=true).
+async function refreshStopKmSuggestion({fill=false}={}){
+  const hint=document.getElementById('sKmHint');
+  const input=document.getElementById('sKm');
+  if(!hint||!input)return;
+  const last=await getLastKnownTripKm(editingStopId?stopNumber:null);
+  input.dataset.lastKnownKm=last?String(last.km):'';
+  if(!last){
+    hint.textContent='Vul de stand op de teller in bij aankomst, of laat leeg.';
+    return;
+  }
+  hint.textContent='Laatst bekend in deze reis: '+formatKmValue(last.km)+' · '+last.label+'. Pas aan naar de stand op de teller.';
+  if(fill&&input.value===''){
+    input.value=String(last.km);
+    input.dataset.autoFilled='1';
+  }
+}
+// Eerste stop: zolang het km-veld de startstand volgt, gaat het mee met de stand bij vertrek.
+document.getElementById('tStartKm').addEventListener('input',function(){
+  const input=document.getElementById('sKm');
+  if(activeTripId||editingStopId||!input)return;
+  if(input.value===''||input.dataset.autoFilled==='1'){
+    input.value=this.value;
+    input.dataset.autoFilled=this.value===''?'':'1';
+  }
+  refreshStopKmSuggestion();
+});
+document.getElementById('sKm').addEventListener('input',function(){
+  this.dataset.autoFilled='';
+});
+
 document.getElementById('tEndKmEndBox').addEventListener('input',function(){
 const clean=this.value.replace(/\D/g,'');
 this.value=clean;
@@ -2862,6 +2921,19 @@ if(departureDate){
   const nights=calculateStopNights(arrivalDate,departureDate);
   if(nights==null){
     showStatus('Vertrekdatum moet gelijk of later zijn dan aankomstdatum.',false);
+    return;
+  }
+}
+const stopKmText=v('sKm');
+if(stopKmText!==''){
+  const stopKm=Number(stopKmText);
+  if(!Number.isInteger(stopKm)||stopKm<0){
+    showStatus('Vul een geldige kilometerstand in (alleen hele getallen), of laat het veld leeg.',false);
+    return;
+  }
+  const lastKnown=await getLastKnownTripKm(stopNumber);
+  if(lastKnown&&stopKm<lastKnown.km){
+    showStatus('De kilometerstand ('+formatKmValue(stopKm)+') is lager dan de laatst bekende stand in deze reis ('+formatKmValue(lastKnown.km)+', '+lastKnown.label+').',false);
     return;
   }
 }
@@ -3048,6 +3120,7 @@ window.startStopEdit=async function(stopId,tripId){
   showStatus('',true);
   updateTripFormMode();
   await loadActiveTripStopsPanel();
+  await refreshStopKmSuggestion();
 };
 
 
@@ -3078,6 +3151,8 @@ document.getElementById('nextStopBtn').classList.add('hidden');
 clearStopFields();
 
 document.getElementById('sKm').value = lastKm;
+document.getElementById('sKm').dataset.autoFilled = lastKm ? '1' : '';
+refreshStopKmSuggestion({fill:true}).catch(error=>console.warn('Kilometerstand voorstellen mislukt:',error));
 }
 
 async function showEndTrip(){
@@ -3088,6 +3163,11 @@ if(!activeTripId){
 document.getElementById('endBox').classList.remove('hidden');
 document.getElementById('tEndDate').value=today();
 document.getElementById('tEndKmEndBox').value='';
+const lastKnownEndKm=await getLastKnownTripKm();
+if(lastKnownEndKm){
+  document.getElementById('tEndKmEndBox').value=String(lastKnownEndKm.km);
+}
+updateKm();
 const lastStopInfo=document.getElementById('endTripLastStop');
 lastStopInfo.textContent='Laatste geregistreerde stop laden...';
 const {data:lastStop,error}=await supabase
@@ -3185,6 +3265,9 @@ function clearStopFields(){
   document.getElementById('sDate').value=today();
   document.getElementById('sDepartureDate').value=addDaysToIsoDate(today(),1);
   document.getElementById('shareWithFriends').checked=true;
+  const kmHint=document.getElementById('sKmHint');
+  if(kmHint)kmHint.textContent='';
+  document.getElementById('sKm').dataset.autoFilled='';
   currentEditingStopPhotos=[];
   stopPhotosToDelete=[];
   renderExistingStopPhotos();
@@ -3287,6 +3370,7 @@ document.getElementById('activeTripInfo').textContent =
 
 // Ook na opnieuw openen van de app de opgeslagen stops (met foto's) tonen.
 await loadActiveTripStopsPanel();
+await refreshStopKmSuggestion({fill:true});
 
 }
 async function loadTrips(){
