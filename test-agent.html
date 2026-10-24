@@ -146,6 +146,9 @@ hr{border:0;border-top:1px solid #ddd;margin:18px 0}
 .op-card-description{margin-top:8px;line-height:1.4}
 .op-photo-grid{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
 .op-photo-grid img{max-width:80px;max-height:80px;border-radius:6px;cursor:pointer}
+.stop-thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.stop-thumbs img{width:56px;height:56px;object-fit:cover;border-radius:6px;cursor:pointer;background:#e9edf2}
+.stop-thumbs-more{width:56px;height:56px;border-radius:6px;background:#e9edf2;color:#20252b;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
 .op-card-footer{margin-top:8px;padding-top:8px;border-top:1px solid #edf0f3}
 .op-detail-title{margin:0 0 10px}
 .op-detail-subtitle{margin-bottom:8px}
@@ -2649,6 +2652,30 @@ async function loadActiveTripStopsPanel(){
     list.textContent='Nog geen stops opgeslagen.';
     return;
   }
+  // Kleine foto's per stop (maximaal 4, daarna "+N"). Lukt laden niet, dan zonder foto's.
+  const STOP_THUMB_MAX=4;
+  const thumbsByStopId={};
+  try{
+    const {data:stopFotos,error:stopFotosError}=await supabase
+      .from('fotos')
+      .select('id,stop_id,url,bestandsnaam')
+      .in('stop_id',stops.map(stop=>stop.id))
+      .order('id',{ascending:true});
+    if(stopFotosError)throw stopFotosError;
+    (stopFotos||[]).forEach(foto=>{
+      if(!foto?.url)return;
+      (thumbsByStopId[foto.stop_id]||=[]).push(foto);
+    });
+  }catch(error){
+    console.warn('Foto\'s bij stops laden mislukt:',error);
+  }
+  const renderStopThumbs=stopId=>{
+    const fotos=thumbsByStopId[stopId]||[];
+    if(!fotos.length)return '';
+    const shown=fotos.slice(0,STOP_THUMB_MAX).map(foto=>`<img src="${esc(foto.url)}" data-photo-url="${esc(foto.url)}" alt="${esc(foto.bestandsnaam||'stopfoto')}" loading="lazy" onclick="openFotoLightbox(this.dataset.photoUrl)">`).join('');
+    const extra=fotos.length>STOP_THUMB_MAX?`<div class="stop-thumbs-more">+${fotos.length-STOP_THUMB_MAX}</div>`:'';
+    return `<div class="stop-thumbs">${shown}${extra}</div>`;
+  };
   list.innerHTML=stops.map(stop=>{
     const overnight=getStopOvernightDetails(stop,{legacyFallback:true});
     const nightsText=overnight.nights!=null?`${overnight.nights} nacht${overnight.nights===1?'':'en'}`:'—';
@@ -2656,6 +2683,7 @@ async function loadActiveTripStopsPanel(){
     return `<div class="item">
       <b>${Number(stop.volgorde||0)}. ${esc(stop.camperplaats||'Onbenoemde stop')}</b> · ${esc(stop.land||'')}
       <div class="muted">${esc(overnight.arrivalDate||'')} → ${esc(overnight.departureDate||'—')} · ${nightsText}${overnightText}</div>
+      ${renderStopThumbs(stop.id)}
       <div class="edit-actions">
         <button class="secondary" onclick="startStopEdit(${stop.id},${stop.reis_id})">Bewerken</button>
       </div>
