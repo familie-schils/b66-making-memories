@@ -3358,6 +3358,8 @@ if(stops?.length){
 
 document.getElementById('tripChooser').classList.add('hidden');
 document.getElementById('tripForm').classList.remove('hidden');
+// Reis loopt al: "Start van de reis" (incl. km bij vertrek) alleen tonen zolang er nog geen stop is.
+document.getElementById('tripStartFields').classList.toggle('hidden', stopNumber>1);
 
 document.getElementById('tripTitle').textContent =
   'Reis actief';

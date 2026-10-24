@@ -351,3 +351,7 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
   - Leeg laten mag. Lager dan de laatst bekende stand wordt geweigerd met een duidelijke melding (bij bewerken: vergeleken met eerdere stops).
 - Einde reis: Eind KM vooraf ingevuld met de laatst bekende stand; "KM gereden" staat nu daar.
 - Getest: syntax; logica in Chromium met nagebootste stops (voorstel, volgen, niet overschrijven, bewerken, eind-km); weergave op telefoonbreedte.
+- Live gecontroleerd (13:47): actieve reis camperlogboek, stop 3 voorgesteld met 101 km (stop 2).
+- **Werkwijze bevestigd door Lead-Developer (13:52):** km bij vertrek bij de start van de reis, per stop alleen km bij aankomst (geen vertrek-km per stop; tussendoor rijden wordt opgevangen doordat je de voorgestelde stand verhoogt), eind-km bij afsluiten.
+- Fix: bij het opnieuw openen van een lopende reis met stops bleef "Start van de reis" (met km bij vertrek) zichtbaar boven de volgende stop. Nu verborgen zodra er een stop is (de waarde blijft gebruikt voor berekeningen; aanpassen via Reis bewerken).
+- Klein punt voor de lijst: 2× 400 in de console bij openen (waarschijnlijk foto's die even de oude openbare link proberen vóór de beveiligde link).
