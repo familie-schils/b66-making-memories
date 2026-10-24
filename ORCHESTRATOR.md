@@ -355,3 +355,5 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
 - **Werkwijze bevestigd door Lead-Developer (13:52):** km bij vertrek bij de start van de reis, per stop alleen km bij aankomst (geen vertrek-km per stop; tussendoor rijden wordt opgevangen doordat je de voorgestelde stand verhoogt), eind-km bij afsluiten.
 - Fix: bij het opnieuw openen van een lopende reis met stops bleef "Start van de reis" (met km bij vertrek) zichtbaar boven de volgende stop. Nu verborgen zodra er een stop is (de waarde blijft gebruikt voor berekeningen; aanpassen via Reis bewerken).
 - Klein punt voor de lijst: 2× 400 in de console bij openen (waarschijnlijk foto's die even de oude openbare link proberen vóór de beveiligde link).
+- Testreis 70 afgesloten door Lead-Developer (14:00): start 100, stop 1 en 2 op 101, eind 102. Klopt met de nieuwe logica.
+- Kleine fix: bij "Nieuwe reis" verdween de uitleg onder het km-veld van de eerste stop (werd direct weer leeggemaakt). Staat nu na het leegmaken.
