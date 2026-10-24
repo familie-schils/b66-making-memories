@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.38",
-  "releasedAt": "2026-10-24T09:58:06.348Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Add profile, invite and photo storage security",
+  "currentVersion": "1.0.39",
+  "releasedAt": "2026-10-24T10:47:18.477Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Update test-agent.html\n- Hernummer foto-scripts naar deel 6, docs foto-opslag",
   "latest5": [
+    {
+      "version": "1.0.39",
+      "releasedAt": "2026-10-24T10:47:18.477Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Update test-agent.html\n- Hernummer foto-scripts naar deel 6, docs foto-opslag"
+    },
     {
       "version": "1.0.38",
       "releasedAt": "2026-10-24T09:58:06.348Z",
@@ -23,14 +28,14 @@
       "version": "1.0.35",
       "releasedAt": "2026-10-24T06:44:59.566Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- update orch"
-    },
-    {
-      "version": "1.0.34",
-      "releasedAt": "2026-10-23T20:54:27.945Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- kleine aanpassing"
     }
   ],
   "history": [
+    {
+      "version": "1.0.39",
+      "releasedAt": "2026-10-24T10:47:18.477Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Update test-agent.html\n- Hernummer foto-scripts naar deel 6, docs foto-opslag"
+    },
     {
       "version": "1.0.38",
       "releasedAt": "2026-10-24T09:58:06.348Z",
@@ -222,5 +227,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "d7aa8277a8f635cdd4a951ec9bb4174de345921b"
+  "lastSyncedTestAgentSha": "9257ff63d5fa8415342cf0e71ae23224a6daeff5"
 }
