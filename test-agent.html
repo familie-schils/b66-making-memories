@@ -1822,14 +1822,23 @@ async function fetchInviteByCode(inviteCode){
   if(!camperInviteError&&camperInvite){
     return {type:'camper',...camperInvite};
   }
-  const {data:memberInvite,error:memberInviteError}=await supabase
-    .from('invitations')
-    .select('id,camper_id,email,role,invitation_token,status,expires_at')
-    .eq('invitation_token',inviteCode)
-    .neq('status','revoked')
-    .neq('status','accepted')
-    .maybeSingle();
-  if(!memberInviteError&&memberInvite){
+  // Opzoeken op exacte code via b66_get_invitation (deel 3 van de beveiliging).
+  // Valt terug op de oude manier zolang die functie nog niet bestaat.
+  let memberInvite=null;
+  const {data:memberRows,error:memberRpcError}=await supabase.rpc('b66_get_invitation',{p_token:inviteCode});
+  if(!memberRpcError){
+    memberInvite=Array.isArray(memberRows)?(memberRows[0]||null):(memberRows||null);
+  }else{
+    const {data:legacyInvite,error:legacyInviteError}=await supabase
+      .from('invitations')
+      .select('id,camper_id,email,role,invitation_token,status,expires_at')
+      .eq('invitation_token',inviteCode)
+      .neq('status','revoked')
+      .neq('status','accepted')
+      .maybeSingle();
+    if(!legacyInviteError)memberInvite=legacyInvite;
+  }
+  if(memberInvite){
     return {type:'member-invite',...memberInvite};
   }
   const {data:platformInvite,error:platformInviteError}=await supabase
