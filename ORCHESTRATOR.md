@@ -262,3 +262,53 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
 5. Rol-controleregel op `camper_users.role`; repo-migraties gelijktrekken met live.
 
 **Nog te testen in de testversie:** vriend verwijderen (beide kanten weg, gedeelde stops niet meer zichtbaar), vriendenverzoek accepteren/afwijzen, rol wijzigen en lid verwijderen in Leden beheren.
+
+## Foto-opslag (2026-10-24, ochtend)
+
+**Besluit Lead-Developer:** het origineel van een foto blijft bij de gebruiker (fotogalerij van telefoon/computer). De app bewaart alleen een kleine versie voor het logboek en voor delen met vrienden. Een koppeling met Google Foto's/OneDrive/iCloud is afgeraden: Google beperkt sinds 2025 wat apps in de fotobibliotheek mogen lezen, iCloud heeft geen bruikbare webkoppeling, elke gebruiker moet inloggen bij die dienst en vrienden kunnen er niet bij. Een eigen exemplaar downloaden bestaat al: Reizen > reis bewerken > "PDF downloaden" / "Excel downloaden" (alleen bij een afgesloten reis). De PDF bevat alle foto's per stop (2 per rij); Excel bevat geen foto's.
+
+**Live bevindingen (alleen gelezen):**
+- Bucket `fotos`: **openbaar**, geen limiet op grootte of type. 90 bestanden, 160 MB (gemiddeld 1,8 MB, grootste 14 MB). Gratis plan: 1 GB (niet nagekeken).
+- Mappen: hoofdmap 78 bestanden (147 MB), `camper-uitleg/` 10, `camper-guides/` 2.
+- Gekoppeld: 28 via `fotos.url` (64 MB), 9 via de campergids. **53 bestanden (87 MB) horen nergens bij.**
+- Storage-regels: alleen `authenticated-upload 1m4ctr_0` (INSERT, elke ingelogde gebruiker, overal in `fotos`). Geen SELECT-, UPDATE- of DELETE-regel. Supabase blokkeert verwijderen van bestanden met SQL (`protect_objects_delete`).
+- Oorzaak van de losse bestanden: (1) er is geen verwijderregel, en (2) de app verwijderde op `fotos.bestandsnaam`, maar daar staat de originele naam (`IMG_0869.jpeg`), niet de naam in de opslag.
+
+### Stap 1 – kleinere foto's (klaar, `test-agent.html`, nog niet gecommit)
+- Upload: maximaal 1280 px, doel 400 KB, kwaliteit 0,80 (min. 0,60), kleinste maat 800 px. Was: 2000 px / 3 MB.
+- Getest in Chromium: telefoonfoto 4032×3024 (6,3 MB) → 1280×960, 217 KB. Ongeveer 6 tot 8 keer meer foto's in dezelfde ruimte.
+- Geldt voor stopfoto's en campergids-foto's (zelfde functie).
+
+### Stap 2 – opslag afsluiten (voorbereid, NIET live gedraaid)
+**App (`test-agent.html`, nog niet gecommit):**
+- Elke foto-link op het scherm wordt vervangen door een tijdelijke beveiligde link (1 uur), in één aanvraag per scherm; ook de vergrote weergave en het reisrapport (PDF). Lukt dat niet, dan blijft de oude link staan, dus de app werkt vóór en na de SQL-scripts.
+- Nieuwe stopfoto's gaan naar `stops/<camper_id>/...` (nodig voor de uploadregel).
+- Foto verwijderen: eerst controleren dat de regel in `fotos` echt weg is (RLS kan stil 0 rijen verwijderen), dan het bestand verwijderen op het pad uit de url.
+- Getest in Chromium met nagebootste Supabase: syntax goed, links vervangen, terugvallen bij geen recht, mislukt pad blijft zichtbaar.
+
+**SQL:**
+1. `assets/meta/security/06a_fotos_regels.sql`: hulpfuncties (`b66_is_head_admin`, `b66_path_camper`, `b66_photo_stop`, `b66_photo_camper`, `b66_photo_visible`), leesregel (leden, vrienden bij gedeelde stop, hoofdbeheerder, eigen upload), verwijderregel (admin/editor van de camper, hoofdbeheerder, eigen upload), bucket max. 5 MB en alleen jpg/png/webp. **Bucket blijft openbaar, de oude app blijft werken.**
+2. `assets/meta/security/06b_fotos_prive.sql`: uploaden alleen in `stops/<camper>/` (admin/editor/lid) of `camper-uitleg/<camper>/` (admin of hoofdbeheerder); bucket **privé**; max. 1 MB. Terugdraai-regel staat bovenin het script.
+- Getest op lokale Postgres 16 met nagebootste storage-tabellen en proefgebruikers (admin, editor, lid, viewer, andere camper, vriend, buitenstaander, hoofdbeheerder): 45 controles, alle goed, ook bij opnieuw draaien.
+- Niet getest: of de SQL Editor in Supabase regels op `storage.objects` mag aanmaken. Geeft het "must be owner", dan de regels via Storage > Policies in het dashboard aanmaken.
+
+**Volgorde (belangrijk):**
+1. Committen op `security/check-rls-status`; testversie testen (foto toevoegen, bekijken, vergroten, verwijderen, reisrapport).
+2. `06a` draaien. Testen: foto's zichtbaar (nu via beveiligde links), vriend ziet alleen foto's van gedeelde stops, verwijderen van een foto haalt ook het bestand weg.
+3. Merge naar `main` (workflow zet `test-agent.html` in `index.html`). Wachten tot productie de nieuwe versie heeft.
+4. Pas dan `06b` draaien. Daarna werken oude openbare links niet meer (bewust).
+5. Opruimen: lijst met losse bestanden staat onderaan `06a` (alleen lezen). Verwijderen in het dashboard (Storage > fotos), niet met SQL.
+
+**Nog open (foto's):**
+- Losse bestanden opruimen (53 stuks, 87 MB).
+- Bestaande grote foto's (gemiddeld 1,8 MB) verkleinen kan later met een eenmalig hulpscript; nu niet nodig.
+- `camper-guides/` (2 bestanden, oude map?) nagaan.
+- Reisrapport (PDF) gebruikt `imageUrlToJpegDataUrl`; die haalt foto's nu via de beveiligde link op, dus het rapport blijft werken na `06b`. Meetesten bij stap 1 van de volgorde.
+- Kwaliteit: in de PDF staan nu de kleine versies (max. 1280 px). Prima om te bekijken; voor een gedrukt fotoboek gebruikt de gebruiker zijn originelen.
+
+**Nummering scripts (2026-10-24, 12:10):** `05_profielen_en_platformuitnodigingen.sql` (profielen en `invite_codes`, door een andere sessie gemaakt, nog niet live) is deel 5. De foto-scripts heten nu `06a_fotos_regels.sql` en `06b_fotos_prive.sql` (eerder `05a`/`05b`; die oude bestanden mogen weg). Deel 5 en 6a zijn onafhankelijk; beide maken `b66_is_head_admin()` aan met dezelfde uitkomst, dus de volgorde maakt niet uit.
+
+## Online test na merge (2026-10-24, 12:40)
+- Merge staat live (productie = testversie, versie 1.0.38). Nieuwe stopfoto: 106 KB in `stops/22/`, gekoppeld aan stop 116. Tonen werkt (via openbare link, want 06a is nog niet gedraaid).
+- De lijst "Stops in deze reis" (actieve reis) liet nooit foto's zien. Toegevoegd in `test-agent.html` (nog niet gecommit): per stop maximaal 4 kleine foto's (56×56) plus "+N"; tik opent de vergrote weergave.
+- Opgemerkt: productie toont het label "TESTVERSIE" (de workflow kopieert test-agent.html ongewijzigd naar index.html). Later oplossen.
