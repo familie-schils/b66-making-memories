@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.42",
-  "releasedAt": "2026-10-24T11:58:11.930Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Hide trip start fields once a stop exists",
+  "currentVersion": "1.0.43",
+  "releasedAt": "2026-10-24T12:37:22.942Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix invite registration screen staying stuck\n- Fix km hint cleared on new trip form",
   "latest5": [
+    {
+      "version": "1.0.43",
+      "releasedAt": "2026-10-24T12:37:22.942Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix invite registration screen staying stuck\n- Fix km hint cleared on new trip form"
+    },
     {
       "version": "1.0.42",
       "releasedAt": "2026-10-24T11:58:11.930Z",
@@ -23,14 +28,14 @@
       "version": "1.0.39",
       "releasedAt": "2026-10-24T10:47:18.477Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Update test-agent.html\n- Hernummer foto-scripts naar deel 6, docs foto-opslag"
-    },
-    {
-      "version": "1.0.38",
-      "releasedAt": "2026-10-24T09:58:06.348Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Add profile, invite and photo storage security"
     }
   ],
   "history": [
+    {
+      "version": "1.0.43",
+      "releasedAt": "2026-10-24T12:37:22.942Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Fix invite registration screen staying stuck\n- Fix km hint cleared on new trip form"
+    },
     {
       "version": "1.0.42",
       "releasedAt": "2026-10-24T11:58:11.930Z",
@@ -242,5 +247,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "8afb98dd4e24b6154d373c03bc6253af08b94b09"
+  "lastSyncedTestAgentSha": "cbd9fe458ffbc215c34fccd862cbb5fab411d9a3"
 }
