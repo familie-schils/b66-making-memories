@@ -1,9 +1,14 @@
 {
   "source": "test-agent-sync",
-  "currentVersion": "1.0.39",
-  "releasedAt": "2026-10-24T10:47:18.477Z",
-  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Update test-agent.html\n- Hernummer foto-scripts naar deel 6, docs foto-opslag",
+  "currentVersion": "1.0.40",
+  "releasedAt": "2026-10-24T10:53:54.489Z",
+  "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Load active trip stops on app reopen",
   "latest5": [
+    {
+      "version": "1.0.40",
+      "releasedAt": "2026-10-24T10:53:54.489Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Load active trip stops on app reopen"
+    },
     {
       "version": "1.0.39",
       "releasedAt": "2026-10-24T10:47:18.477Z",
@@ -23,14 +28,14 @@
       "version": "1.0.36",
       "releasedAt": "2026-10-24T07:39:04.447Z",
       "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Restrict invitation reads to exact-token lookup"
-    },
-    {
-      "version": "1.0.35",
-      "releasedAt": "2026-10-24T06:44:59.566Z",
-      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- update orch"
     }
   ],
   "history": [
+    {
+      "version": "1.0.40",
+      "releasedAt": "2026-10-24T10:53:54.489Z",
+      "notes": "Synchronisatie van TEST-AGENT naar productie.\n\nWijzigingen:\n- Load active trip stops on app reopen"
+    },
     {
       "version": "1.0.39",
       "releasedAt": "2026-10-24T10:47:18.477Z",
@@ -227,5 +232,5 @@
       "notes": "Startpunt voor automatische TEST-AGENT-synchronisaties."
     }
   ],
-  "lastSyncedTestAgentSha": "9257ff63d5fa8415342cf0e71ae23224a6daeff5"
+  "lastSyncedTestAgentSha": "132a76a1c5cdeea758c021229884499b5f0c1f34"
 }
