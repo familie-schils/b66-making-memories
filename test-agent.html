@@ -1250,11 +1250,11 @@ let stopPhotosToDelete=[];
   const PHOTO_UPLOAD_DIMENSION_REDUCTION_FACTOR=0.85;
   const PHOTO_UPLOAD_MIN_DIMENSION=800;
 
-  // --- Beveiligde foto-links (deel 5) -------------------------------------
+  // --- Beveiligde foto-links (deel 6) -------------------------------------
   // fotos.url bevat de openbare link van bucket 'fotos'. Zodra de bucket
-  // privé is (deel 5b) werkt die link niet meer. Daarom vervangt de app elke
+  // privé is (deel 6b) werkt die link niet meer. Daarom vervangt de app elke
   // foto-link op het scherm door een tijdelijke beveiligde link (1 uur).
-  // Lukt dat niet (bijv. zolang deel 5a nog niet gedraaid is), dan blijft de
+  // Lukt dat niet (bijv. zolang deel 6a nog niet gedraaid is), dan blijft de
   // oude link gewoon staan.
   const PHOTO_PUBLIC_MARKER='/storage/v1/object/public/fotos/';
   const PHOTO_SIGNED_TTL_SECONDS=3600;
@@ -1348,7 +1348,7 @@ let stopPhotosToDelete=[];
       }
     }
   }).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['src']});
-  // Nieuwe stopfoto's komen in de map van de camper (nodig voor de uploadregel van deel 5b).
+  // Nieuwe stopfoto's komen in de map van de camper (nodig voor de uploadregel van deel 6b).
   function photoUploadFolder(){
     return activeCamperId?`stops/${activeCamperId}/`:'';
   }
