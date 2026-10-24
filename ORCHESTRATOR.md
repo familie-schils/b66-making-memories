@@ -312,3 +312,5 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
 - Merge staat live (productie = testversie, versie 1.0.38). Nieuwe stopfoto: 106 KB in `stops/22/`, gekoppeld aan stop 116. Tonen werkt (via openbare link, want 06a is nog niet gedraaid).
 - De lijst "Stops in deze reis" (actieve reis) liet nooit foto's zien. Toegevoegd in `test-agent.html` (nog niet gecommit): per stop maximaal 4 kleine foto's (56×56) plus "+N"; tik opent de vergrote weergave.
 - Opgemerkt: productie toont het label "TESTVERSIE" (de workflow kopieert test-agent.html ongewijzigd naar index.html). Later oplossen.
+- Oud probleem opgelost (12:55): na opnieuw openen van de app bleef "Stops in deze reis" verborgen (de lijst werd alleen geladen na opslaan of bewerken van een stop). `loadActiveTrip()` laadt de lijst nu ook.
+- Opgemerkt, nog niet onderzocht: in het reisoverzicht (Reis openen > Reislog) van de actieve reis stond alleen de tankbeurt, niet stop "test foto".
