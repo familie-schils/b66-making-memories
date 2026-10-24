@@ -212,3 +212,30 @@ Gemiddeld ca. 1 uur per dag (vaste baan); in het weekend en op vrije dagen meerd
 1. Veiligheid afmaken (Deel 1 klaar, Deel 2 nog te draaien, uitnodigingen dichtzetten).
 2. Testen met enkele echte gebruikers.
 3. Pas daarna Fieneke (betalingen/prijs) en Suus (bekendheid).
+
+## Teststatus na Deel 2 (2026-10-24)
+
+**Live gedraaid:** Deel 1, 01b (uitnodiging-fix), Deel 2 (`02_gegevens_afsluiten.sql`, controle: 1 regel per tabel/actie; fotos heeft bewust geen UPDATE, campers geen DELETE).
+
+**Getest in de testversie (https://familie-schils.github.io/b66-making-memories/test-agent.html):**
+- Uitnodiging via link als nieuwe gebruiker (viewer, camper 22): gelukt; invitation `accepted`, camper_users viewer, profiel aangemaakt. Geen "permission denied" en geen "duplicate key" meer.
+- Admin (camperlogboek) leest alles; maakt uitnodigingen (viewer en editor).
+- Viewer: leest, schrijven geweigerd door RLS ("new row violates row-level security policy for table tankbeurten").
+- Editor (msc.schils+test3): tankbeurt opslaan lukt; uitnodigingsvak verborgen.
+- Vrienden: poging4 (vriend van camperlogboek) ziet precies de 3 gedeelde stops (112,113,114) en niet stop 115 (niet gedeeld); geen data van camper 22.
+- Nog niet getest: account zonder camper (piet@), stop wijzigen als editor/viewer.
+
+**Besluit:** de rol `lid` blijft bestaan (oude accounts houden rechten; Deel 2 behandelt lid als schrijver).
+
+**Testrij in camper 22:** tankbeurt "TEST EDITOR mag dit wel" (10 l, EUR 15) mag worden verwijderd door de admin.
+
+**Gewijzigd in test-agent.html:** profiel aanmaken telt duplicate (23505) als gelukt; rolkeuze (Viewer/Editor) in Mijn Camper > Uitnodigen.
+
+**Verbeterpunten / nieuwe taken**
+1. Open vriendenverzoek zichtbaar maken op startscherm (ster/badge, evt. teller op Meer).
+2. Formulieren verbergen voor viewers; nette melding "Je mag hier alleen meekijken" i.p.v. technische RLS-melding.
+3. Uitnodigingslink die de app toont wijst naar productie (`/?invite=`), moet naar de testversie in test (en later naar de juiste versie).
+4. Knop voor nieuwe camper-eigenaren (platform-uitnodiging) bestaat niet.
+5. Testaccounts: wachtwoord zetten via SQL of plusadressen (`msc.schils+testN@gmail.com`).
+
+**Volgende stap:** `invitations_read_by_token` (SELECT `true`) dichtzetten: iedereen kan nu alle uitnodigingen incl. tokens lezen.
