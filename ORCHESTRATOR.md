@@ -307,3 +307,8 @@ Bron: alleen-lezen query in de Supabase SQL Editor (functies, triggers, `b66_pol
 - Kwaliteit: in de PDF staan nu de kleine versies (max. 1280 px). Prima om te bekijken; voor een gedrukt fotoboek gebruikt de gebruiker zijn originelen.
 
 **Nummering scripts (2026-10-24, 12:10):** `05_profielen_en_platformuitnodigingen.sql` (profielen en `invite_codes`, door een andere sessie gemaakt, nog niet live) is deel 5. De foto-scripts heten nu `06a_fotos_regels.sql` en `06b_fotos_prive.sql` (eerder `05a`/`05b`; die oude bestanden mogen weg). Deel 5 en 6a zijn onafhankelijk; beide maken `b66_is_head_admin()` aan met dezelfde uitkomst, dus de volgorde maakt niet uit.
+
+## Online test na merge (2026-10-24, 12:40)
+- Merge staat live (productie = testversie, versie 1.0.38). Nieuwe stopfoto: 106 KB in `stops/22/`, gekoppeld aan stop 116. Tonen werkt (via openbare link, want 06a is nog niet gedraaid).
+- De lijst "Stops in deze reis" (actieve reis) liet nooit foto's zien. Toegevoegd in `test-agent.html` (nog niet gecommit): per stop maximaal 4 kleine foto's (56×56) plus "+N"; tik opent de vergrote weergave.
+- Opgemerkt: productie toont het label "TESTVERSIE" (de workflow kopieert test-agent.html ongewijzigd naar index.html). Later oplossen.
